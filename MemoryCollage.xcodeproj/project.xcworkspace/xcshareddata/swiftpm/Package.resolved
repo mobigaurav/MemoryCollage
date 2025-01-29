@@ -1,0 +1,15 @@
+{
+  "originHash" : "c81695cc2f535ed098516a5700cf17be73d7c28c67b8a0e55914feedc0775d9a",
+  "pins" : [
+    {
+      "identity" : "gpuimage2",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/BradLarson/GPUImage2.git",
+      "state" : {
+        "revision" : "ffd7b5a64a20535980d4e9eb156fe2ecbe41fc6a",
+        "version" : "0.0.1"
+      }
+    }
+  ],
+  "version" : 3
+}
