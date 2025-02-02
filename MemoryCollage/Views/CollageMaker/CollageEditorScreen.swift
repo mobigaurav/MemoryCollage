@@ -25,6 +25,13 @@ struct CollageEditorScreen: View {
     @State private var backgroundColor: Color = .gray
     @State private var keyboardHeight: CGFloat = 0
     @State private var scrollableImages: [ScrollableImage] = []
+    @State private var imageOffsets: [CGSize] = []
+    @State private var geometrySize:CGSize = CGSize(width: 100, height: 100)
+    @State private var selectedBackground: Color = .white
+    @State private var selectedGradient: Int? = nil
+    @State private var isGradientSelected = false
+    @State private var showBackgroundSelection = false
+    @State private var collageFrame: CGRect = .zero  // Store collage area
     
     @Environment(\.dismiss) var dismiss
     
@@ -35,7 +42,6 @@ struct CollageEditorScreen: View {
                     ZStack {
                         // Render Template
                         renderTemplate(in: geometry.size)
-                        
                         // Text Overlays with Drag Gesture
                         ForEach($textOverlays.indices, id: \.self) { index in
                             if textOverlays[index].isEditing {
@@ -70,12 +76,19 @@ struct CollageEditorScreen: View {
                             }
                         }
                     }
+                    
+                    .onAppear {
+                           // ✅ Store the geometry size as collage frame
+                           DispatchQueue.main.async {
+                               self.collageFrame = geometry.frame(in: .global)
+                           }
+                       }
                 }
                 .frame(maxHeight: .infinity)
                 
                 
                 // Horizontal Scrollable Templates
-                ScrollView(.horizontal, showsIndicators: false) {
+                ScrollView(.horizontal, showsIndicators: true) {
                     HStack(spacing: 10) {
                         ForEach(TemplateManager.shared.templates) { template in
                             TemplateThumbnailButton(
@@ -89,12 +102,13 @@ struct CollageEditorScreen: View {
                             }
                         }
                     }
+                    .padding(.horizontal, 15)
+                    .padding(.vertical, 12)
                 }
                 .background(Color.white)
-                .padding(.horizontal)
-                .frame(height: 80)
+                .padding(.top, 10)
+                .frame(height: 90)
                 
-                // Buttons for Adding Text and Saving Collage
                 // Toolbar
                 ToolbarView(
                     selectedResolution: $selectedResolution,
@@ -102,7 +116,8 @@ struct CollageEditorScreen: View {
                     onAddText: { addTextOverlay() },
                     onSaveImage: { exportCollage() },
                     onShareImage: { exportCollage(shouldShare: true) },
-                    onShuffle: { shuffleImages() }
+                    onShuffle: { shuffleImages() },
+                    onBackgroundColor: { displayBackgroundColorOptions() }
                 )
                 .padding(.vertical)
                 
@@ -117,6 +132,14 @@ struct CollageEditorScreen: View {
                     .font(.system(size: 18, weight: .medium))
                 Text("Back")
             })
+            .sheet(isPresented: $showBackgroundSelection) {
+                BackgroundSelectionView(
+                    selectedBackground: $selectedBackground,
+                    selectedGradient: $selectedGradient,
+                    isGradientSelected: $isGradientSelected,
+                    isPresented: $showBackgroundSelection
+                )
+            }
             .onAppear {
                 DispatchQueue.main.async {
                     initializeDraggableImages()
@@ -129,9 +152,36 @@ struct CollageEditorScreen: View {
         }
     }
     
+    private func displayBackgroundColorOptions() {
+        showBackgroundSelection = true
+    }
+    
     private func shuffleImages() {
         selectedImages.shuffle() // Shuffle the selected images
         initializeDraggableImages() // Reinitialize draggable images
+    }
+    
+    private func initializeDraggableImages() {
+
+        scrollableImages = selectedImages.enumerated().map { index, image in
+               ScrollableImage(
+                   image: image,
+                   offset: .zero,
+                   position: CGPoint(x: 150 + index * 50, y: 200 + index * 50)
+               )
+           }
+           imageOffsets = Array(repeating: .zero, count: selectedImages.count)
+    }
+    
+    private func getGradientByID(_ id: Int) -> LinearGradient {
+        let gradientOptions: [Int: LinearGradient] = [
+            0: LinearGradient(gradient: Gradient(colors: [.blue, .purple]), startPoint: .top, endPoint: .bottom),
+            1: LinearGradient(gradient: Gradient(colors: [.red, .orange]), startPoint: .topLeading, endPoint: .bottomTrailing),
+            2: LinearGradient(gradient: Gradient(colors: [.green, .yellow]), startPoint: .leading, endPoint: .trailing),
+            3: LinearGradient(gradient: Gradient(colors: [.pink, .indigo]), startPoint: .bottomLeading, endPoint: .topTrailing)
+        ]
+        
+        return gradientOptions[id] ?? LinearGradient(gradient: Gradient(colors: [.white, .white]), startPoint: .top, endPoint: .bottom)
     }
     
     func getFrame(for index: Int, canvasSize: CGSize) -> CGRect {
@@ -140,7 +190,7 @@ struct CollageEditorScreen: View {
             let circleLayout = TemplateManager.shared.circularLayout(for: selectedImages.count, in: canvasSize, radiusScale: radiusScale)
             return circleLayout[index % circleLayout.count]
             
-        case .grid(let rows, let columns):
+        case .grid(_ , let columns):
             // Calculate the cell width
             let cellWidth = canvasSize.width / CGFloat(columns)
             let totalImages = selectedImages.count
@@ -176,11 +226,11 @@ struct CollageEditorScreen: View {
             case "Flower":
                 let flowerLayout = TemplateManager.shared.createFlowerLayout(for: selectedImages.count, in: canvasSize)
                 return flowerLayout[index % flowerLayout.count]
-              
+                
             case "Spiral":
                 let spiralLayout = TemplateManager.shared.createSpiralLayout(for: selectedImages.count, in: canvasSize)
                 return spiralLayout[index % spiralLayout.count]
-             
+                
             default:
                 return CGRect.zero
             }
@@ -199,43 +249,50 @@ struct CollageEditorScreen: View {
         }
     }
     
-    private func initializeDraggableImages() {
-        scrollableImages = selectedImages.map { ScrollableImage(image: $0, offset: .zero) }
-    }
     
     private func renderTemplate(in canvasSize: CGSize) -> some View {
         ZStack {
+            // ✅ Apply Selected Background
+            if isGradientSelected, let selectedGradientID = selectedGradient {
+                let gradient = getGradientByID(selectedGradientID)
+                gradient.edgesIgnoringSafeArea(.all)
+            } else {
+                selectedBackground.edgesIgnoringSafeArea(.all)
+            }
+
+          
             if selectedTemplate.type == .freeform {
                 ForEach($scrollableImages) { $scrollableImage in
-                    ScrollView([.horizontal, .vertical]) {
-                        Image(uiImage: scrollableImage.image)
-                            .resizable()
-                            .scaledToFill()
-                            .frame(width: 300, height: 300)
-                            .offset(scrollableImage.offset)
-                            .gesture(DragGesture()
+                    Image(uiImage: scrollableImage.image)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: scrollableImage.scale * 100, height: scrollableImage.scale * 100) // ✅ Dynamic Scaling
+                        .position(scrollableImage.position) // ✅ Correctly place inside collage area
+                        .gesture(
+                            DragGesture()
                                 .onChanged { value in
-                                    scrollableImage.offset = CGSize(
-                                        width: value.translation.width,
-                                        height: value.translation.height
-                                    )
+                                    scrollableImage.position = value.location // ✅ Drag without affecting templates
                                 }
-                            )
-                    }
-                    .frame(width: 200, height: 200)
-                    .clipped()
+                        )
+                        .gesture(
+                            MagnificationGesture()
+                                .onChanged { value in
+                                    scrollableImage.scale = max(0.5, min(2.0, value)) // ✅ Scale within limits
+                                }
+                        )
                 }
-            } else {
+            }
+            else {
                 ForEach(0..<selectedImages.count, id: \.self) { index in
-                    if index < scrollableImages.count {  // Prevent out-of-bounds access
+                    if index < scrollableImages.count {
                         let frame = getFrame(for: index, canvasSize: canvasSize)
-                        
-                        ScrollView([.horizontal, .vertical]) {
+
+                        ScrollView([.horizontal, .vertical], showsIndicators: false) {
                             Image(uiImage: selectedImages[index])
                                 .resizable()
                                 .scaledToFill()
-                                .frame(width: frame.width * 1.5, height: frame.height * 1.5)
-                                .offset(scrollableImages[index].offset) // Apply stored scroll offsets
+                                .frame(width: frame.width * 1.5, height: frame.height * 1.5) // Larger to allow scrolling
+                                .offset(scrollableImages[index].offset)
                         }
                         .frame(width: frame.width, height: frame.height)
                         .clipped()
@@ -249,6 +306,233 @@ struct CollageEditorScreen: View {
     }
 
 
+
+    private func captureCollage(contentSize: CGSize, completion: @escaping (UIImage) -> Void) {
+        DispatchQueue.global(qos: .userInitiated).async {
+            let collageView = CollageRendererView(
+                images: self.selectedImages,
+                scrollableImages: self.scrollableImages,
+                template: self.selectedTemplate,
+                background: self.isGradientSelected ? UIColor.clear : UIColor.white,
+                isGradient: self.isGradientSelected
+            )
+
+            // Ensure rendering happens on the main thread
+            DispatchQueue.main.async {
+                if let finalImage = collageView.captureSnapshot(size: contentSize) {
+                    DispatchQueue.main.async {
+                        completion(finalImage)
+                    }
+                } else {
+                    print("⚠️ Snapshot failed!")
+                }
+            }
+        }
+    }
+
+    
+
+
+    private func addWatermark(to image: UIImage) -> UIImage {
+        let renderer = UIGraphicsImageRenderer(size: image.size)
+        
+        return renderer.image { context in
+            image.draw(in: CGRect(origin: .zero, size: image.size)) // Draw the original image
+            
+            // Watermark attributes
+            let watermarkText = "Memory Collage - Free Version"
+            let attributes: [NSAttributedString.Key: Any] = [
+                .font: UIFont.boldSystemFont(ofSize: 25),
+                .foregroundColor: UIColor.white.withAlphaComponent(0.7),
+                .backgroundColor: UIColor.black.withAlphaComponent(0.5)
+            ]
+
+            let textSize = watermarkText.size(withAttributes: attributes)
+            let textRect = CGRect(
+                x: image.size.width - textSize.width - 20,
+                y: image.size.height - textSize.height - 20,
+                width: textSize.width,
+                height: textSize.height
+            )
+
+            watermarkText.draw(in: textRect, withAttributes: attributes)
+        }
+    }
+
+
+    private func exportCollage(shouldShare:Bool = false) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            if let screenshot = takeScreenshot() {
+               let collageFrame = findCollageContentFrame()
+               
+               if let croppedImage = cropImage(screenshot, to: collageFrame) {
+                   let hasPurchasedPremium = UserDefaults.standard.bool(forKey: "hasPurchasedPremium")
+                   // Apply watermark only if not purchased
+                  let finalImage = hasPurchasedPremium ? croppedImage : addWatermark(to: croppedImage)
+                   handleFinalImage(finalImage, shouldShare: shouldShare)
+               } else {
+                   print("❌ Failed to crop image correctly")
+               }
+           } else {
+               print("❌ Screenshot failed")
+           }
+        }
+    }
+    
+    // 📸 Take a Screenshot of the Current View
+    private func takeScreenshot() -> UIImage? {
+        let window = UIApplication.shared.windows.first
+        let renderer = UIGraphicsImageRenderer(size: window?.bounds.size ?? .zero)
+        return renderer.image { _ in
+            window?.drawHierarchy(in: window?.bounds ?? .zero, afterScreenUpdates: true)
+        }
+    }
+    
+    // 📏 Find the CGRect of the Collage Content Inside GeometryReader
+    private func findCollageContentFrame() -> CGRect {
+       // let collageView = UIApplication.shared.windows.first?.rootViewController?.view
+        //let collageFrame = collageView?.convert(collageView?.bounds ?? .zero, to: nil) ?? .zero
+        return collageFrame
+    }
+    
+    // ✂️ Crop the Screenshot to the Collage Area
+    private func cropImage(_ image: UIImage, to rect: CGRect) -> UIImage? {
+        guard let cgImage = image.cgImage else { return nil }
+        
+        let scale = image.scale
+        let adjustedRect = CGRect(
+            x: rect.origin.x * scale,
+            y: rect.origin.y * scale,
+            width: rect.width * scale,
+            height: rect.height * scale
+        )
+        
+        if let croppedCGImage = cgImage.cropping(to: adjustedRect) {
+            return UIImage(cgImage: croppedCGImage, scale: scale, orientation: image.imageOrientation)
+        }
+        return nil
+    }
+    
+    private func handleFinalImage(_ image: UIImage, shouldShare: Bool) {
+        let hasPurchasedPremium = UserDefaults.standard.bool(forKey: "hasPurchasedPremium")
+        if !hasPurchasedPremium {
+            let alert = UIAlertController(
+                title: "Created with Watermark!",
+                message: "Your collage has been created with a watermark. Upgrade to premium to remove the watermark.",
+                preferredStyle: .alert
+            )
+
+            alert.addAction(UIAlertAction(title: "Cancel", style: .default, handler: { _ in
+                if shouldShare {
+                    self.shareCollage(image: image)
+                } else {
+                    UIImageWriteToSavedPhotosAlbum(image, nil, nil, nil)
+                    let saveAlert = UIAlertController(
+                        title: "Saved!",
+                        message: "Your collage with watermark has been saved to Photos. Upgrade to premium to remove the watermark.",
+                        preferredStyle: .alert
+                    )
+                    saveAlert.addAction(UIAlertAction(title: "OK", style: .default))
+                    UIApplication.shared.windows.first?.rootViewController?.present(saveAlert, animated: true)
+                }
+            }))
+
+            alert.addAction(UIAlertAction(
+                title: "Upgrade to Premium",
+                style: .default,
+                handler: { _ in
+                    self.showPaywallModal()
+                }
+            ))
+
+            UIApplication.shared.windows.first?.rootViewController?.present(alert, animated: true)
+
+        }else {
+                    if shouldShare {
+                        shareCollage(image: image)
+                    } else {
+                        UIImageWriteToSavedPhotosAlbum(image, nil, nil, nil)
+                        print("✅ Collage saved successfully!")
+                        let alert = UIAlertController(
+                            title: "Saved!",
+                            message: "Your collage has been saved to Photos.",
+                            preferredStyle: .alert
+                        )
+                        alert.addAction(UIAlertAction(title: "OK", style: .default))
+                        UIApplication.shared.windows.first?.rootViewController?.present(alert, animated: true)
+                    }
+        }
+
+    }
+    
+    
+    private func exportCollage1(shouldShare: Bool = false) {
+        DispatchQueue.global(qos: .userInitiated).async {
+            DispatchQueue.main.async {
+                if let window = UIApplication.shared.windows.first {
+                    let canvasSize = window.rootViewController?.view.bounds.size ?? UIScreen.main.bounds.size
+
+                    self.captureCollage(contentSize: canvasSize) { baseImage in
+                        DispatchQueue.main.async {
+                            var finalImage = baseImage
+
+                            // Handle watermark logic
+                            let hasPurchasedPremium = UserDefaults.standard.bool(forKey: "hasPurchasedPremium")
+                            if !hasPurchasedPremium {
+                                let alert = UIAlertController(
+                                    title: "Created with Watermark!",
+                                    message: "Your collage has been created with a watermark. Upgrade to premium to remove the watermark.",
+                                    preferredStyle: .alert
+                                )
+
+                                alert.addAction(UIAlertAction(title: "Cancel", style: .default, handler: { _ in
+                                    if shouldShare {
+                                        self.shareCollage(image: finalImage)
+                                    } else {
+                                        UIImageWriteToSavedPhotosAlbum(finalImage, nil, nil, nil)
+                                        let saveAlert = UIAlertController(
+                                            title: "Saved!",
+                                            message: "Your collage with watermark has been saved to Photos. Upgrade to premium to remove the watermark.",
+                                            preferredStyle: .alert
+                                        )
+                                        saveAlert.addAction(UIAlertAction(title: "OK", style: .default))
+                                        UIApplication.shared.windows.first?.rootViewController?.present(saveAlert, animated: true)
+                                    }
+                                }))
+
+                                alert.addAction(UIAlertAction(
+                                    title: "Upgrade to Premium",
+                                    style: .default,
+                                    handler: { _ in
+                                        self.showPaywallModal()
+                                    }
+                                ))
+
+                                UIApplication.shared.windows.first?.rootViewController?.present(alert, animated: true)
+
+                            } else {
+                                if shouldShare {
+                                    self.shareCollage(image: finalImage)
+                                } else {
+                                    UIImageWriteToSavedPhotosAlbum(finalImage, nil, nil, nil)
+                                    let alert = UIAlertController(
+                                        title: "Saved!",
+                                        message: "Your collage has been saved to Photos.",
+                                        preferredStyle: .alert
+                                    )
+                                    alert.addAction(UIAlertAction(title: "OK", style: .default))
+                                    UIApplication.shared.windows.first?.rootViewController?.present(alert, animated: true)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    
+    
     
     private func calculateBoundingRect(using canvasSize: CGSize) -> CGRect {
         var boundingRect: CGRect = .null
@@ -285,7 +569,7 @@ struct CollageEditorScreen: View {
         return boundingRect
     }
     
-
+    
     private func addKeyboardObservers() {
         NotificationCenter.default.addObserver(forName: UIResponder.keyboardWillShowNotification, object: nil, queue: .main) { notification in
             if let keyboardFrame = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect {
@@ -315,140 +599,8 @@ struct CollageEditorScreen: View {
         UIApplication.shared.windows.first?.rootViewController?.present(paywallView, animated: true)
     }
     
-    private func captureCollage(contentSize: CGSize, completion: @escaping (UIImage) -> Void) {
-        let boundingRect = calculateBoundingRect(using: contentSize)
-
-        let collageView = CollageCaptureView(contentSize: boundingRect.size, content: {
-            ZStack {
-                Color.white.edgesIgnoringSafeArea(.all)
-
-                ForEach(0..<selectedImages.count, id: \.self) { index in
-                    let frame = getFrame(for: index, canvasSize: contentSize)
-                    
-                    Image(uiImage: selectedImages[index])
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: frame.width * 1.5, height: frame.height * 1.5)
-                        .offset(scrollableImages[index].offset) // Apply scroll offset
-                        .frame(width: frame.width, height: frame.height)
-                        .clipped()
-                        .position(x: frame.midX, y: frame.midY)
-                }
-
-                // Text Overlays Corrected Positioning
-                ForEach(textOverlays) { overlay in
-                    Text(overlay.text)
-                        .font(.headline)
-                        .foregroundColor(.white)
-                        .background(Color.black.opacity(0.7))
-                        .cornerRadius(5)
-                        .position(
-                            x: overlay.position.x - boundingRect.origin.x,
-                            y: overlay.position.y - boundingRect.origin.y
-                        )
-                }
-                
-              // Add watermark for free users
-               if !UserDefaults.standard.bool(forKey: "hasPurchasedPremium") {
-                   VStack {
-                       Spacer()
-                       Text("Memory Collage - Free Version")
-                           .font(.caption)
-                           .foregroundColor(.white.opacity(0.7))
-                           .padding()
-                           .background(Color.black.opacity(0.5))
-                           .cornerRadius(8)
-                           .padding(.bottom, 10)
-                   }
-               }
-            }
-        }, onCapture: { image in
-            completion(image)
-        })
-
-        DispatchQueue.main.async {
-            let hostingController = UIHostingController(rootView: collageView)
-            hostingController.view.frame = CGRect(origin: .zero, size: contentSize)
-
-            UIApplication.shared.windows.first?.rootViewController?.view.addSubview(hostingController.view)
-
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                hostingController.view.removeFromSuperview()
-            }
-        }
-    }
-
-
     
-    private func exportCollage(shouldShare: Bool = false) {
-        // Check purchase status
-        let hasPurchasedPremium = UserDefaults.standard.bool(forKey: "hasPurchasedPremium")
-        
-        DispatchQueue.global(qos: .userInitiated).async {
-            DispatchQueue.main.async {
-                if let window = UIApplication.shared.windows.first {
-                    let contentSize = window.rootViewController?.view.bounds.size ?? UIScreen.main.bounds.size
-                    
-                    self.captureCollage(contentSize: contentSize) { baseImage in
-                        DispatchQueue.main.async {
-                            var finalImage = baseImage
-
-                            // Add watermark if not purchased
-                            if !hasPurchasedPremium {
-                                let alert = UIAlertController(
-                                    title: "Created with Watermark!",
-                                    message: "Your collage has been created with a watermark. Upgrade to premium to remove the watermark.",
-                                    preferredStyle: .alert
-                                )
-                                
-                                alert.addAction(UIAlertAction(title: "Cancel", style: .default, handler: { _ in
-                                    if shouldShare {
-                                        self.shareCollage(image: finalImage)
-                                    } else {
-                                        UIImageWriteToSavedPhotosAlbum(finalImage, nil, nil, nil)
-                                        let saveAlert = UIAlertController(
-                                            title: "Saved!",
-                                            message: "Your collage with watermark has been saved to Photos. Upgrade to premium to remove the watermark.",
-                                            preferredStyle: .alert
-                                        )
-                                        saveAlert.addAction(UIAlertAction(title: "OK", style: .default))
-                                        UIApplication.shared.windows.first?.rootViewController?.present(saveAlert, animated: true)
-                                    }
-                                }))
-                                
-                                alert.addAction(UIAlertAction(
-                                    title: "Upgrade to Premium",
-                                    style: .default,
-                                    handler: { _ in
-                                        self.showPaywallModal()
-                                    }
-                                ))
-                                
-                                UIApplication.shared.windows.first?.rootViewController?.present(alert, animated: true)
-                                
-                            } else {
-                                if shouldShare {
-                                    self.shareCollage(image: finalImage)
-                                } else {
-                                    UIImageWriteToSavedPhotosAlbum(finalImage, nil, nil, nil)
-                                    let alert = UIAlertController(
-                                        title: "Saved!",
-                                        message: "Your collage has been saved to Photos.",
-                                        preferredStyle: .alert
-                                    )
-                                    alert.addAction(UIAlertAction(title: "OK", style: .default))
-                                    UIApplication.shared.windows.first?.rootViewController?.present(alert, animated: true)
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-
-
+    
     private func resetStateAfterSave() {
         textOverlays = textOverlays.map { overlay in
             var updatedOverlay = overlay

@@ -19,5 +19,7 @@ struct ScrollableImage: Identifiable {
     let id = UUID()
     var image: UIImage
     var offset: CGSize = .zero
+    var position: CGPoint
+    var scale: CGFloat = 1.0
 }
 

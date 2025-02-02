@@ -13,6 +13,7 @@ struct ToolbarView: View {
     var onSaveImage: () -> Void
     var onShareImage: () -> Void
     let onShuffle: () -> Void
+    let onBackgroundColor: () -> Void
     //var onPreview: () -> Void // New parameter for the preview action
     
     let resolutions = ["Low", "Medium", "High"]
@@ -67,6 +68,11 @@ struct ToolbarView: View {
                     Text(selectedResolution)
                         .font(.caption2)
                 }
+            }
+            
+            Button(action: onBackgroundColor) {
+                Image(systemName: "paintpalette.fill")
+                    .foregroundColor(.blue)
             }
             
             Button(action: onShuffle) {
