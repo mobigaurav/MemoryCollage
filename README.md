@@ -72,7 +72,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📧 Contact
 For feature requests, bugs, or collaboration, feel free to reach out:
-- ✉️ Email: your.email@example.com
+- ✉️ Email: mobigaurav@gmail.com
 - 🔗 GitHub Issues: [Create an Issue](https://github.com/yourusername/MemoryCollage/issues)
 
 ## Support the Project
