@@ -70,10 +70,10 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - More templates and layouts for collages.
 - Advanced video editing tools with real-time previews.
 
-## 📧 Contact
+## Contact
 For feature requests, bugs, or collaboration, feel free to reach out:
 - ✉️ Email: mobigaurav@gmail.com
-- 🔗 GitHub Issues: [Create an Issue](https://github.com/yourusername/MemoryCollage/issues)
+- 🔗 GitHub Issues: [Create an Issue](https://github.com/mobigaurav/MemoryCollage/issues)
 
 ## Support the Project
 
