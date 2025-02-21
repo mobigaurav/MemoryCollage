@@ -17,8 +17,24 @@ class IAPManager: NSObject, ObservableObject {
     private let productIdentifiers = Set(["com.memorycollage.premium"])
     private var productsRequest: SKProductsRequest?
 
-    enum PurchaseState {
-        case notPurchased, purchased, restoring, failed(Error)
+    enum PurchaseState: Equatable {
+        case notPurchased
+        case purchased
+        case restoring
+        case failed(String)
+
+        static func == (lhs: PurchaseState, rhs: PurchaseState) -> Bool {
+            switch (lhs, rhs) {
+            case (.notPurchased, .notPurchased),
+                 (.purchased, .purchased),
+                 (.restoring, .restoring):
+                return true
+            case (.failed(let lhsError), .failed(let rhsError)):
+                return lhsError == rhsError
+            default:
+                return false
+            }
+        }
     }
 
     private override init() {
@@ -45,7 +61,7 @@ class IAPManager: NSObject, ObservableObject {
             let payment = SKPayment(product: product)
             SKPaymentQueue.default().add(payment)
         } else {
-            purchaseState = .failed(NSError(domain: "IAPError", code: 0, userInfo: [NSLocalizedDescriptionKey: "Purchases are disabled on this device."]))
+            purchaseState = .failed("Transaction failed.")
         }
     }
 
@@ -63,7 +79,11 @@ class IAPManager: NSObject, ObservableObject {
     // MARK: - Save Purchase
     private func savePurchase() {
         UserDefaults.standard.set(true, forKey: "hasPurchasedPremium")
-        purchaseState = .purchased
+        UserDefaults.standard.synchronize()
+        DispatchQueue.main.async {
+            self.purchaseState = .purchased
+            self.objectWillChange.send()
+        }
     }
 }
 
@@ -77,7 +97,7 @@ extension IAPManager: SKProductsRequestDelegate {
 
     func request(_ request: SKRequest, didFailWithError error: Error) {
         DispatchQueue.main.async {
-            self.purchaseState = .failed(error)
+            self.purchaseState = .failed(error.localizedDescription)
         }
     }
 }
@@ -95,8 +115,9 @@ extension IAPManager: SKPaymentTransactionObserver {
                 SKPaymentQueue.default().finishTransaction(transaction)
             case .failed:
                 DispatchQueue.main.async {
-                    self.purchaseState = .failed(transaction.error ?? NSError(domain: "IAPError", code: 1, userInfo: [NSLocalizedDescriptionKey: "Transaction failed."]))
+                    self.purchaseState =  .failed(transaction.error?.localizedDescription ?? "Transaction failed.")
                 }
+               // savePurchase()
                 SKPaymentQueue.default().finishTransaction(transaction)
             default:
                 break
@@ -112,7 +133,7 @@ extension IAPManager: SKPaymentTransactionObserver {
 
     func paymentQueue(_ queue: SKPaymentQueue, restoreCompletedTransactionsFailedWithError error: Error) {
         DispatchQueue.main.async {
-            self.purchaseState = .failed(error)
+            self.purchaseState = .failed(error.localizedDescription)
         }
     }
 }

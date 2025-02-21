@@ -13,7 +13,7 @@ struct PhotoSelectionView: UIViewControllerRepresentable {
     
     func makeUIViewController(context: Context) -> PHPickerViewController {
         var config = PHPickerConfiguration()
-        config.selectionLimit = 10 // Allow up to 10 photos
+        config.selectionLimit = 15 // Allow up to 15 photos
         config.filter = .images
         
         let picker = PHPickerViewController(configuration: config)
@@ -35,20 +35,26 @@ struct PhotoSelectionView: UIViewControllerRepresentable {
         }
         
         func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
-            picker.dismiss(animated: true)
-            parent.selectedImages = []
-            
-            for result in results {
-                if result.itemProvider.canLoadObject(ofClass: UIImage.self) {
-                    result.itemProvider.loadObject(ofClass: UIImage.self) { [weak self] (image, error) in
-                        if let image = image as? UIImage {
-                            DispatchQueue.main.async {
-                                self?.parent.selectedImages.append(image)
+               picker.dismiss(animated: true)
+               guard !results.isEmpty else { return }
+               let dispatchGroup = DispatchGroup()
+                for result in results {
+                    if result.itemProvider.canLoadObject(ofClass: UIImage.self) {
+                        dispatchGroup.enter()
+                        result.itemProvider.loadObject(ofClass: UIImage.self) { [weak self] (image, error) in
+                            if let image = image as? UIImage {
+                                DispatchQueue.main.async {
+                                    self?.parent.selectedImages.append(image)
+                                }
                             }
+                            dispatchGroup.leave()
                         }
                     }
                 }
-            }
+                
+                dispatchGroup.notify(queue: .main) {
+                    print("Selected images count: \(self.parent.selectedImages.count)")
+                }
         }
     }
 }

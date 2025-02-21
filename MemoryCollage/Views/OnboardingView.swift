@@ -33,6 +33,20 @@ struct OnboardingView: View {
                 .edgesIgnoringSafeArea(.all)
                 
                 VStack {
+                    HStack(spacing:10) {
+                        Spacer()
+                        Button(action: {
+                            UserDefaults.standard.set(true, forKey: "isOnboardingComplete")
+                            withAnimation {
+                                           navigateToMainApp = true
+                                       }
+                        }) {
+                            Text("Skip")
+                                .fontWeight(.bold)
+                                .foregroundColor(.white)
+                        }
+                    }
+                    padding(.horizontal, 10)
                     // Page Content
                     TabView(selection: $currentPage) {
                         ForEach(0..<onboardingPages.count, id: \ .self) { index in
@@ -62,7 +76,6 @@ struct OnboardingView: View {
                     .tabViewStyle(PageTabViewStyle(indexDisplayMode: .always))
                     
                     Spacer()
-                    
                     // Continue Button
                     Button(action: {
                         if currentPage < onboardingPages.count - 1 {
@@ -86,6 +99,8 @@ struct OnboardingView: View {
                             .background(Color.orange)
                             .cornerRadius(10)
                             .padding(.horizontal, 20)
+                        
+                        
                     }
                     
                     Spacer()

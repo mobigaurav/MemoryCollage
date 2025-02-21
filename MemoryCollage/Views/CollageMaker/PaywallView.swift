@@ -8,6 +8,7 @@ import SwiftUI
 
 struct PaywallView: View {
     @Environment(\.dismiss) var dismiss
+    @ObservedObject var iapManager = IAPManager.shared
 
     var body: some View {
         ZStack {
@@ -84,7 +85,19 @@ struct PaywallView: View {
                 Spacer()
             }
         }
+        .onAppear {
+            IAPManager.shared.fetchProducts()
+        }
+        .onReceive(iapManager.$purchaseState) {state in
+            if state == .purchased {
+                dismiss()
+            }
+            else if case .failed = state {
+                dismiss()
+            }
+        }
     }
+      
 }
 
 

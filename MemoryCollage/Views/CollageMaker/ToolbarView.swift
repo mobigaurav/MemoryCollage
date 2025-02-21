@@ -14,7 +14,7 @@ struct ToolbarView: View {
     var onShareImage: () -> Void
     let onShuffle: () -> Void
     let onBackgroundColor: () -> Void
-    //var onPreview: () -> Void // New parameter for the preview action
+   
     
     let resolutions = ["Low", "Medium", "High"]
     let imageTypes = ["JPEG", "PNG", "HEIC"]
