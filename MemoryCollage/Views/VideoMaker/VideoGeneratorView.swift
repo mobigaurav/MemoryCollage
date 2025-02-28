@@ -39,6 +39,7 @@ struct VideoGeneratorView: View {
                        .edgesIgnoringSafeArea(.all)
             
             VStack(spacing: 20) {
+                
                 Text("Video Generator")
                                    .font(.largeTitle)
                                    .fontWeight(.bold)

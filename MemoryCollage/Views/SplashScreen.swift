@@ -18,6 +18,7 @@ struct SplashScreen: View {
         if isActive {
             if showOnboarding {
                 OnboardingView(isOnboardingComplete: $isActive)
+                //OnboardingView()
             } else {
                 MainAppView()
             }

@@ -2,16 +2,32 @@
 //  MemoryCollageTests.swift
 //  MemoryCollageTests
 //
-//  Created by Gaurav Kumar on 12/31/24.
+//  Created by Gaurav Kumar on 2/22/25.
 //
 
-import Testing
+import XCTest
 @testable import MemoryCollage
 
-struct MemoryCollageTests {
-
-    @Test func example() async throws {
-        // Write your test here and use APIs like `#expect(...)` to check expected conditions.
+final class MemoryCollageTests: XCTestCase {
+    
+    func testExample() {
+        XCTAssertTrue(true, "Basic test should pass")
     }
-
+    
+    func testAddPhotoToCollage() {
+            var selectedImages: [UIImage] = []
+            let newImage = UIImage(systemName: "photo")!
+            // Simulate adding a photo
+            selectedImages.append(newImage)
+            // Verify the count increased
+            XCTAssertEqual(selectedImages.count, 1, "Image should be added to the collage")
+        }
+    
+    func testPaywallShowsForFreeUsers() {
+        let iapManager = IAPManager.shared
+        // Simulate a free user
+        UserDefaults.standard.set(false, forKey: "hasPurchasedPremium")
+        let shouldShowPaywall = !iapManager.isPurchased()
+        XCTAssertTrue(shouldShowPaywall, "Paywall should be displayed for free users")
+    }
 }

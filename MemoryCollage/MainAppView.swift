@@ -8,19 +8,17 @@
 import SwiftUI
 
 struct MainAppView:View {
-    @Environment(\.horizontalSizeClass) var horizontalSizeClass
-    
     var body:some View {
             TabView {
                 CollageTabView()
-                            .tabItem {
-                                Label("Collage", systemImage: "photo")
-                            }
+                    .tabItem {
+                        Label("Collage", systemImage: "photo")
+                    }
 
-                            VideoTabView()
-                                .tabItem {
-                                    Label("Videos", systemImage: "film")
-                                }
+                VideoTabView()
+                    .tabItem {
+                        Label("Videos", systemImage: "film")
+                    }
             }
             .onAppear {
                 let tabBarAppearance = UITabBarAppearance()
@@ -30,20 +28,5 @@ struct MainAppView:View {
                 UITabBar.appearance().scrollEdgeAppearance = tabBarAppearance
             }
         }
-    
-       
 }
 
-struct SidebarView: View {
-    var body: some View {
-           List {
-               NavigationLink(destination: CollageTabView()) {
-                   Label("Collage", systemImage: "photo")
-               }
-               NavigationLink(destination: VideoTabView()) {
-                   Label("Videos", systemImage: "film")
-               }
-           }
-           .navigationTitle("MemoryCollage")
-       }
-}

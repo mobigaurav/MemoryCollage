@@ -7,21 +7,12 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		845A384BA853EE3877DB8CF5 /* Pods_MemoryCollageTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D8073DEF9AEB10C6392DD2B4 /* Pods_MemoryCollageTests.framework */; };
+		32FA51FBBCDF9E23075FA90D /* Pods_MemoryCollage.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9DE903EB1EAE401C6B9D3043 /* Pods_MemoryCollage.framework */; };
 		9E074B4E2D49D8630050C7CF /* .gitignore in Resources */ = {isa = PBXBuildFile; fileRef = 9E074B4D2D49D85B0050C7CF /* .gitignore */; };
-		D5DD11B8973072EF391010FE /* Pods_MemoryCollage.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 94479AE7D7C479B55C59803B /* Pods_MemoryCollage.framework */; };
-		F98F9A457BA55081EEFA24E4 /* Pods_MemoryCollage_MemoryCollageUITests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6BA61B70A7F95EACD24C2703 /* Pods_MemoryCollage_MemoryCollageUITests.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
-		9E44B47D2D24D27A00BC887C /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 9E44B4642D24D27900BC887C /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 9E44B46B2D24D27900BC887C;
-			remoteInfo = MemoryCollage;
-		};
-		9E44B4872D24D27A00BC887C /* PBXContainerItemProxy */ = {
+		9E8DFF0E2D6A5EB8002A68A7 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 9E44B4642D24D27900BC887C /* Project object */;
 			proxyType = 1;
@@ -44,20 +35,14 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		1EB0A831F178433D5F70A4DA /* Pods-MemoryCollage-MemoryCollageUITests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-MemoryCollage-MemoryCollageUITests.debug.xcconfig"; path = "Target Support Files/Pods-MemoryCollage-MemoryCollageUITests/Pods-MemoryCollage-MemoryCollageUITests.debug.xcconfig"; sourceTree = "<group>"; };
-		23986A97CC738697DAB97C03 /* Pods-MemoryCollage.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-MemoryCollage.debug.xcconfig"; path = "Target Support Files/Pods-MemoryCollage/Pods-MemoryCollage.debug.xcconfig"; sourceTree = "<group>"; };
-		5D2A8970024C803139F9B91E /* Pods-MemoryCollageTests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-MemoryCollageTests.debug.xcconfig"; path = "Target Support Files/Pods-MemoryCollageTests/Pods-MemoryCollageTests.debug.xcconfig"; sourceTree = "<group>"; };
-		62ADB49B834A011343A78C86 /* Pods-MemoryCollage.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-MemoryCollage.release.xcconfig"; path = "Target Support Files/Pods-MemoryCollage/Pods-MemoryCollage.release.xcconfig"; sourceTree = "<group>"; };
-		6BA61B70A7F95EACD24C2703 /* Pods_MemoryCollage_MemoryCollageUITests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_MemoryCollage_MemoryCollageUITests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		90772034E43E8FFA298BB61E /* Pods-MemoryCollageTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-MemoryCollageTests.release.xcconfig"; path = "Target Support Files/Pods-MemoryCollageTests/Pods-MemoryCollageTests.release.xcconfig"; sourceTree = "<group>"; };
-		94479AE7D7C479B55C59803B /* Pods_MemoryCollage.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_MemoryCollage.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		6F1DCA6609379CA33CA20DB4 /* Pods-MemoryCollage.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-MemoryCollage.debug.xcconfig"; path = "Target Support Files/Pods-MemoryCollage/Pods-MemoryCollage.debug.xcconfig"; sourceTree = "<group>"; };
+		9DE903EB1EAE401C6B9D3043 /* Pods_MemoryCollage.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_MemoryCollage.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		9E074B4D2D49D85B0050C7CF /* .gitignore */ = {isa = PBXFileReference; lastKnownFileType = text; path = .gitignore; sourceTree = "<group>"; };
 		9E44B46C2D24D27900BC887C /* MemoryCollage.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MemoryCollage.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		9E44B47C2D24D27A00BC887C /* MemoryCollageTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MemoryCollageTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		9E44B4862D24D27A00BC887C /* MemoryCollageUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MemoryCollageUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		9E8DFDB02D6A52EE002A68A7 /* SwiftVideoGenerator.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = SwiftVideoGenerator.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		9E8DFF0A2D6A5EB8002A68A7 /* MemoryCollageTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MemoryCollageTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		9ED379DA2D441B760076F2A9 /* SwiftVideoGenerator.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = SwiftVideoGenerator.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		B8FFA44C3C5A1075CED4D216 /* Pods-MemoryCollage-MemoryCollageUITests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-MemoryCollage-MemoryCollageUITests.release.xcconfig"; path = "Target Support Files/Pods-MemoryCollage-MemoryCollageUITests/Pods-MemoryCollage-MemoryCollageUITests.release.xcconfig"; sourceTree = "<group>"; };
-		D8073DEF9AEB10C6392DD2B4 /* Pods_MemoryCollageTests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_MemoryCollageTests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		E451E5BB8E229F2D175DA5BF /* Pods-MemoryCollage.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-MemoryCollage.release.xcconfig"; path = "Target Support Files/Pods-MemoryCollage/Pods-MemoryCollage.release.xcconfig"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -79,14 +64,9 @@
 			path = MemoryCollage;
 			sourceTree = "<group>";
 		};
-		9E44B47F2D24D27A00BC887C /* MemoryCollageTests */ = {
+		9E8DFF0B2D6A5EB8002A68A7 /* MemoryCollageTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = MemoryCollageTests;
-			sourceTree = "<group>";
-		};
-		9E44B4892D24D27A00BC887C /* MemoryCollageUITests */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = MemoryCollageUITests;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -96,23 +76,14 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D5DD11B8973072EF391010FE /* Pods_MemoryCollage.framework in Frameworks */,
+				32FA51FBBCDF9E23075FA90D /* Pods_MemoryCollage.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		9E44B4792D24D27A00BC887C /* Frameworks */ = {
+		9E8DFF072D6A5EB8002A68A7 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				845A384BA853EE3877DB8CF5 /* Pods_MemoryCollageTests.framework in Frameworks */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		9E44B4832D24D27A00BC887C /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				F98F9A457BA55081EEFA24E4 /* Pods_MemoryCollage_MemoryCollageUITests.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -124,8 +95,7 @@
 			children = (
 				9E074B4D2D49D85B0050C7CF /* .gitignore */,
 				9E44B46E2D24D27900BC887C /* MemoryCollage */,
-				9E44B47F2D24D27A00BC887C /* MemoryCollageTests */,
-				9E44B4892D24D27A00BC887C /* MemoryCollageUITests */,
+				9E8DFF0B2D6A5EB8002A68A7 /* MemoryCollageTests */,
 				9E44B46D2D24D27900BC887C /* Products */,
 				A39DA3BA5A672001647E12AD /* Frameworks */,
 				AE776EE4B9245DAE75C09C52 /* Pods */,
@@ -136,8 +106,7 @@
 			isa = PBXGroup;
 			children = (
 				9E44B46C2D24D27900BC887C /* MemoryCollage.app */,
-				9E44B47C2D24D27A00BC887C /* MemoryCollageTests.xctest */,
-				9E44B4862D24D27A00BC887C /* MemoryCollageUITests.xctest */,
+				9E8DFF0A2D6A5EB8002A68A7 /* MemoryCollageTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -145,10 +114,9 @@
 		A39DA3BA5A672001647E12AD /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				9E8DFDB02D6A52EE002A68A7 /* SwiftVideoGenerator.framework */,
 				9ED379DA2D441B760076F2A9 /* SwiftVideoGenerator.framework */,
-				94479AE7D7C479B55C59803B /* Pods_MemoryCollage.framework */,
-				6BA61B70A7F95EACD24C2703 /* Pods_MemoryCollage_MemoryCollageUITests.framework */,
-				D8073DEF9AEB10C6392DD2B4 /* Pods_MemoryCollageTests.framework */,
+				9DE903EB1EAE401C6B9D3043 /* Pods_MemoryCollage.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -156,12 +124,8 @@
 		AE776EE4B9245DAE75C09C52 /* Pods */ = {
 			isa = PBXGroup;
 			children = (
-				23986A97CC738697DAB97C03 /* Pods-MemoryCollage.debug.xcconfig */,
-				62ADB49B834A011343A78C86 /* Pods-MemoryCollage.release.xcconfig */,
-				1EB0A831F178433D5F70A4DA /* Pods-MemoryCollage-MemoryCollageUITests.debug.xcconfig */,
-				B8FFA44C3C5A1075CED4D216 /* Pods-MemoryCollage-MemoryCollageUITests.release.xcconfig */,
-				5D2A8970024C803139F9B91E /* Pods-MemoryCollageTests.debug.xcconfig */,
-				90772034E43E8FFA298BB61E /* Pods-MemoryCollageTests.release.xcconfig */,
+				6F1DCA6609379CA33CA20DB4 /* Pods-MemoryCollage.debug.xcconfig */,
+				E451E5BB8E229F2D175DA5BF /* Pods-MemoryCollage.release.xcconfig */,
 			);
 			path = Pods;
 			sourceTree = "<group>";
@@ -173,12 +137,12 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 9E44B4902D24D27A00BC887C /* Build configuration list for PBXNativeTarget "MemoryCollage" */;
 			buildPhases = (
-				86FF5404C27D110899E832C4 /* [CP] Check Pods Manifest.lock */,
+				920CBFAD20E42829B64E7E4A /* [CP] Check Pods Manifest.lock */,
 				9E44B4682D24D27900BC887C /* Sources */,
 				9E44B4692D24D27900BC887C /* Frameworks */,
 				9E44B46A2D24D27900BC887C /* Resources */,
-				BD44ABD24492E4330A5E7087 /* [CP] Embed Pods Frameworks */,
 				9ED379DD2D441B760076F2A9 /* Embed Frameworks */,
+				DBEA1B0D132F3994E8EA5CB0 /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
@@ -192,50 +156,28 @@
 			productReference = 9E44B46C2D24D27900BC887C /* MemoryCollage.app */;
 			productType = "com.apple.product-type.application";
 		};
-		9E44B47B2D24D27A00BC887C /* MemoryCollageTests */ = {
+		9E8DFF092D6A5EB8002A68A7 /* MemoryCollageTests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 9E44B4932D24D27A00BC887C /* Build configuration list for PBXNativeTarget "MemoryCollageTests" */;
+			buildConfigurationList = 9E8DFF102D6A5EB8002A68A7 /* Build configuration list for PBXNativeTarget "MemoryCollageTests" */;
 			buildPhases = (
-				6EC25D5D4714F3B6E42A6815 /* [CP] Check Pods Manifest.lock */,
-				9E44B4782D24D27A00BC887C /* Sources */,
-				9E44B4792D24D27A00BC887C /* Frameworks */,
-				9E44B47A2D24D27A00BC887C /* Resources */,
+				9E8DFF062D6A5EB8002A68A7 /* Sources */,
+				9E8DFF072D6A5EB8002A68A7 /* Frameworks */,
+				9E8DFF082D6A5EB8002A68A7 /* Resources */,
 			);
 			buildRules = (
 			);
 			dependencies = (
-				9E44B47E2D24D27A00BC887C /* PBXTargetDependency */,
+				9E8DFF0F2D6A5EB8002A68A7 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
-				9E44B47F2D24D27A00BC887C /* MemoryCollageTests */,
+				9E8DFF0B2D6A5EB8002A68A7 /* MemoryCollageTests */,
 			);
 			name = MemoryCollageTests;
+			packageProductDependencies = (
+			);
 			productName = MemoryCollageTests;
-			productReference = 9E44B47C2D24D27A00BC887C /* MemoryCollageTests.xctest */;
+			productReference = 9E8DFF0A2D6A5EB8002A68A7 /* MemoryCollageTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
-		};
-		9E44B4852D24D27A00BC887C /* MemoryCollageUITests */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 9E44B4962D24D27A00BC887C /* Build configuration list for PBXNativeTarget "MemoryCollageUITests" */;
-			buildPhases = (
-				1CAE455CCB572F27A7086F2E /* [CP] Check Pods Manifest.lock */,
-				9E44B4822D24D27A00BC887C /* Sources */,
-				9E44B4832D24D27A00BC887C /* Frameworks */,
-				9E44B4842D24D27A00BC887C /* Resources */,
-				0891A8119AECA912880CAA4A /* [CP] Embed Pods Frameworks */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-				9E44B4882D24D27A00BC887C /* PBXTargetDependency */,
-			);
-			fileSystemSynchronizedGroups = (
-				9E44B4892D24D27A00BC887C /* MemoryCollageUITests */,
-			);
-			name = MemoryCollageUITests;
-			productName = MemoryCollageUITests;
-			productReference = 9E44B4862D24D27A00BC887C /* MemoryCollageUITests.xctest */;
-			productType = "com.apple.product-type.bundle.ui-testing";
 		};
 /* End PBXNativeTarget section */
 
@@ -250,11 +192,7 @@
 					9E44B46B2D24D27900BC887C = {
 						CreatedOnToolsVersion = 16.2;
 					};
-					9E44B47B2D24D27A00BC887C = {
-						CreatedOnToolsVersion = 16.2;
-						TestTargetID = 9E44B46B2D24D27900BC887C;
-					};
-					9E44B4852D24D27A00BC887C = {
+					9E8DFF092D6A5EB8002A68A7 = {
 						CreatedOnToolsVersion = 16.2;
 						TestTargetID = 9E44B46B2D24D27900BC887C;
 					};
@@ -275,8 +213,7 @@
 			projectRoot = "";
 			targets = (
 				9E44B46B2D24D27900BC887C /* MemoryCollage */,
-				9E44B47B2D24D27A00BC887C /* MemoryCollageTests */,
-				9E44B4852D24D27A00BC887C /* MemoryCollageUITests */,
+				9E8DFF092D6A5EB8002A68A7 /* MemoryCollageTests */,
 			);
 		};
 /* End PBXProject section */
@@ -290,14 +227,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		9E44B47A2D24D27A00BC887C /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		9E44B4842D24D27A00BC887C /* Resources */ = {
+		9E8DFF082D6A5EB8002A68A7 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -307,68 +237,7 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
-		0891A8119AECA912880CAA4A /* [CP] Embed Pods Frameworks */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-MemoryCollage-MemoryCollageUITests/Pods-MemoryCollage-MemoryCollageUITests-frameworks-${CONFIGURATION}-input-files.xcfilelist",
-			);
-			name = "[CP] Embed Pods Frameworks";
-			outputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-MemoryCollage-MemoryCollageUITests/Pods-MemoryCollage-MemoryCollageUITests-frameworks-${CONFIGURATION}-output-files.xcfilelist",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-MemoryCollage-MemoryCollageUITests/Pods-MemoryCollage-MemoryCollageUITests-frameworks.sh\"\n";
-			showEnvVarsInLog = 0;
-		};
-		1CAE455CCB572F27A7086F2E /* [CP] Check Pods Manifest.lock */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-			);
-			inputPaths = (
-				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
-				"${PODS_ROOT}/Manifest.lock",
-			);
-			name = "[CP] Check Pods Manifest.lock";
-			outputFileListPaths = (
-			);
-			outputPaths = (
-				"$(DERIVED_FILE_DIR)/Pods-MemoryCollage-MemoryCollageUITests-checkManifestLockResult.txt",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
-			showEnvVarsInLog = 0;
-		};
-		6EC25D5D4714F3B6E42A6815 /* [CP] Check Pods Manifest.lock */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-			);
-			inputPaths = (
-				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
-				"${PODS_ROOT}/Manifest.lock",
-			);
-			name = "[CP] Check Pods Manifest.lock";
-			outputFileListPaths = (
-			);
-			outputPaths = (
-				"$(DERIVED_FILE_DIR)/Pods-MemoryCollageTests-checkManifestLockResult.txt",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
-			showEnvVarsInLog = 0;
-		};
-		86FF5404C27D110899E832C4 /* [CP] Check Pods Manifest.lock */ = {
+		920CBFAD20E42829B64E7E4A /* [CP] Check Pods Manifest.lock */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -390,7 +259,7 @@
 			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
 			showEnvVarsInLog = 0;
 		};
-		BD44ABD24492E4330A5E7087 /* [CP] Embed Pods Frameworks */ = {
+		DBEA1B0D132F3994E8EA5CB0 /* [CP] Embed Pods Frameworks */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -417,14 +286,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		9E44B4782D24D27A00BC887C /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		9E44B4822D24D27A00BC887C /* Sources */ = {
+		9E8DFF062D6A5EB8002A68A7 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -434,15 +296,10 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
-		9E44B47E2D24D27A00BC887C /* PBXTargetDependency */ = {
+		9E8DFF0F2D6A5EB8002A68A7 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 9E44B46B2D24D27900BC887C /* MemoryCollage */;
-			targetProxy = 9E44B47D2D24D27A00BC887C /* PBXContainerItemProxy */;
-		};
-		9E44B4882D24D27A00BC887C /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 9E44B46B2D24D27900BC887C /* MemoryCollage */;
-			targetProxy = 9E44B4872D24D27A00BC887C /* PBXContainerItemProxy */;
+			targetProxy = 9E8DFF0E2D6A5EB8002A68A7 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -568,13 +425,12 @@
 		};
 		9E44B4912D24D27A00BC887C /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 23986A97CC738697DAB97C03 /* Pods-MemoryCollage.debug.xcconfig */;
+			baseConfigurationReference = 6F1DCA6609379CA33CA20DB4 /* Pods-MemoryCollage.debug.xcconfig */;
 			buildSettings = {
-				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = NO;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_ASSET_PATHS = "\"MemoryCollage/Preview Content\"";
 				DEVELOPMENT_TEAM = C6E94YDVFW;
 				ENABLE_PREVIEWS = YES;
@@ -600,7 +456,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.0;
+				MARKETING_VERSION = 1.0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.playingview.mobigaurav.MemoryCollage;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -612,13 +468,12 @@
 		};
 		9E44B4922D24D27A00BC887C /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 62ADB49B834A011343A78C86 /* Pods-MemoryCollage.release.xcconfig */;
+			baseConfigurationReference = E451E5BB8E229F2D175DA5BF /* Pods-MemoryCollage.release.xcconfig */;
 			buildSettings = {
-				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = NO;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_ASSET_PATHS = "\"MemoryCollage/Preview Content\"";
 				DEVELOPMENT_TEAM = C6E94YDVFW;
 				ENABLE_PREVIEWS = YES;
@@ -644,7 +499,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.0;
+				MARKETING_VERSION = 1.0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.playingview.mobigaurav.MemoryCollage;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -654,16 +509,21 @@
 			};
 			name = Release;
 		};
-		9E44B4942D24D27A00BC887C /* Debug */ = {
+		9E8DFF112D6A5EB8002A68A7 /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 5D2A8970024C803139F9B91E /* Pods-MemoryCollageTests.debug.xcconfig */;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = C6E94YDVFW;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(SDKROOT)/Developer/Library/Frameworks",
+					"$(SDKROOT)/Developer/Library/Frameworks",
+					"$(SDKROOT)/Developer/Library/Frameworks",
+					"$(SDKROOT)/Developer/Library/Frameworks",
+				);
 				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.6;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.playingview.mobigaurav.MemoryCollageTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -674,16 +534,21 @@
 			};
 			name = Debug;
 		};
-		9E44B4952D24D27A00BC887C /* Release */ = {
+		9E8DFF122D6A5EB8002A68A7 /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 90772034E43E8FFA298BB61E /* Pods-MemoryCollageTests.release.xcconfig */;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = C6E94YDVFW;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(SDKROOT)/Developer/Library/Frameworks",
+					"$(SDKROOT)/Developer/Library/Frameworks",
+					"$(SDKROOT)/Developer/Library/Frameworks",
+					"$(SDKROOT)/Developer/Library/Frameworks",
+				);
 				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.6;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.playingview.mobigaurav.MemoryCollageTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -691,42 +556,6 @@
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/MemoryCollage.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/MemoryCollage";
-			};
-			name = Release;
-		};
-		9E44B4972D24D27A00BC887C /* Debug */ = {
-			isa = XCBuildConfiguration;
-			baseConfigurationReference = 1EB0A831F178433D5F70A4DA /* Pods-MemoryCollage-MemoryCollageUITests.debug.xcconfig */;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = C6E94YDVFW;
-				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.playingview.mobigaurav.MemoryCollageUITests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_TARGET_NAME = MemoryCollage;
-			};
-			name = Debug;
-		};
-		9E44B4982D24D27A00BC887C /* Release */ = {
-			isa = XCBuildConfiguration;
-			baseConfigurationReference = B8FFA44C3C5A1075CED4D216 /* Pods-MemoryCollage-MemoryCollageUITests.release.xcconfig */;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = C6E94YDVFW;
-				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.playingview.mobigaurav.MemoryCollageUITests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_TARGET_NAME = MemoryCollage;
 			};
 			name = Release;
 		};
@@ -751,20 +580,11 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		9E44B4932D24D27A00BC887C /* Build configuration list for PBXNativeTarget "MemoryCollageTests" */ = {
+		9E8DFF102D6A5EB8002A68A7 /* Build configuration list for PBXNativeTarget "MemoryCollageTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				9E44B4942D24D27A00BC887C /* Debug */,
-				9E44B4952D24D27A00BC887C /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		9E44B4962D24D27A00BC887C /* Build configuration list for PBXNativeTarget "MemoryCollageUITests" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				9E44B4972D24D27A00BC887C /* Debug */,
-				9E44B4982D24D27A00BC887C /* Release */,
+				9E8DFF112D6A5EB8002A68A7 /* Debug */,
+				9E8DFF122D6A5EB8002A68A7 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

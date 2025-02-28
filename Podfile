@@ -7,15 +7,18 @@ target 'MemoryCollage' do
   use_frameworks!
   pod 'SwiftVideoGenerator'
 
-  # Pods for MemoryCollage
-
-  target 'MemoryCollageTests' do
-    inherit! :search_paths
-    # Pods for testing
-  end
-
-  target 'MemoryCollageUITests' do
-    # Pods for testing
-  end
+#  # Pods for MemoryCollage
+#
+#  target 'MemoryCollageTests' do
+#    inherit! :search_paths
+#    # Pods for testing
+#    pod 'SwiftVideoGenerator'
+#  end
+#
+#  target 'MemoryCollageUITests' do
+#    inherit! :search_paths
+#    # Pods for testing
+#    pod 'SwiftVideoGenerator'
+#  end
 
 end

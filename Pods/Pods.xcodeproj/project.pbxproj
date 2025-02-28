@@ -9,30 +9,17 @@
 /* Begin PBXBuildFile section */
 		1A9EC2A775765244DB08C567F24D8330 /* VideoGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3CD5D129BD7A1C9FC90D45889D537BD /* VideoGenerator.swift */; };
 		1C0114A79E5B2CBC08F13D198A6672F4 /* ImageExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69CDBE96604912975C9AF95F1C2ACDFB /* ImageExtension.swift */; };
-		1CCF9EBE9C0495C0F4A717AABD1AEF15 /* Pods-MemoryCollage-MemoryCollageUITests-dummy.m in Sources */ = {isa = PBXBuildFile; fileRef = D67093F914F26C2104F1A6FF4692A597 /* Pods-MemoryCollage-MemoryCollageUITests-dummy.m */; };
 		1DDF1576A9E922523C6A6B88E984D218 /* VideoGeneratorError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F50A2986EEC90A30CE2FBFAD1C3AD3F /* VideoGeneratorError.swift */; };
-		3626FC197F2371CA990E875F15B75E9F /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 384DDA2CB25005BD6479B5987C619DD4 /* Foundation.framework */; };
-		42BDF2590041DE2715A25F66F56872AE /* Pods-MemoryCollage-dummy.m in Sources */ = {isa = PBXBuildFile; fileRef = 9484BDFDAFBE51482C4DE5D0AF3189D8 /* Pods-MemoryCollage-dummy.m */; };
-		5D0D572C468A6FB5123436D4049944C5 /* Pods-MemoryCollageTests-dummy.m in Sources */ = {isa = PBXBuildFile; fileRef = 19B24D370DD94FE77EABD5A9898D8BAC /* Pods-MemoryCollageTests-dummy.m */; };
+		42BDF2590041DE2715A25F66F56872AE /* Pods-MemoryCollage-dummy.m in Sources */ = {isa = PBXBuildFile; fileRef = F36AF17C1867BAC863BD35DA6B037D10 /* Pods-MemoryCollage-dummy.m */; };
 		629356673B10F487240DBFAECBEA4587 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 384DDA2CB25005BD6479B5987C619DD4 /* Foundation.framework */; };
 		9743BE8598DAB33BE7BF5C7A4B7DBF8F /* SwiftVideoGenerator-umbrella.h in Headers */ = {isa = PBXBuildFile; fileRef = 15C8ADAF1F7C16D56F60467406D339D2 /* SwiftVideoGenerator-umbrella.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		A10BD42D905F82EB65258F43C801A089 /* AVAssetExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6ADC82AC3564A9D253E6BF9F380CD41F /* AVAssetExtension.swift */; };
-		B8ED905F11188E1FAB50989F5ED12392 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 384DDA2CB25005BD6479B5987C619DD4 /* Foundation.framework */; };
-		BBDE86F39B8E697DFCE6BBA7909CFB2C /* Pods-MemoryCollage-umbrella.h in Headers */ = {isa = PBXBuildFile; fileRef = D896C803DDAD4AA5B3D8C081C0E959A2 /* Pods-MemoryCollage-umbrella.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		BE6783C807707BAE4EB701856F0AC8CC /* Pods-MemoryCollage-MemoryCollageUITests-umbrella.h in Headers */ = {isa = PBXBuildFile; fileRef = EA590C1D0EB517E3A64B863F4B53ED3A /* Pods-MemoryCollage-MemoryCollageUITests-umbrella.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		BBDE86F39B8E697DFCE6BBA7909CFB2C /* Pods-MemoryCollage-umbrella.h in Headers */ = {isa = PBXBuildFile; fileRef = 8B2439D7B2E6E3B6F8A34C30C94FE633 /* Pods-MemoryCollage-umbrella.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		E417D51ED7A2DCEC424219DDD2F81C22 /* SwiftVideoGenerator-dummy.m in Sources */ = {isa = PBXBuildFile; fileRef = 156C4137DBFD540DC0B1DD267EF7E439 /* SwiftVideoGenerator-dummy.m */; };
 		F9454DC46971A9BB48E539D5BD551A3F /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 384DDA2CB25005BD6479B5987C619DD4 /* Foundation.framework */; };
-		FFC7111505A54B6DA0117F43578D8043 /* Pods-MemoryCollageTests-umbrella.h in Headers */ = {isa = PBXBuildFile; fileRef = DCDAC50CC8E4528FBCEC650C042EFD90 /* Pods-MemoryCollageTests-umbrella.h */; settings = {ATTRIBUTES = (Public, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
-		216F4554B365AB3D03CA2AFE5C5ABA90 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = BFDFE7DC352907FC980B868725387E98 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 877B00E6DE7D4DC1416DB002A9C00848;
-			remoteInfo = SwiftVideoGenerator;
-		};
 		57FC913CBC1C9579849ECF6C84425A64 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = BFDFE7DC352907FC980B868725387E98 /* Project object */;
@@ -40,58 +27,32 @@
 			remoteGlobalIDString = 877B00E6DE7D4DC1416DB002A9C00848;
 			remoteInfo = SwiftVideoGenerator;
 		};
-		652E037FAA3DA3D8F39D2A9AD7EC3B79 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = BFDFE7DC352907FC980B868725387E98 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 8769B2DEADA145584F5FFA2FCF3D5278;
-			remoteInfo = "Pods-MemoryCollage";
-		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		1184DA1E1B551A0E72C6057CEC939CE0 /* Pods-MemoryCollageTests-acknowledgements.markdown */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text; path = "Pods-MemoryCollageTests-acknowledgements.markdown"; sourceTree = "<group>"; };
 		156C4137DBFD540DC0B1DD267EF7E439 /* SwiftVideoGenerator-dummy.m */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.objc; path = "SwiftVideoGenerator-dummy.m"; sourceTree = "<group>"; };
 		15C8ADAF1F7C16D56F60467406D339D2 /* SwiftVideoGenerator-umbrella.h */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.h; path = "SwiftVideoGenerator-umbrella.h"; sourceTree = "<group>"; };
 		18A43E897C9C7D86F05C7DF2A20224F3 /* SwiftVideoGenerator.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; path = SwiftVideoGenerator.debug.xcconfig; sourceTree = "<group>"; };
-		19B24D370DD94FE77EABD5A9898D8BAC /* Pods-MemoryCollageTests-dummy.m */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.objc; path = "Pods-MemoryCollageTests-dummy.m"; sourceTree = "<group>"; };
+		1D88D06E9952EA1354931973C1003A45 /* Pods-MemoryCollage-frameworks.sh */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.script.sh; path = "Pods-MemoryCollage-frameworks.sh"; sourceTree = "<group>"; };
 		1EA9C02036521BE77387BEB2EEB8AA08 /* SwiftVideoGenerator-Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = "SwiftVideoGenerator-Info.plist"; sourceTree = "<group>"; };
-		26A493E837697E72AD81F165890EC11B /* Pods-MemoryCollage-MemoryCollageUITests-acknowledgements.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = "Pods-MemoryCollage-MemoryCollageUITests-acknowledgements.plist"; sourceTree = "<group>"; };
 		384DDA2CB25005BD6479B5987C619DD4 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
-		40C7513C0A2A2AB9B51C83FD286B7970 /* Pods-MemoryCollage-MemoryCollageUITests-acknowledgements.markdown */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text; path = "Pods-MemoryCollage-MemoryCollageUITests-acknowledgements.markdown"; sourceTree = "<group>"; };
-		52B50D8C5B9812AC671991BB09CA420C /* Pods-MemoryCollageTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; path = "Pods-MemoryCollageTests.release.xcconfig"; sourceTree = "<group>"; };
-		55914572168790FE44F190B457477106 /* Pods-MemoryCollage-acknowledgements.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = "Pods-MemoryCollage-acknowledgements.plist"; sourceTree = "<group>"; };
+		57F765FFE9C6E0ED628424C0CE942CBE /* Pods-MemoryCollage.modulemap */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.module; path = "Pods-MemoryCollage.modulemap"; sourceTree = "<group>"; };
+		58495DC26F16CD195E569E838DF6CFB6 /* Pods-MemoryCollage-Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = "Pods-MemoryCollage-Info.plist"; sourceTree = "<group>"; };
 		59036D9DF8516C51E1F6C0AF6F40EFB0 /* SwiftVideoGenerator */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; name = SwiftVideoGenerator; path = SwiftVideoGenerator.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		5AD13B4E847AFCF1388DA7B86B45859D /* Pods-MemoryCollageTests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; path = "Pods-MemoryCollageTests.debug.xcconfig"; sourceTree = "<group>"; };
 		5F50A2986EEC90A30CE2FBFAD1C3AD3F /* VideoGeneratorError.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = VideoGeneratorError.swift; path = Sources/SwiftVideoGenerator/Classes/Error/VideoGeneratorError.swift; sourceTree = "<group>"; };
-		61DBD5A35C521FBF37B7121DC455E2F4 /* Pods-MemoryCollage-frameworks.sh */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.script.sh; path = "Pods-MemoryCollage-frameworks.sh"; sourceTree = "<group>"; };
+		68D290F869D5DA278A95DE1E7544B4E2 /* Pods-MemoryCollage.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; path = "Pods-MemoryCollage.debug.xcconfig"; sourceTree = "<group>"; };
 		69CDBE96604912975C9AF95F1C2ACDFB /* ImageExtension.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ImageExtension.swift; path = Sources/SwiftVideoGenerator/Classes/Extensions/ImageExtension.swift; sourceTree = "<group>"; };
 		6ADC82AC3564A9D253E6BF9F380CD41F /* AVAssetExtension.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AVAssetExtension.swift; path = Sources/SwiftVideoGenerator/Classes/Extensions/AVAssetExtension.swift; sourceTree = "<group>"; };
-		74C2DEF5EEEA4BF7341672BB3B3A1734 /* Pods-MemoryCollageTests */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; name = "Pods-MemoryCollageTests"; path = Pods_MemoryCollageTests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		7213AC0C3E8B788DC7120EBFE6ABBBD2 /* Pods-MemoryCollage-acknowledgements.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = "Pods-MemoryCollage-acknowledgements.plist"; sourceTree = "<group>"; };
 		7E21F72B087F77279907EC4A4E0635EE /* SwiftVideoGenerator-prefix.pch */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.h; path = "SwiftVideoGenerator-prefix.pch"; sourceTree = "<group>"; };
-		8AB8B328CC1FD13DFE8DF17A8EDC79D7 /* Pods-MemoryCollage.modulemap */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.module; path = "Pods-MemoryCollage.modulemap"; sourceTree = "<group>"; };
-		8B50015F4048299672170BA5899AF952 /* Pods-MemoryCollage-MemoryCollageUITests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; path = "Pods-MemoryCollage-MemoryCollageUITests.release.xcconfig"; sourceTree = "<group>"; };
+		8B2439D7B2E6E3B6F8A34C30C94FE633 /* Pods-MemoryCollage-umbrella.h */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.h; path = "Pods-MemoryCollage-umbrella.h"; sourceTree = "<group>"; };
 		8C0E54903B037113598A27A31714D286 /* SwiftVideoGenerator.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; path = SwiftVideoGenerator.release.xcconfig; sourceTree = "<group>"; };
-		9078F8AFC0428FE0E571444A03A24600 /* Pods-MemoryCollage.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; path = "Pods-MemoryCollage.debug.xcconfig"; sourceTree = "<group>"; };
-		932AD3C7258E868DBFE1754B97C686C4 /* Pods-MemoryCollage-Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = "Pods-MemoryCollage-Info.plist"; sourceTree = "<group>"; };
-		9484BDFDAFBE51482C4DE5D0AF3189D8 /* Pods-MemoryCollage-dummy.m */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.objc; path = "Pods-MemoryCollage-dummy.m"; sourceTree = "<group>"; };
 		9D940727FF8FB9C785EB98E56350EF41 /* Podfile */ = {isa = PBXFileReference; explicitFileType = text.script.ruby; includeInIndex = 1; indentWidth = 2; lastKnownFileType = text; name = Podfile; path = ../Podfile; sourceTree = SOURCE_ROOT; tabWidth = 2; xcLanguageSpecificationIdentifier = xcode.lang.ruby; };
 		A0326145CBBB36F4427CCEBB278FE09C /* SwiftVideoGenerator.modulemap */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.module; path = SwiftVideoGenerator.modulemap; sourceTree = "<group>"; };
-		AA7AFAC87D31CAF795A350F86425408A /* Pods-MemoryCollageTests-acknowledgements.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = "Pods-MemoryCollageTests-acknowledgements.plist"; sourceTree = "<group>"; };
-		B3F0C5C4F383632969DEAD717E525BB3 /* Pods-MemoryCollage.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; path = "Pods-MemoryCollage.release.xcconfig"; sourceTree = "<group>"; };
-		B9428DF8C3B5443E34C3BA7AEECC8735 /* Pods-MemoryCollage-MemoryCollageUITests-Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = "Pods-MemoryCollage-MemoryCollageUITests-Info.plist"; sourceTree = "<group>"; };
 		C3CD5D129BD7A1C9FC90D45889D537BD /* VideoGenerator.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = VideoGenerator.swift; path = Sources/SwiftVideoGenerator/Classes/VideoGenerator.swift; sourceTree = "<group>"; };
-		C48F3C115DE1AE903741A1E3545225D1 /* Pods-MemoryCollage-acknowledgements.markdown */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text; path = "Pods-MemoryCollage-acknowledgements.markdown"; sourceTree = "<group>"; };
-		C7AF523143C0AFD5657F248D90D2F4E4 /* Pods-MemoryCollageTests-Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = "Pods-MemoryCollageTests-Info.plist"; sourceTree = "<group>"; };
-		CB1B319A2A1CC9453EEED87110CB0A54 /* Pods-MemoryCollageTests.modulemap */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.module; path = "Pods-MemoryCollageTests.modulemap"; sourceTree = "<group>"; };
-		D40B28C446ABA7098CBEE00BB0C9615C /* Pods-MemoryCollage-MemoryCollageUITests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; path = "Pods-MemoryCollage-MemoryCollageUITests.debug.xcconfig"; sourceTree = "<group>"; };
-		D67093F914F26C2104F1A6FF4692A597 /* Pods-MemoryCollage-MemoryCollageUITests-dummy.m */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.objc; path = "Pods-MemoryCollage-MemoryCollageUITests-dummy.m"; sourceTree = "<group>"; };
-		D896C803DDAD4AA5B3D8C081C0E959A2 /* Pods-MemoryCollage-umbrella.h */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.h; path = "Pods-MemoryCollage-umbrella.h"; sourceTree = "<group>"; };
-		DCDAC50CC8E4528FBCEC650C042EFD90 /* Pods-MemoryCollageTests-umbrella.h */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.h; path = "Pods-MemoryCollageTests-umbrella.h"; sourceTree = "<group>"; };
-		DFD5ABE42428431CA9BBD73DD12F1D04 /* Pods-MemoryCollage-MemoryCollageUITests */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; name = "Pods-MemoryCollage-MemoryCollageUITests"; path = Pods_MemoryCollage_MemoryCollageUITests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		E729D62D2DCB4ED8026FD7D21BEEFCCA /* Pods-MemoryCollage-MemoryCollageUITests-frameworks.sh */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.script.sh; path = "Pods-MemoryCollage-MemoryCollageUITests-frameworks.sh"; sourceTree = "<group>"; };
-		EA590C1D0EB517E3A64B863F4B53ED3A /* Pods-MemoryCollage-MemoryCollageUITests-umbrella.h */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.h; path = "Pods-MemoryCollage-MemoryCollageUITests-umbrella.h"; sourceTree = "<group>"; };
-		FA62216663BCE92E9672AD929E62FAEC /* Pods-MemoryCollage-MemoryCollageUITests.modulemap */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.module; path = "Pods-MemoryCollage-MemoryCollageUITests.modulemap"; sourceTree = "<group>"; };
+		CBE1FDD636BD03D0321A834944320EEF /* Pods-MemoryCollage-acknowledgements.markdown */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text; path = "Pods-MemoryCollage-acknowledgements.markdown"; sourceTree = "<group>"; };
+		F36AF17C1867BAC863BD35DA6B037D10 /* Pods-MemoryCollage-dummy.m */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.objc; path = "Pods-MemoryCollage-dummy.m"; sourceTree = "<group>"; };
+		FD15F57C74259308AD16F3E17C9FDFF6 /* Pods-MemoryCollage.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; path = "Pods-MemoryCollage.release.xcconfig"; sourceTree = "<group>"; };
 		FE56225CB29E8604A396A62DA71D28AD /* Pods-MemoryCollage */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; name = "Pods-MemoryCollage"; path = Pods_MemoryCollage.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -101,22 +62,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				629356673B10F487240DBFAECBEA4587 /* Foundation.framework in Frameworks */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		2EE25001A14178D9C0AC6CE0766EB3AB /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				3626FC197F2371CA990E875F15B75E9F /* Foundation.framework in Frameworks */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		964F7264B05841B7D472EFD65E6B2BAA /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				B8ED905F11188E1FAB50989F5ED12392 /* Foundation.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -131,32 +76,21 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		055CB8A25FD5027F46C26DB668B6C948 /* Pods-MemoryCollage-MemoryCollageUITests */ = {
+		09116E4BDD747813D32612DB2CC482F9 /* Pods-MemoryCollage */ = {
 			isa = PBXGroup;
 			children = (
-				FA62216663BCE92E9672AD929E62FAEC /* Pods-MemoryCollage-MemoryCollageUITests.modulemap */,
-				40C7513C0A2A2AB9B51C83FD286B7970 /* Pods-MemoryCollage-MemoryCollageUITests-acknowledgements.markdown */,
-				26A493E837697E72AD81F165890EC11B /* Pods-MemoryCollage-MemoryCollageUITests-acknowledgements.plist */,
-				D67093F914F26C2104F1A6FF4692A597 /* Pods-MemoryCollage-MemoryCollageUITests-dummy.m */,
-				E729D62D2DCB4ED8026FD7D21BEEFCCA /* Pods-MemoryCollage-MemoryCollageUITests-frameworks.sh */,
-				B9428DF8C3B5443E34C3BA7AEECC8735 /* Pods-MemoryCollage-MemoryCollageUITests-Info.plist */,
-				EA590C1D0EB517E3A64B863F4B53ED3A /* Pods-MemoryCollage-MemoryCollageUITests-umbrella.h */,
-				D40B28C446ABA7098CBEE00BB0C9615C /* Pods-MemoryCollage-MemoryCollageUITests.debug.xcconfig */,
-				8B50015F4048299672170BA5899AF952 /* Pods-MemoryCollage-MemoryCollageUITests.release.xcconfig */,
+				57F765FFE9C6E0ED628424C0CE942CBE /* Pods-MemoryCollage.modulemap */,
+				CBE1FDD636BD03D0321A834944320EEF /* Pods-MemoryCollage-acknowledgements.markdown */,
+				7213AC0C3E8B788DC7120EBFE6ABBBD2 /* Pods-MemoryCollage-acknowledgements.plist */,
+				F36AF17C1867BAC863BD35DA6B037D10 /* Pods-MemoryCollage-dummy.m */,
+				1D88D06E9952EA1354931973C1003A45 /* Pods-MemoryCollage-frameworks.sh */,
+				58495DC26F16CD195E569E838DF6CFB6 /* Pods-MemoryCollage-Info.plist */,
+				8B2439D7B2E6E3B6F8A34C30C94FE633 /* Pods-MemoryCollage-umbrella.h */,
+				68D290F869D5DA278A95DE1E7544B4E2 /* Pods-MemoryCollage.debug.xcconfig */,
+				FD15F57C74259308AD16F3E17C9FDFF6 /* Pods-MemoryCollage.release.xcconfig */,
 			);
-			name = "Pods-MemoryCollage-MemoryCollageUITests";
-			path = "Target Support Files/Pods-MemoryCollage-MemoryCollageUITests";
-			sourceTree = "<group>";
-		};
-		1828BB3BFB14EE176D8000F3E3F6D075 /* Products */ = {
-			isa = PBXGroup;
-			children = (
-				FE56225CB29E8604A396A62DA71D28AD /* Pods-MemoryCollage */,
-				DFD5ABE42428431CA9BBD73DD12F1D04 /* Pods-MemoryCollage-MemoryCollageUITests */,
-				74C2DEF5EEEA4BF7341672BB3B3A1734 /* Pods-MemoryCollageTests */,
-				59036D9DF8516C51E1F6C0AF6F40EFB0 /* SwiftVideoGenerator */,
-			);
-			name = Products;
+			name = "Pods-MemoryCollage";
+			path = "Target Support Files/Pods-MemoryCollage";
 			sourceTree = "<group>";
 		};
 		1BE30A6B49367A0365FA4445B07730AA /* SwiftVideoGenerator */ = {
@@ -172,47 +106,13 @@
 			path = SwiftVideoGenerator;
 			sourceTree = "<group>";
 		};
-		381DAD75FCF594A528DB3C55DE781590 /* Targets Support Files */ = {
+		7BE9847048CEA49D4BA5EAF69BEF8726 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				3B45365F5888AC255AB4D712B8ECF82F /* Pods-MemoryCollage */,
-				055CB8A25FD5027F46C26DB668B6C948 /* Pods-MemoryCollage-MemoryCollageUITests */,
-				532E15007FD45A8080C225B59AD6647F /* Pods-MemoryCollageTests */,
+				FE56225CB29E8604A396A62DA71D28AD /* Pods-MemoryCollage */,
+				59036D9DF8516C51E1F6C0AF6F40EFB0 /* SwiftVideoGenerator */,
 			);
-			name = "Targets Support Files";
-			sourceTree = "<group>";
-		};
-		3B45365F5888AC255AB4D712B8ECF82F /* Pods-MemoryCollage */ = {
-			isa = PBXGroup;
-			children = (
-				8AB8B328CC1FD13DFE8DF17A8EDC79D7 /* Pods-MemoryCollage.modulemap */,
-				C48F3C115DE1AE903741A1E3545225D1 /* Pods-MemoryCollage-acknowledgements.markdown */,
-				55914572168790FE44F190B457477106 /* Pods-MemoryCollage-acknowledgements.plist */,
-				9484BDFDAFBE51482C4DE5D0AF3189D8 /* Pods-MemoryCollage-dummy.m */,
-				61DBD5A35C521FBF37B7121DC455E2F4 /* Pods-MemoryCollage-frameworks.sh */,
-				932AD3C7258E868DBFE1754B97C686C4 /* Pods-MemoryCollage-Info.plist */,
-				D896C803DDAD4AA5B3D8C081C0E959A2 /* Pods-MemoryCollage-umbrella.h */,
-				9078F8AFC0428FE0E571444A03A24600 /* Pods-MemoryCollage.debug.xcconfig */,
-				B3F0C5C4F383632969DEAD717E525BB3 /* Pods-MemoryCollage.release.xcconfig */,
-			);
-			name = "Pods-MemoryCollage";
-			path = "Target Support Files/Pods-MemoryCollage";
-			sourceTree = "<group>";
-		};
-		532E15007FD45A8080C225B59AD6647F /* Pods-MemoryCollageTests */ = {
-			isa = PBXGroup;
-			children = (
-				CB1B319A2A1CC9453EEED87110CB0A54 /* Pods-MemoryCollageTests.modulemap */,
-				1184DA1E1B551A0E72C6057CEC939CE0 /* Pods-MemoryCollageTests-acknowledgements.markdown */,
-				AA7AFAC87D31CAF795A350F86425408A /* Pods-MemoryCollageTests-acknowledgements.plist */,
-				19B24D370DD94FE77EABD5A9898D8BAC /* Pods-MemoryCollageTests-dummy.m */,
-				C7AF523143C0AFD5657F248D90D2F4E4 /* Pods-MemoryCollageTests-Info.plist */,
-				DCDAC50CC8E4528FBCEC650C042EFD90 /* Pods-MemoryCollageTests-umbrella.h */,
-				5AD13B4E847AFCF1388DA7B86B45859D /* Pods-MemoryCollageTests.debug.xcconfig */,
-				52B50D8C5B9812AC671991BB09CA420C /* Pods-MemoryCollageTests.release.xcconfig */,
-			);
-			name = "Pods-MemoryCollageTests";
-			path = "Target Support Files/Pods-MemoryCollageTests";
+			name = Products;
 			sourceTree = "<group>";
 		};
 		BFCE9A9D8C03103ABB258C099604039F /* Support Files */ = {
@@ -236,9 +136,17 @@
 				9D940727FF8FB9C785EB98E56350EF41 /* Podfile */,
 				D210D550F4EA176C3123ED886F8F87F5 /* Frameworks */,
 				EBADA8D75E030A6696CFF3F96828B612 /* Pods */,
-				1828BB3BFB14EE176D8000F3E3F6D075 /* Products */,
-				381DAD75FCF594A528DB3C55DE781590 /* Targets Support Files */,
+				7BE9847048CEA49D4BA5EAF69BEF8726 /* Products */,
+				CFE4F5F041A067A304551DBDA085D492 /* Targets Support Files */,
 			);
+			sourceTree = "<group>";
+		};
+		CFE4F5F041A067A304551DBDA085D492 /* Targets Support Files */ = {
+			isa = PBXGroup;
+			children = (
+				09116E4BDD747813D32612DB2CC482F9 /* Pods-MemoryCollage */,
+			);
+			name = "Targets Support Files";
 			sourceTree = "<group>";
 		};
 		D210D550F4EA176C3123ED886F8F87F5 /* Frameworks */ = {
@@ -268,27 +176,11 @@
 /* End PBXGroup section */
 
 /* Begin PBXHeadersBuildPhase section */
-		0C5CB1187B0AC221492E8009828CF3E4 /* Headers */ = {
-			isa = PBXHeadersBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				FFC7111505A54B6DA0117F43578D8043 /* Pods-MemoryCollageTests-umbrella.h in Headers */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		1E120830168D6FBED486872DB30C7BA9 /* Headers */ = {
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 				9743BE8598DAB33BE7BF5C7A4B7DBF8F /* SwiftVideoGenerator-umbrella.h in Headers */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		93B6E0208C78E7F2B2FAF07A30C6B396 /* Headers */ = {
-			isa = PBXHeadersBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				BE6783C807707BAE4EB701856F0AC8CC /* Pods-MemoryCollage-MemoryCollageUITests-umbrella.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -303,44 +195,6 @@
 /* End PBXHeadersBuildPhase section */
 
 /* Begin PBXNativeTarget section */
-		1D1975889BD89D4782EEEB92B011942D /* Pods-MemoryCollage-MemoryCollageUITests */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = DDF1ECF595AA85EAF2CA2A29790A68C9 /* Build configuration list for PBXNativeTarget "Pods-MemoryCollage-MemoryCollageUITests" */;
-			buildPhases = (
-				93B6E0208C78E7F2B2FAF07A30C6B396 /* Headers */,
-				F8662F60EFD6F9B3BC576285A6F13699 /* Sources */,
-				964F7264B05841B7D472EFD65E6B2BAA /* Frameworks */,
-				DE44C83483E87E129365BE0C376F9101 /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-				BF37789E696C15821B6044181C64A423 /* PBXTargetDependency */,
-			);
-			name = "Pods-MemoryCollage-MemoryCollageUITests";
-			productName = Pods_MemoryCollage_MemoryCollageUITests;
-			productReference = DFD5ABE42428431CA9BBD73DD12F1D04 /* Pods-MemoryCollage-MemoryCollageUITests */;
-			productType = "com.apple.product-type.framework";
-		};
-		52ECF0DEE0DC6DA01C2EE22ACD583300 /* Pods-MemoryCollageTests */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 51EEA854A9B472CED47D1A8449E3A6C5 /* Build configuration list for PBXNativeTarget "Pods-MemoryCollageTests" */;
-			buildPhases = (
-				0C5CB1187B0AC221492E8009828CF3E4 /* Headers */,
-				F15F2A6789DB3E68E57BCEE8D6405A3B /* Sources */,
-				2EE25001A14178D9C0AC6CE0766EB3AB /* Frameworks */,
-				1E75E352022AEC61E38ABF237F9AF201 /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-				D904A07D771A1C61D6863DF2D3E10625 /* PBXTargetDependency */,
-			);
-			name = "Pods-MemoryCollageTests";
-			productName = Pods_MemoryCollageTests;
-			productReference = 74C2DEF5EEEA4BF7341672BB3B3A1734 /* Pods-MemoryCollageTests */;
-			productType = "com.apple.product-type.framework";
-		};
 		8769B2DEADA145584F5FFA2FCF3D5278 /* Pods-MemoryCollage */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = EA659F48A25FB990FEE08CE3561328E7 /* Build configuration list for PBXNativeTarget "Pods-MemoryCollage" */;
@@ -398,13 +252,11 @@
 			mainGroup = CF1408CF629C7361332E53B88F7BD30C;
 			minimizedProjectReferenceProxies = 0;
 			preferredProjectObjectVersion = 77;
-			productRefGroup = 1828BB3BFB14EE176D8000F3E3F6D075 /* Products */;
+			productRefGroup = 7BE9847048CEA49D4BA5EAF69BEF8726 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
 				8769B2DEADA145584F5FFA2FCF3D5278 /* Pods-MemoryCollage */,
-				1D1975889BD89D4782EEEB92B011942D /* Pods-MemoryCollage-MemoryCollageUITests */,
-				52ECF0DEE0DC6DA01C2EE22ACD583300 /* Pods-MemoryCollageTests */,
 				877B00E6DE7D4DC1416DB002A9C00848 /* SwiftVideoGenerator */,
 			);
 		};
@@ -418,21 +270,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		1E75E352022AEC61E38ABF237F9AF201 /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		DB9DD19D13D7FA0A6BB711CC6B9AFD5F /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		DE44C83483E87E129365BE0C376F9101 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -462,42 +300,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		F15F2A6789DB3E68E57BCEE8D6405A3B /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				5D0D572C468A6FB5123436D4049944C5 /* Pods-MemoryCollageTests-dummy.m in Sources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		F8662F60EFD6F9B3BC576285A6F13699 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				1CCF9EBE9C0495C0F4A717AABD1AEF15 /* Pods-MemoryCollage-MemoryCollageUITests-dummy.m in Sources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
-		BF37789E696C15821B6044181C64A423 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			name = SwiftVideoGenerator;
-			target = 877B00E6DE7D4DC1416DB002A9C00848 /* SwiftVideoGenerator */;
-			targetProxy = 216F4554B365AB3D03CA2AFE5C5ABA90 /* PBXContainerItemProxy */;
-		};
 		D65AE094FACCBA32968AB30632E9344A /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			name = SwiftVideoGenerator;
 			target = 877B00E6DE7D4DC1416DB002A9C00848 /* SwiftVideoGenerator */;
 			targetProxy = 57FC913CBC1C9579849ECF6C84425A64 /* PBXContainerItemProxy */;
-		};
-		D904A07D771A1C61D6863DF2D3E10625 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			name = "Pods-MemoryCollage";
-			target = 8769B2DEADA145584F5FFA2FCF3D5278 /* Pods-MemoryCollage */;
-			targetProxy = 652E037FAA3DA3D8F39D2A9AD7EC3B79 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -608,46 +418,6 @@
 			};
 			name = Release;
 		};
-		3FEF465E8346B75B465ABC3934323C8B /* Release */ = {
-			isa = XCBuildConfiguration;
-			baseConfigurationReference = 8B50015F4048299672170BA5899AF952 /* Pods-MemoryCollage-MemoryCollageUITests.release.xcconfig */;
-			buildSettings = {
-				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = NO;
-				CLANG_ENABLE_OBJC_WEAK = NO;
-				"CODE_SIGN_IDENTITY[sdk=appletvos*]" = "";
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
-				"CODE_SIGN_IDENTITY[sdk=watchos*]" = "";
-				CURRENT_PROJECT_VERSION = 1;
-				DEFINES_MODULE = YES;
-				DYLIB_COMPATIBILITY_VERSION = 1;
-				DYLIB_CURRENT_VERSION = 1;
-				DYLIB_INSTALL_NAME_BASE = "@rpath";
-				ENABLE_MODULE_VERIFIER = NO;
-				ENABLE_USER_SCRIPT_SANDBOXING = NO;
-				INFOPLIST_FILE = "Target Support Files/Pods-MemoryCollage-MemoryCollageUITests/Pods-MemoryCollage-MemoryCollageUITests-Info.plist";
-				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
-				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@loader_path/Frameworks",
-				);
-				MACH_O_TYPE = staticlib;
-				MODULEMAP_FILE = "Target Support Files/Pods-MemoryCollage-MemoryCollageUITests/Pods-MemoryCollage-MemoryCollageUITests.modulemap";
-				OTHER_LDFLAGS = "";
-				OTHER_LIBTOOLFLAGS = "";
-				PODS_ROOT = "$(SRCROOT)";
-				PRODUCT_BUNDLE_IDENTIFIER = "org.cocoapods.${PRODUCT_NAME:rfc1034identifier}";
-				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
-				SDKROOT = iphoneos;
-				SKIP_INSTALL = YES;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				VALIDATE_PRODUCT = YES;
-				VERSIONING_SYSTEM = "apple-generic";
-				VERSION_INFO_PREFIX = "";
-			};
-			name = Release;
-		};
 		5AB415FC7E170CE050C3BC112D02926E /* Debug */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 18A43E897C9C7D86F05C7DF2A20224F3 /* SwiftVideoGenerator.debug.xcconfig */;
@@ -751,7 +521,7 @@
 		};
 		6E98E3C068990BC9D69EF375E0523CA5 /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 9078F8AFC0428FE0E571444A03A24600 /* Pods-MemoryCollage.debug.xcconfig */;
+			baseConfigurationReference = 68D290F869D5DA278A95DE1E7544B4E2 /* Pods-MemoryCollage.debug.xcconfig */;
 			buildSettings = {
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = NO;
 				CLANG_ENABLE_OBJC_WEAK = NO;
@@ -787,89 +557,10 @@
 				VERSION_INFO_PREFIX = "";
 			};
 			name = Debug;
-		};
-		6EFB73860A5ADF956D2CDDAF24C2C7E3 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			baseConfigurationReference = 5AD13B4E847AFCF1388DA7B86B45859D /* Pods-MemoryCollageTests.debug.xcconfig */;
-			buildSettings = {
-				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = NO;
-				CLANG_ENABLE_OBJC_WEAK = NO;
-				"CODE_SIGN_IDENTITY[sdk=appletvos*]" = "";
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
-				"CODE_SIGN_IDENTITY[sdk=watchos*]" = "";
-				CURRENT_PROJECT_VERSION = 1;
-				DEFINES_MODULE = YES;
-				DYLIB_COMPATIBILITY_VERSION = 1;
-				DYLIB_CURRENT_VERSION = 1;
-				DYLIB_INSTALL_NAME_BASE = "@rpath";
-				ENABLE_MODULE_VERIFIER = NO;
-				ENABLE_USER_SCRIPT_SANDBOXING = NO;
-				INFOPLIST_FILE = "Target Support Files/Pods-MemoryCollageTests/Pods-MemoryCollageTests-Info.plist";
-				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
-				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@loader_path/Frameworks",
-				);
-				MACH_O_TYPE = staticlib;
-				MODULEMAP_FILE = "Target Support Files/Pods-MemoryCollageTests/Pods-MemoryCollageTests.modulemap";
-				OTHER_LDFLAGS = "";
-				OTHER_LIBTOOLFLAGS = "";
-				PODS_ROOT = "$(SRCROOT)";
-				PRODUCT_BUNDLE_IDENTIFIER = "org.cocoapods.${PRODUCT_NAME:rfc1034identifier}";
-				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
-				SDKROOT = iphoneos;
-				SKIP_INSTALL = YES;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				VERSIONING_SYSTEM = "apple-generic";
-				VERSION_INFO_PREFIX = "";
-			};
-			name = Debug;
-		};
-		96A05C620E328CAF6C12AA59C89DCFE2 /* Release */ = {
-			isa = XCBuildConfiguration;
-			baseConfigurationReference = 52B50D8C5B9812AC671991BB09CA420C /* Pods-MemoryCollageTests.release.xcconfig */;
-			buildSettings = {
-				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = NO;
-				CLANG_ENABLE_OBJC_WEAK = NO;
-				"CODE_SIGN_IDENTITY[sdk=appletvos*]" = "";
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
-				"CODE_SIGN_IDENTITY[sdk=watchos*]" = "";
-				CURRENT_PROJECT_VERSION = 1;
-				DEFINES_MODULE = YES;
-				DYLIB_COMPATIBILITY_VERSION = 1;
-				DYLIB_CURRENT_VERSION = 1;
-				DYLIB_INSTALL_NAME_BASE = "@rpath";
-				ENABLE_MODULE_VERIFIER = NO;
-				ENABLE_USER_SCRIPT_SANDBOXING = NO;
-				INFOPLIST_FILE = "Target Support Files/Pods-MemoryCollageTests/Pods-MemoryCollageTests-Info.plist";
-				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
-				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@loader_path/Frameworks",
-				);
-				MACH_O_TYPE = staticlib;
-				MODULEMAP_FILE = "Target Support Files/Pods-MemoryCollageTests/Pods-MemoryCollageTests.modulemap";
-				OTHER_LDFLAGS = "";
-				OTHER_LIBTOOLFLAGS = "";
-				PODS_ROOT = "$(SRCROOT)";
-				PRODUCT_BUNDLE_IDENTIFIER = "org.cocoapods.${PRODUCT_NAME:rfc1034identifier}";
-				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
-				SDKROOT = iphoneos;
-				SKIP_INSTALL = YES;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				VALIDATE_PRODUCT = YES;
-				VERSIONING_SYSTEM = "apple-generic";
-				VERSION_INFO_PREFIX = "";
-			};
-			name = Release;
 		};
 		C25E846714CB6A9EC1794CE384A51EA3 /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = B3F0C5C4F383632969DEAD717E525BB3 /* Pods-MemoryCollage.release.xcconfig */;
+			baseConfigurationReference = FD15F57C74259308AD16F3E17C9FDFF6 /* Pods-MemoryCollage.release.xcconfig */;
 			buildSettings = {
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = NO;
 				CLANG_ENABLE_OBJC_WEAK = NO;
@@ -906,45 +597,6 @@
 				VERSION_INFO_PREFIX = "";
 			};
 			name = Release;
-		};
-		CA25B93E497099A0BCA6F8D3B697CECC /* Debug */ = {
-			isa = XCBuildConfiguration;
-			baseConfigurationReference = D40B28C446ABA7098CBEE00BB0C9615C /* Pods-MemoryCollage-MemoryCollageUITests.debug.xcconfig */;
-			buildSettings = {
-				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = NO;
-				CLANG_ENABLE_OBJC_WEAK = NO;
-				"CODE_SIGN_IDENTITY[sdk=appletvos*]" = "";
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
-				"CODE_SIGN_IDENTITY[sdk=watchos*]" = "";
-				CURRENT_PROJECT_VERSION = 1;
-				DEFINES_MODULE = YES;
-				DYLIB_COMPATIBILITY_VERSION = 1;
-				DYLIB_CURRENT_VERSION = 1;
-				DYLIB_INSTALL_NAME_BASE = "@rpath";
-				ENABLE_MODULE_VERIFIER = NO;
-				ENABLE_USER_SCRIPT_SANDBOXING = NO;
-				INFOPLIST_FILE = "Target Support Files/Pods-MemoryCollage-MemoryCollageUITests/Pods-MemoryCollage-MemoryCollageUITests-Info.plist";
-				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
-				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@loader_path/Frameworks",
-				);
-				MACH_O_TYPE = staticlib;
-				MODULEMAP_FILE = "Target Support Files/Pods-MemoryCollage-MemoryCollageUITests/Pods-MemoryCollage-MemoryCollageUITests.modulemap";
-				OTHER_LDFLAGS = "";
-				OTHER_LIBTOOLFLAGS = "";
-				PODS_ROOT = "$(SRCROOT)";
-				PRODUCT_BUNDLE_IDENTIFIER = "org.cocoapods.${PRODUCT_NAME:rfc1034identifier}";
-				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
-				SDKROOT = iphoneos;
-				SKIP_INSTALL = YES;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				VERSIONING_SYSTEM = "apple-generic";
-				VERSION_INFO_PREFIX = "";
-			};
-			name = Debug;
 		};
 /* End XCBuildConfiguration section */
 
@@ -963,24 +615,6 @@
 			buildConfigurations = (
 				2B9E26EAE2CD392AD762421F663075A1 /* Debug */,
 				63FAF33E1C55B71A5F5A8B3CC8749F99 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		51EEA854A9B472CED47D1A8449E3A6C5 /* Build configuration list for PBXNativeTarget "Pods-MemoryCollageTests" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				6EFB73860A5ADF956D2CDDAF24C2C7E3 /* Debug */,
-				96A05C620E328CAF6C12AA59C89DCFE2 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		DDF1ECF595AA85EAF2CA2A29790A68C9 /* Build configuration list for PBXNativeTarget "Pods-MemoryCollage-MemoryCollageUITests" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				CA25B93E497099A0BCA6F8D3B697CECC /* Debug */,
-				3FEF465E8346B75B465ABC3934323C8B /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
