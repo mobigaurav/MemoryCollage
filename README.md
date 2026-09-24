@@ -1,5 +1,11 @@
 # MemoryCollage
 
+The shipping product is now the Flutter app in [`memory_book/`](memory_book/README.md) (iOS + Android): a living photo book, collage studio, and memory-reel exporter.
+
+Long-range docs (so we do not lose the plan): [system design](memory_book/docs/SYSTEM_DESIGN.md), [product roadmap](memory_book/docs/PRODUCT_ROADMAP.md), and [backend](docs/BACKEND.md).
+
+This Swift/iOS tree is kept as layout-math and filter reference for the rebuild.
+
 MemoryCollage is a powerful and intuitive iOS application that enables users to create photo collages, generate videos from images with background music and filters, and leverage AI to generate videos from text or images. The app provides a seamless user experience with customizable features for each media creation mode.
 
 ##  Features

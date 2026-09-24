@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# Project-local Flutter wrapper (SDK lives in ../.tools/flutter, gitignored).
+set -euo pipefail
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+FLUTTER="$ROOT/.tools/flutter/bin/flutter"
+if [[ ! -x "$FLUTTER" ]]; then
+  echo "Flutter SDK missing at $FLUTTER" >&2
+  echo "From the repo root run:" >&2
+  echo "  git clone --depth 1 -b stable https://github.com/flutter/flutter.git .tools/flutter" >&2
+  exit 1
+fi
+exec "$FLUTTER" "$@"
