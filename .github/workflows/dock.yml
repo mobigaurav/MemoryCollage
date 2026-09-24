@@ -1,0 +1,66 @@
+# Claim check on every pull request. Preview only — Dock never merges.
+# https://pypi.org/project/dock-inbox/
+
+name: dock
+
+on:
+  pull_request:
+
+jobs:
+  claims:
+    name: Dock claims
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Dock
+        run: pip install "dock-inbox==0.1.0"
+
+      - name: Write report
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set +e
+          dock merge --path . --pr "${{ github.event.pull_request.number }}" --format md > dock-report.md
+          echo "exit=$?" >> "$GITHUB_OUTPUT"
+          cat dock-report.md
+
+      - name: Comment on the pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          {
+            echo "<!-- dock-report -->"
+            echo "## Dock"
+            echo
+            echo "Claim check for this PR (pass / fail / unknown). Dock does not merge. A person still clicks Merge on GitHub."
+            echo
+            echo "Dock is not an LLM. It scores PR prose against changed paths and the patch. Unknown means a human still has to look. Package: https://pypi.org/project/dock-inbox/"
+            echo
+            cat dock-report.md
+          } > dock-comment.md
+          existing="$(gh api "repos/${{ github.repository }}/issues/${PR}/comments" \
+            --jq '.[] | select(.user.login=="github-actions[bot]" and (.body | startswith("<!-- dock-report -->"))) | .id' \
+            | tail -n 1)"
+          if [ -n "$existing" ]; then
+            gh api --method PATCH "repos/${{ github.repository }}/issues/comments/${existing}" \
+              -F body="$(cat dock-comment.md)"
+          else
+            gh pr comment "${PR}" --body-file dock-comment.md
+          fi
+
+      - name: Upload report
+        uses: actions/upload-artifact@v4
+        with:
+          name: dock-report
+          path: dock-report.md

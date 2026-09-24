@@ -12,6 +12,10 @@
 ## User settings
 xcuserdata/
 xcshareddata/
+# The Swift tree ignores shared Xcode data. The Flutter runner scheme still ships.
+!memory_book/ios/Runner.xcodeproj/xcshareddata/
+!memory_book/ios/Runner.xcodeproj/xcshareddata/xcschemes/
+!memory_book/ios/Runner.xcodeproj/xcshareddata/xcschemes/Runner.xcscheme
 
 ## Obj-C/Swift specific
 *.hmap
@@ -68,4 +72,35 @@ fastlane/report.xml
 fastlane/Preview.html
 fastlane/screenshots/**/*.png
 fastlane/test_output
+
+# Flutter rebuild (memory_book)
+.tools/
+memory_book/.dart_tool/
+memory_book/.flutter-plugins
+memory_book/.flutter-plugins-dependencies
+memory_book/.packages
+memory_book/build/
+memory_book/.idea/
+**/*.iml
+memory_book/ios/Pods/
+memory_book/ios/.symlinks/
+memory_book/ios/Flutter/ephemeral/
+memory_book/ios/Flutter/Generated.xcconfig
+memory_book/ios/Flutter/flutter_export_environment.sh
+memory_book/ios/**/xcuserdata/
+memory_book/ios/Flutter/Flutter.framework
+memory_book/ios/Flutter/Flutter.podspec
+memory_book/android/.gradle/
+memory_book/android/local.properties
+
+# Memory Book API and marketing site
+services/api/.venv/
+**/__pycache__/
+services/api/.pytest_cache/
+services/api/.env
+**/.aws-sam/
+apps/web/node_modules/
+apps/web/.next/
+apps/web/.vercel/
+apps/web/.env.local
 

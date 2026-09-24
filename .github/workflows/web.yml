@@ -1,0 +1,39 @@
+# Deploys the marketing site when dev is updated.
+# One GitHub secret, VERCEL_TOKEN, is enough for the first deploy to create
+# the Vercel project. No project has to be created in the Vercel UI first.
+# Optional: VERCEL_ORG_ID and VERCEL_PROJECT_ID once the project exists.
+
+name: web
+
+on:
+  push:
+    branches: [dev]
+
+jobs:
+  deploy:
+    name: Deploy site
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - name: Deploy apps/web to Vercel
+        working-directory: apps/web
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          if [ -z "$VERCEL_TOKEN" ]; then
+            echo "VERCEL_TOKEN is not set on this repo. Skipping the site deploy."
+            exit 0
+          fi
+          npm install --global vercel@latest
+          args=(deploy --prod --yes --token "$VERCEL_TOKEN")
+          if [ -n "$VERCEL_ORG_ID" ]; then
+            args+=(--scope "$VERCEL_ORG_ID")
+          fi
+          vercel "${args[@]}"
