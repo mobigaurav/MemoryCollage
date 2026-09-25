@@ -50,7 +50,7 @@ A phone cannot call `localhost` on your Mac. Use this API URL for device tests.
 
 ## Deploy the site
 
-Merging into `dev` runs [`.github/workflows/web.yml`](../.github/workflows/web.yml). That action deploys `apps/web` and creates the Vercel project on the first successful run. Add one GitHub Actions secret, `VERCEL_TOKEN`, on [MemoryCollage](https://github.com/mobigaurav/MemoryCollage). Optional later: `VERCEL_ORG_ID` and `VERCEL_PROJECT_ID`.
+Merging into `dev` runs [`.github/workflows/web.yml`](../.github/workflows/web.yml). That action deploys `apps/web` to a **Memory Book** Vercel project named `memory-book`. Add `VERCEL_TOKEN` on [MemoryCollage](https://github.com/mobigaurav/MemoryCollage). Optional: `VERCEL_ORG_ID` for the team. Do **not** copy `VERCEL_PROJECT_ID` from Arogya — a folder named `apps/web` plus `vercel --yes` will otherwise attach to Arogya's project `web` and take `https://web-liart-six-83.vercel.app`.
 
 Store buttons appear when these Vercel env vars are set:
 

@@ -1,13 +1,16 @@
-# Deploys the marketing site when dev is updated.
-# One GitHub secret, VERCEL_TOKEN, is enough for the first deploy to create
-# the Vercel project. No project has to be created in the Vercel UI first.
-# Optional: VERCEL_ORG_ID and VERCEL_PROJECT_ID once the project exists.
+# Deploys the Memory Book marketing site when `dev` is updated.
+# VERCEL_TOKEN is required. Optional: VERCEL_ORG_ID (team scope).
+#
+# Do not set VERCEL_PROJECT_ID to Arogya's `web` project. `vercel --yes`
+# from a folder named `apps/web` will otherwise link to that existing
+# project and steal https://web-liart-six-83.vercel.app.
 
 name: web
 
 on:
   push:
     branches: [dev]
+  workflow_dispatch:
 
 jobs:
   deploy:
@@ -25,14 +28,15 @@ jobs:
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         run: |
           if [ -z "$VERCEL_TOKEN" ]; then
             echo "VERCEL_TOKEN is not set on this repo. Skipping the site deploy."
             exit 0
           fi
           npm install --global vercel@latest
-          args=(deploy --prod --yes --token "$VERCEL_TOKEN")
+          # Ignore a copied Arogya project id if one is still on this repo.
+          unset VERCEL_PROJECT_ID
+          args=(deploy --prod --yes --name memory-book --token "$VERCEL_TOKEN")
           if [ -n "$VERCEL_ORG_ID" ]; then
             args+=(--scope "$VERCEL_ORG_ID")
           fi
