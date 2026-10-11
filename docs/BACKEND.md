@@ -41,12 +41,10 @@ Stack `memorybook-lite-dev` in `us-east-1`.
 
 ```bash
 cd memory_book
-bash flutterw run --dart-define=AI_BASE_URL=https://z2k4sv0eoe.execute-api.us-east-1.amazonaws.com/dev \
-  --dart-define=COGNITO_CLIENT_ID=thi97f481tevec4k8t7eibsf6 \
-  --dart-define=AWS_REGION=us-east-1
+bash flutterw run
 ```
 
-A phone cannot call `localhost` on your Mac. Use this API URL for device tests.
+The app already has this API URL, the Cognito client id, and `us-east-1` in `memory_book/lib/core/config.dart`. Create account and sign-in call Cognito. A credit call hits this API. A phone cannot call `localhost` on your Mac.
 
 ## Deploy the site
 
@@ -63,7 +61,8 @@ Pull requests also run API tests, the site build, Flutter analyze/test, and [Doc
 ## What is still next
 
 1. Point the Flutter credit number at `GET /v1/me` once the API is deployed.
-2. Apply `services/api/schema.sql` on Neon and replace the in-memory ledger. A Lambda cold start forgets credits until then.
-3. Add one image-to-video adapter behind `VIDEO_VENDOR`. The key stays in the stack parameter, never in the app.
+2. Apply `services/api/schema.sql` on Neon and replace the in-memory ledger. A Lambda cold start forgets credits and in-flight clips until then.
+3. `VideoVendor` is `runway`. The Runway secret is already a stack parameter. A later `sam deploy` keeps that secret. Pass `VideoVendorApiKey` only when you are replacing the key. A photo uses Gen-4 Turbo. Words alone use Gen-4.5.
 4. Verify the RevenueCat webhook before it grants credits. The route answers and does not grant anything yet.
-5. Poll `GET /v1/ai/jobs/{id}` from the app when a job is queued.
+5. The phone already polls `GET /v1/ai/jobs/{id}` until the clip is ready.
+6. Apple and Google sign-in go through this pool’s hosted UI (`memorybook-dev.auth.us-east-1.amazoncognito.com`), then return to `memorybook://auth`. A deploy with no Google or Apple parameters leaves those providers off and keeps any secret you already set. Pass `GoogleClientId` and `GoogleClientSecret`, or `AppleServicesId`, `AppleTeamId`, `AppleKeyId`, and `ApplePrivateKey`, only when connecting that provider. Register the stack output `CognitoIdpResponseUrl` as the Google redirect URI and the Apple Services ID return URL. Do not put those secrets in `samconfig.toml`.

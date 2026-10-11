@@ -17,16 +17,30 @@ import android.media.MediaCodec
 import android.media.MediaCodecInfo
 import android.media.MediaExtractor
 import android.media.MediaFormat
+import android.media.MediaMetadataRetriever
 import android.media.MediaMuxer
+import android.net.Uri
 import android.os.Build
 import android.view.Surface
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
+import androidx.media3.common.MediaItem
+import androidx.media3.common.audio.AudioProcessor
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.effect.Presentation
+import androidx.media3.transformer.Composition
+import androidx.media3.transformer.EditedMediaItem
+import androidx.media3.transformer.EditedMediaItemSequence
+import androidx.media3.transformer.Effects
+import androidx.media3.transformer.ExportException
+import androidx.media3.transformer.ExportResult
+import androidx.media3.transformer.Transformer
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
+import java.io.ByteArrayOutputStream
 import java.io.File
 import kotlin.concurrent.thread
 
@@ -40,7 +54,25 @@ class MainActivity : FlutterActivity() {
                         when (call.method) {
                             "encodeFrames" -> result.success(encode(call.arguments()))
                             "encodeSlideshow" -> result.success(encode(call.arguments(), slideshow = true))
+                            "preparePlayback" -> result.success(null)
+                            "mixAudio" -> {
+                                val args = call.arguments as? Map<*, *> ?: emptyMap<String, Any>()
+                                val video = args["videoPath"] as? String ?: error("videoPath")
+                                val audio = args["audioPath"] as? String ?: error("audioPath")
+                                result.success(muxAudio(video, audio))
+                            }
                             "encodeHeic" -> result.success(call.argument<ByteArray>("bytes"))
+                            "posterFrame" -> result.success(posterFrame(call.arguments()))
+                            "editClip" -> {
+                                val args = call.arguments
+                                runOnUiThread {
+                                    try {
+                                        editClip(args, result)
+                                    } catch (e: Exception) {
+                                        result.error("encode", e.message, null)
+                                    }
+                                }
+                            }
                             else -> result.notImplemented()
                         }
                     } catch (e: Exception) {
@@ -131,7 +163,7 @@ class MainActivity : FlutterActivity() {
 
         val bitmaps = images.mapNotNull { raw ->
             val path = raw as? String ?: return@mapNotNull null
-            BitmapFactory.decodeFile(path)
+            decodeUpright(path)
         }
         for (i in bitmaps.indices) {
             val still = compose(bitmaps[i], null, 0f, "none", width, height, filter)
@@ -244,6 +276,28 @@ class MainActivity : FlutterActivity() {
         return ColorMatrixColorFilter(m)
     }
 
+    private fun decodeUpright(path: String): Bitmap? {
+        val bmp = BitmapFactory.decodeFile(path) ?: return null
+        val orientation = try {
+            android.media.ExifInterface(path).getAttributeInt(
+                android.media.ExifInterface.TAG_ORIENTATION,
+                android.media.ExifInterface.ORIENTATION_NORMAL,
+            )
+        } catch (_: Exception) {
+            return bmp
+        }
+        val degrees = when (orientation) {
+            android.media.ExifInterface.ORIENTATION_ROTATE_90 -> 90f
+            android.media.ExifInterface.ORIENTATION_ROTATE_180 -> 180f
+            android.media.ExifInterface.ORIENTATION_ROTATE_270 -> 270f
+            else -> return bmp
+        }
+        val matrix = android.graphics.Matrix().apply { postRotate(degrees) }
+        val rotated = Bitmap.createBitmap(bmp, 0, 0, bmp.width, bmp.height, matrix, true)
+        if (rotated != bmp) bmp.recycle()
+        return rotated
+    }
+
     private fun muxAudio(video: String, audio: String): String {
         return try {
             val out = video.replace(".mp4", "_m.mp4")
@@ -320,6 +374,106 @@ class MainActivity : FlutterActivity() {
     private fun fit(iw: Int, ih: Int, w: Int, h: Int): Rect {
         val f = fitF(iw, ih, w, h)
         return Rect(f.left.toInt(), f.top.toInt(), f.right.toInt(), f.bottom.toInt())
+    }
+
+    private fun posterFrame(raw: Any?): ByteArray {
+        val args = raw as? Map<*, *> ?: error("poster")
+        val path = args["path"] as? String ?: error("path")
+        val atMs = (args["atMs"] as? Number)?.toLong() ?: 0L
+        val retriever = MediaMetadataRetriever()
+        try {
+            retriever.setDataSource(path)
+            val frame = retriever.getFrameAtTime(
+                atMs * 1000,
+                MediaMetadataRetriever.OPTION_CLOSEST,
+            ) ?: error("Could not read a frame from this reel.")
+            val stream = ByteArrayOutputStream()
+            frame.compress(Bitmap.CompressFormat.JPEG, 86, stream)
+            frame.recycle()
+            return stream.toByteArray()
+        } finally {
+            retriever.release()
+        }
+    }
+
+    @OptIn(UnstableApi::class)
+    private fun editClip(raw: Any?, result: MethodChannel.Result) {
+        val args = raw as? Map<*, *> ?: error("edit")
+        val output = args["outputPath"] as? String ?: error("outputPath")
+        val aspect = args["aspect"] as? String ?: "original"
+        val mute = args["mute"] as? Boolean ?: false
+        val clips = args["clips"] as? List<*> ?: error("clips")
+        val items = clips.map { item ->
+            val map = item as? Map<*, *> ?: error("clip")
+            val path = map["path"] as? String ?: error("path")
+            val start = (map["startMs"] as? Number)?.toLong() ?: 0L
+            val end = (map["endMs"] as? Number)?.toLong() ?: 0L
+            val clipping = MediaItem.ClippingConfiguration.Builder()
+                .setStartPositionMs(start.coerceAtLeast(0))
+                .apply { if (end > start) setEndPositionMs(end) }
+                .build()
+            val media = MediaItem.Builder()
+                .setUri(Uri.fromFile(File(path)))
+                .setClippingConfiguration(clipping)
+                .build()
+            val effects = when (aspect) {
+                "9:16" -> crop(9f / 16f)
+                "1:1" -> crop(1f)
+                "4:5" -> crop(4f / 5f)
+                "16:9" -> crop(16f / 9f)
+                else -> Effects.EMPTY
+            }
+            EditedMediaItem.Builder(media)
+                .setRemoveAudio(mute)
+                .setEffects(effects)
+                .build()
+        }
+        if (items.isEmpty()) error("Choose a reel to edit.")
+        val sequence = if (mute) {
+            EditedMediaItemSequence.withVideoFrom(items)
+        } else {
+            EditedMediaItemSequence.withAudioAndVideoFrom(items)
+        }
+        val composition = Composition.Builder(sequence)
+            .setHdrMode(Composition.HDR_MODE_TONE_MAP_HDR_TO_SDR_USING_OPEN_GL)
+            .build()
+        val out = File(output)
+        out.parentFile?.mkdirs()
+        if (out.exists()) out.delete()
+        var finished = false
+        val transformer = Transformer.Builder(this)
+            .addListener(object : Transformer.Listener {
+                override fun onCompleted(composition: Composition, exportResult: ExportResult) {
+                    if (finished) return
+                    finished = true
+                    result.success(output)
+                }
+
+                override fun onError(
+                    composition: Composition,
+                    exportResult: ExportResult,
+                    exportException: ExportException,
+                ) {
+                    if (finished) return
+                    finished = true
+                    result.error("encode", exportException.message, null)
+                }
+            })
+            .build()
+        transformer.start(composition, output)
+    }
+
+    @OptIn(UnstableApi::class)
+    private fun crop(aspect: Float): Effects {
+        return Effects(
+            emptyList<AudioProcessor>(),
+            listOf(
+                Presentation.createForAspectRatio(
+                    aspect,
+                    Presentation.LAYOUT_SCALE_TO_FIT_WITH_CROP,
+                ),
+            ),
+        )
     }
 
     private fun ensureNotifyPermission() {

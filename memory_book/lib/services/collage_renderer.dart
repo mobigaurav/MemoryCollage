@@ -8,6 +8,7 @@ import '../domain/collage_templates.dart';
 import '../domain/media_options.dart';
 import '../domain/slot_crop.dart';
 import '../features/collage/sticker_painters.dart';
+import '../services/photo_files.dart';
 
 class CollageTextOverlay {
   const CollageTextOverlay({
@@ -205,7 +206,7 @@ class CollageRenderer {
 
   Future<ui.Image?> _load(String path) async {
     try {
-      final bytes = await File(path).readAsBytes();
+      final bytes = await File(PhotoFiles.resolve(path)).readAsBytes();
       final codec = await ui.instantiateImageCodec(bytes);
       final frame = await codec.getNextFrame();
       return frame.image;

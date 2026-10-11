@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 
 import '../domain/slot_crop.dart';
+import '../services/photo_files.dart';
 import 'local_photo.dart';
 
 /// Draws the whole photo at cover size times [crop.scale], clipped to the frame.
@@ -52,7 +53,8 @@ class _FramedPhotoState extends State<FramedPhoto> {
   }
 
   void _listen() {
-    final stream = FileImage(File(widget.path)).resolve(const ImageConfiguration());
+    final resolved = PhotoFiles.resolve(widget.path);
+    final stream = FileImage(File(resolved)).resolve(const ImageConfiguration());
     final listener = ImageStreamListener(
       (info, _) {
         final width = info.image.width.toDouble();
@@ -97,7 +99,7 @@ class _FramedPhotoState extends State<FramedPhoto> {
           final height = cover.height * widget.crop.scale;
           final dpr = MediaQuery.devicePixelRatioOf(context);
           Widget image = Image.file(
-            File(widget.path),
+            File(PhotoFiles.resolve(widget.path)),
             width: width,
             height: height,
             fit: BoxFit.fill,
@@ -133,7 +135,7 @@ Future<double> fitScaleForPhoto({
   required double frameHeight,
 }) async {
   try {
-    final bytes = await File(path).readAsBytes();
+    final bytes = await File(PhotoFiles.resolve(path)).readAsBytes();
     final codec = await ui.instantiateImageCodec(bytes);
     final frame = await codec.getNextFrame();
     final image = frame.image;

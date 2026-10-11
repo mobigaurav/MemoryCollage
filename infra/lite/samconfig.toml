@@ -13,4 +13,4 @@ confirm_changeset = true
 resolve_s3 = true
 resolve_image_repos = true
 region = "us-east-1"
-parameter_overrides = "Env=dev AppName=memorybook VideoVendor=none"
+parameter_overrides = "Env=dev AppName=memorybook VideoVendor=runway"

@@ -14,7 +14,7 @@ Future<void> showAlbumEditSheet({
 }) {
   return showModalBottomSheet<void>(
     context: context,
-    backgroundColor: MbTokens.leatherDark,
+    backgroundColor: MbTokens.cream,
     isScrollControlled: true,
     builder: (_) => AlbumEditSheet(album: album),
   );
@@ -76,7 +76,12 @@ class _AlbumEditSheetState extends ConsumerState<AlbumEditSheet> {
             TextField(
               controller: _title,
               decoration: const InputDecoration(labelText: 'Title'),
-              style: const TextStyle(color: MbTokens.cream, fontSize: 20),
+              style: const TextStyle(
+                color: MbTokens.ink,
+                fontFamily: MbTokens.sans,
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+              ),
             ),
             const SizedBox(height: 16),
             const Text('Cover cloth'),
@@ -116,12 +121,13 @@ class _AlbumEditSheetState extends ConsumerState<AlbumEditSheet> {
               },
               child: const Text('Open the book'),
             ),
-            TextButton(
-              onPressed: _busy ? null : _delete,
-              child: const Text(
-                'Delete book',
-                style: TextStyle(color: MbTokens.danger),
+            FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFFC62828),
+                foregroundColor: Colors.white,
               ),
+              onPressed: _busy ? null : _delete,
+              child: const Text('Delete book'),
             ),
           ],
         ),
@@ -153,15 +159,21 @@ class _AlbumEditSheetState extends ConsumerState<AlbumEditSheet> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: MbTokens.leather,
+        backgroundColor: MbTokens.cream,
         title: const Text('Delete this book?'),
-        content: const Text('Pages and photos copied into it will be removed.'),
+        content: const Text(
+          'The book leaves this phone. The photos in your camera roll stay.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
             child: const Text('Cancel'),
           ),
-          TextButton(
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFFC62828),
+              foregroundColor: Colors.white,
+            ),
             onPressed: () => Navigator.pop(ctx, true),
             child: const Text('Delete'),
           ),

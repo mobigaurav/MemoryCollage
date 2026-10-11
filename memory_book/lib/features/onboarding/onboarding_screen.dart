@@ -43,7 +43,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: MbTokens.leatherDark,
       body: SafeArea(
         child: Column(
           children: [
@@ -90,6 +89,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   return Padding(
                     padding: const EdgeInsets.all(28),
                     child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
                           page.title,
@@ -100,9 +100,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         Text(
                           page.body,
                           textAlign: TextAlign.center,
-                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                color: MbTokens.paper,
-                              ),
+                          style: Theme.of(context).textTheme.bodyLarge,
                         ),
                       ],
                     ),
@@ -150,20 +148,19 @@ class SplashScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const Scaffold(
-      backgroundColor: MbTokens.leatherDark,
       body: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.auto_stories, size: 88, color: MbTokens.foil),
+            Icon(Icons.auto_stories, size: 88, color: MbTokens.leather),
             SizedBox(height: 16),
             Text(
               'Memory Book',
               style: TextStyle(
                 fontFamily: MbTokens.serif,
-                fontSize: 40,
-                height: 1.1,
-                color: MbTokens.cream,
+                fontSize: 44,
+                height: 1.05,
+                color: MbTokens.ink,
               ),
             ),
           ],

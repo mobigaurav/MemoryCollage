@@ -14,9 +14,9 @@ abstract final class MbTokens {
   static const oxblood = Color(0xFF6E2C2C);
   static const film = Color(0xFF111111);
   static const filmBorder = Color(0xFF2A2A2A);
-  static const caption = Color(0xFF6B5344);
+  static const caption = Color(0xFF4A3B32);
   static const slotDash = Color(0xFFB89A78);
-  static const danger = Color(0xFF8B2E2E);
+  static const danger = Color(0xFFB42318);
 
   /// Warm table the shared spread and reel sit on. Not a dark field.
   static const studio = Color(0xFFF6EFE3);

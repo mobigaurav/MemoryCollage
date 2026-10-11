@@ -1,18 +1,23 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'core/config.dart';
 import 'data/db/app_database.dart';
 import 'data/repositories/album_repository.dart';
 import 'data/repositories/draft_repository.dart';
 import 'data/repositories/settings_repository.dart';
 import 'services/auth_ai.dart';
 import 'services/book_export.dart';
+import 'services/community_api.dart';
 import 'services/credit_ledger.dart';
+import 'services/household_api.dart';
 import 'services/export_history.dart';
 import 'services/export_service.dart';
 import 'services/local_notify.dart';
 import 'services/photo_service.dart';
 import 'services/print_service.dart';
 import 'services/premium_service.dart';
+import 'services/push_notifications.dart';
+import 'services/reel_library.dart';
 import 'services/slideshow_exporter.dart';
 
 final appDatabaseProvider = Provider<AppDatabase>((ref) {
@@ -37,6 +42,13 @@ final photoServiceProvider = Provider<PhotoService>((ref) => PhotoService());
 
 final localNotifyProvider = Provider<LocalNotify>((ref) => LocalNotify());
 
+final pushNotificationsProvider = Provider<PushNotifications>(
+  (ref) => PushNotifications(
+    ref.watch(settingsRepositoryProvider),
+    ref.watch(localNotifyProvider),
+  ),
+);
+
 final nativeEncoderProvider =
     Provider<NativeVideoEncoder>((ref) => NativeVideoEncoder());
 
@@ -49,6 +61,12 @@ final exportServiceProvider = Provider<ExportService>(
 final exportHistoryProvider = Provider<ExportHistory>(
   (ref) => ExportHistory(ref.watch(settingsRepositoryProvider)),
 );
+
+final reelLibraryProvider = Provider<ReelLibrary>((ref) => ReelLibrary());
+
+final reelsProvider = FutureProvider<List<ReelRecord>>((ref) {
+  return ref.watch(reelLibraryProvider).load();
+});
 
 final flipReelExporterProvider = Provider<FlipReelExporter>(
   (ref) => FlipReelExporter(ref.watch(nativeEncoderProvider)),
@@ -83,7 +101,7 @@ final aiVideoClientProvider = Provider<AiVideoClient>(
 );
 
 final premiumServiceProvider = Provider<PremiumService>(
-  (ref) => PremiumService(ref.watch(settingsRepositoryProvider)),
+  (ref) => PremiumService(),
 );
 
 class PremiumController extends Notifier<PremiumState> {
@@ -91,11 +109,39 @@ class PremiumController extends Notifier<PremiumState> {
   PremiumState build() {
     final service = ref.read(premiumServiceProvider);
     service.listen((info) async {
-      final local = await service.localUnlocked();
-      state = service.applyCustomer(info, state, local);
+      state = service.applyCustomer(info, state);
     });
-    Future.microtask(refresh);
+    ref.listen(authSessionProvider, (previous, next) {
+      if (next.isLoading) return;
+      final session = next.asData?.value;
+      final before = previous?.asData?.value;
+      if (before?.provider == session?.provider &&
+          before?.subject == session?.subject) {
+        return;
+      }
+      Future<void>(() async {
+        await _bindStore(session);
+        if (!ref.mounted) return;
+        state = await ref.read(premiumServiceProvider).refresh();
+      });
+    });
+    Future.microtask(() async {
+      final session = await ref.read(authRepositoryProvider).current();
+      await _bindStore(session);
+      await refresh();
+    });
     return PremiumState.free;
+  }
+
+  Future<void> _bindStore(AuthSession? session) async {
+    final service = ref.read(premiumServiceProvider);
+    try {
+      if (session == null || session.subject.isEmpty) {
+        await service.signOutStore();
+        return;
+      }
+      await service.identify('${session.provider}:${session.subject}');
+    } catch (_) {}
   }
 
   Future<void> refresh() async {
@@ -113,12 +159,17 @@ class PremiumController extends Notifier<PremiumState> {
     state = await ref.read(premiumServiceProvider).restore();
   }
 
-  Future<void> unlockLocally() async {
-    state = await ref.read(premiumServiceProvider).unlockLocally();
-  }
-
-  Future<void> clearLocalUnlock() async {
-    state = await ref.read(premiumServiceProvider).clearLocalUnlock();
+  Future<void> buyCreditPack() async {
+    final result = await ref.read(premiumServiceProvider).purchaseCreditPack();
+    final id = result.transactionId;
+    if (id != null) {
+      final ledger = ref.read(creditLedgerProvider);
+      final reason = 'pack_5:$id';
+      if (!await ledger.hasReason(reason)) {
+        await ledger.grant(AppConfig.creditPackSize, reason);
+      }
+    }
+    state = result.state;
   }
 }
 
@@ -141,3 +192,11 @@ final creditBalanceProvider = StreamProvider<int>((ref) {
 final authSessionProvider = StreamProvider((ref) {
   return ref.watch(authRepositoryProvider).watch();
 });
+
+final communityApiProvider = Provider<CommunityApi>(
+  (ref) => CommunityApi(ref.watch(settingsRepositoryProvider)),
+);
+
+final householdApiProvider = Provider<HouseholdApi>(
+  (ref) => HouseholdApi(ref.watch(settingsRepositoryProvider)),
+);

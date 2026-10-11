@@ -20,6 +20,10 @@ class Job:
     style: str
     video_url: str | None = None
     error: str | None = None
+    prompt: str = ""
+    status_url: str = ""
+    response_url: str = ""
+    refunded: bool = False
 
 
 @dataclass
@@ -27,11 +31,13 @@ class MemoryStore:
     users: dict[str, str | None] = field(default_factory=dict)
     events: list[tuple[str, int, str]] = field(default_factory=list)
     jobs: dict[str, Job] = field(default_factory=dict)
+    device_tokens: dict[str, tuple[str, str]] = field(default_factory=dict)
 
     def reset(self) -> None:
         self.users.clear()
         self.events.clear()
         self.jobs.clear()
+        self.device_tokens.clear()
 
     def ensure_user(self, sub: str, email: str | None) -> int:
         if sub not in self.users:
@@ -52,6 +58,16 @@ class MemoryStore:
 
     def grant(self, sub: str, amount: int, reason: str) -> None:
         self.events.append((sub, amount, reason))
+
+    def save_device_token(self, sub: str, token: str, platform: str) -> None:
+        self.device_tokens[token] = (sub, platform)
+
+    def delete_device_token(self, sub: str, token: str) -> bool:
+        row = self.device_tokens.get(token)
+        if row is None or row[0] != sub:
+            return False
+        del self.device_tokens[token]
+        return True
 
     def create_job(self, sub: str, style: str, status: str) -> Job:
         job = Job(id=str(uuid.uuid4()), sub=sub, status=status, style=style)

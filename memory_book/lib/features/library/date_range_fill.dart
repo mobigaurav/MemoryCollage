@@ -32,7 +32,11 @@ class DateRangeFillFields extends StatelessWidget {
           title: const Text('Fill from a date range'),
           subtitle: const Text(
             'Pull photos from this trip or week onto empty pages.',
-            style: TextStyle(color: MbTokens.paperDeep),
+            style: TextStyle(
+              color: MbTokens.inkSoft,
+              fontFamily: MbTokens.sans,
+              height: 1.35,
+            ),
           ),
           value: enabled,
           onChanged: onEnabled,
@@ -100,7 +104,7 @@ Future<(DateTime start, DateTime end)?> pickFillRange(
   var enabled = true;
   return showModalBottomSheet<(DateTime, DateTime)>(
     context: context,
-    backgroundColor: MbTokens.leatherDark,
+    backgroundColor: MbTokens.cream,
     isScrollControlled: true,
     builder: (ctx) {
       return Padding(

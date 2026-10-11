@@ -5,22 +5,28 @@ import 'package:go_router/go_router.dart';
 import '../../data/repositories/settings_repository.dart';
 import '../../features/auth/auth_screen.dart';
 import '../../features/book/book_reader_screen.dart';
-import '../../features/book/page_curl_spike_screen.dart';
+import '../../features/book/family_screen.dart';
 import '../../features/collage/collage_studio_screen.dart';
 import '../../features/library/library_screen.dart';
 import '../../features/onboarding/onboarding_screen.dart';
 import '../../features/paywall/paywall_screen.dart';
+import '../../features/reels/clip_editor_screen.dart';
+import '../../features/reels/reels_screen.dart';
 import '../../features/settings/settings_screen.dart';
+import '../../features/world/world_screen.dart';
 import '../../features/shell/app_shell.dart';
 import '../../features/studio/studio_screen.dart';
 import '../../features/video/video_studio_screen.dart';
+import '../../features/video/year_film_screen.dart';
 import '../../providers.dart';
+import '../../services/analytics.dart';
 
 final _rootKey = GlobalKey<NavigatorState>();
 
 GoRouter createRouter() {
   return GoRouter(
     navigatorKey: _rootKey,
+    observers: [AnalyticsRouteObserver()],
     initialLocation: '/splash',
     routes: [
       GoRoute(
@@ -49,6 +55,22 @@ GoRouter createRouter() {
               GoRoute(
                 path: '/studio',
                 builder: (context, state) => const StudioScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/reels',
+                builder: (context, state) => const ReelsScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/world',
+                builder: (context, state) => const WorldScreen(),
               ),
             ],
           ),
@@ -89,6 +111,26 @@ GoRouter createRouter() {
       ),
       GoRoute(
         parentNavigatorKey: _rootKey,
+        path: '/year',
+        builder: (context, state) => const YearFilmScreen(),
+      ),
+      GoRoute(
+        parentNavigatorKey: _rootKey,
+        path: '/family',
+        builder: (context, state) => FamilyScreen(
+          albumId: state.uri.queryParameters['album'],
+          albumTitle: state.uri.queryParameters['title'],
+        ),
+      ),
+      GoRoute(
+        parentNavigatorKey: _rootKey,
+        path: '/reel/edit',
+        builder: (context, state) => ClipEditorScreen(
+          reelId: state.uri.queryParameters['id'] ?? '',
+        ),
+      ),
+      GoRoute(
+        parentNavigatorKey: _rootKey,
         path: '/paywall',
         builder: (context, state) => const PaywallScreen(),
       ),
@@ -105,11 +147,6 @@ GoRouter createRouter() {
         parentNavigatorKey: _rootKey,
         path: '/ai',
         builder: (context, state) => const AiLabScreen(),
-      ),
-      GoRoute(
-        parentNavigatorKey: _rootKey,
-        path: '/dev/curl',
-        builder: (context, state) => const PageCurlSpikeScreen(),
       ),
     ],
   );

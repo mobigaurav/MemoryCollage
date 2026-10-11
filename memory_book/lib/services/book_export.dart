@@ -11,13 +11,14 @@ import '../data/repositories/album_repository.dart';
 import '../domain/book_models.dart';
 import '../domain/slot_crop.dart';
 import 'export_service.dart';
+import 'photo_files.dart';
 
 /// Off-screen book painter used for spread PNG export and 9:16 flip reels.
 class BookPainter {
   Future<ui.Image?> load(String? path) async {
     if (path == null || path.isEmpty) return null;
     try {
-      final bytes = await File(path).readAsBytes();
+      final bytes = await File(PhotoFiles.resolve(path)).readAsBytes();
       final codec = await ui.instantiateImageCodec(bytes);
       return (await codec.getNextFrame()).image;
     } catch (_) {

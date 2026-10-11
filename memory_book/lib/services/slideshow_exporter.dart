@@ -7,6 +7,7 @@ import 'package:uuid/uuid.dart';
 
 import '../domain/media_options.dart';
 import 'export_service.dart';
+import 'photo_files.dart';
 
 class SlideshowExporter {
   SlideshowExporter(this.encoder);
@@ -30,24 +31,24 @@ class SlideshowExporter {
     };
     final tmp = await getTemporaryDirectory();
     final out = p.join(tmp.path, 'slide_${_uuid.v4()}.mp4');
-    final frames = [...images];
+    final frames = [for (final path in images) PhotoFiles.resolve(path)];
     if (title != null && title.trim().isNotEmpty) {
       frames.insert(0, await _card(title.trim(), size.$1, size.$2, tmp.path));
     }
     if (endCard != null && endCard.trim().isNotEmpty) {
       frames.add(await _card(endCard.trim(), size.$1, size.$2, tmp.path));
     }
-    await encoder.encodeSlideshow(
+    final mixed = await encoder.encodeSlideshow(
       images: frames,
       outputPath: out,
       width: size.$1,
       height: size.$2,
       secondsPerSlide: secondsPerSlide,
       transition: transition.name,
-      audioPath: audioPath,
+      audioPath: audioPath == null ? null : PhotoFiles.resolve(audioPath),
       filter: filter.name,
     );
-    return File(out);
+    return File(mixed);
   }
 
   Future<String> _card(String text, int width, int height, String dir) async {

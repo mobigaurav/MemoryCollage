@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:memory_book/core/config.dart';
@@ -9,7 +10,10 @@ import 'package:memory_book/domain/slot_crop.dart';
 import 'package:memory_book/domain/collage_templates.dart';
 import 'package:memory_book/domain/media_options.dart';
 import 'package:memory_book/services/auth_ai.dart';
+import 'package:memory_book/services/photo_files.dart';
 import 'package:memory_book/services/cognito_auth.dart';
+import 'package:memory_book/domain/year_film.dart';
+import 'package:memory_book/services/reel_library.dart';
 
 void main() {
   test('catalog has a deep unique template library', () {
@@ -98,8 +102,25 @@ void main() {
       friendlyCognitoError('NotAuthorizedException'),
       'That email or password does not match.',
     );
-    final payload = base64Url.encode(utf8.encode('{"sub":"user-42"}'));
+    expect(
+      friendlyCognitoError(
+        'Cannot reset password for the user as there is no registered/verified email',
+      ),
+      contains('Confirm the code'),
+    );
+    expect(
+      friendlyCognitoError('ExpiredCodeException'),
+      contains('expired'),
+    );
+    final payload = base64Url.encode(
+      utf8.encode('{"sub":"user-42","email_verified":true}'),
+    );
     expect(jwtSubject('h.$payload.s'), 'user-42');
+    expect(jwtEmailVerified('h.$payload.s'), isTrue);
+    final unverified = base64Url.encode(
+      utf8.encode('{"sub":"user-7","email_verified":false}'),
+    );
+    expect(jwtEmailVerified('h.$unverified.s'), isFalse);
   });
 
   test('page reorder and even page counts', () {
@@ -108,5 +129,86 @@ void main() {
     expect(evenPageCount(1), 4);
     expect(evenPageCount(5), 6);
     expect(evenPageCount(12), 12);
+  });
+
+  test('a moved container still finds a photo by its file name', () {
+    final root = Directory.systemTemp.createTempSync('mb_photos');
+    final photos = Directory('${root.path}/photos')..createSync();
+    final file = File('${photos.path}/kept.jpg')..writeAsStringSync('jpg');
+    PhotoFiles.documentsRoot = root.path;
+    expect(
+      PhotoFiles.resolve('/var/old-container/Documents/photos/kept.jpg'),
+      file.path,
+    );
+    expect(PhotoFiles.resolve('photos/kept.jpg'), file.path);
+    root.deleteSync(recursive: true);
+    PhotoFiles.documentsRoot = null;
+  });
+
+  test('Cognito social sign-in asks the hosted UI for that provider', () {
+    final uri = cognitoAuthorizeUri(
+      host: 'memorybook-dev.auth.us-east-1.amazoncognito.com',
+      clientId: 'client',
+      redirectUri: AppConfig.cognitoRedirectUri,
+      identityProvider: 'Google',
+      codeChallenge: cognitoCodeChallenge('verifier'),
+    );
+    expect(uri.host, 'memorybook-dev.auth.us-east-1.amazoncognito.com');
+    expect(uri.path, '/oauth2/authorize');
+    expect(uri.queryParameters['identity_provider'], 'Google');
+    expect(uri.queryParameters['redirect_uri'], 'memorybook://auth');
+    expect(uri.queryParameters['code_challenge_method'], 'S256');
+    expect(
+      cognitoAuthorizationCode(Uri.parse('memorybook://auth?code=abc')),
+      'abc',
+    );
+    expect(
+      () => cognitoAuthorizationCode(
+        Uri.parse('memorybook://auth?error=invalid_request'),
+      ),
+      throwsA(
+        predicate(
+          (e) => e is StateError && e.message.contains('Cognito does not have'),
+        ),
+      ),
+    );
+  });
+
+  test('unnamed reels get a number and stay unique', () {
+    ReelRecord clip(String id, String title) => ReelRecord(
+          id: id,
+          title: title,
+          fileName: '$id.mp4',
+          createdAt: DateTime.utc(2026, 1, int.parse(id)),
+          kind: 'ai',
+        );
+    final settled = settleReelTitles([
+      clip('3', 'AI clip'),
+      clip('1', 'AI clip'),
+      clip('2', 'AI clip'),
+    ]);
+    expect(settled.map((row) => row.title).toList(), [
+      'AI clip 3',
+      'AI clip 1',
+      'AI clip 2',
+    ]);
+    expect(nextReelTitle(settled, 'AI clip'), 'AI clip 4');
+    expect(nextReelTitle(settled, 'Sunday picnic'), 'Sunday picnic');
+    expect(
+      nextReelTitle([...settled, clip('4', 'Sunday picnic')], 'Sunday picnic'),
+      'Sunday picnic (2)',
+    );
+  });
+
+  test('a year film keeps an even path and prefers a full year', () {
+    expect(takeEvenly([1, 2, 3], 24), [1, 2, 3]);
+    expect(takeEvenly(List.generate(80, (i) => i), 24).length, 24);
+    expect(takeEvenly(List.generate(80, (i) => i), 24).first, 0);
+    expect(takeEvenly(List.generate(80, (i) => i), 24).last, 79);
+    expect(
+      yearWorthFilming({2026: 2, 2025: 12}, now: 2026),
+      2025,
+    );
+    expect(yearWorthFilming({2026: 1, 2025: 2}, now: 2026), isNull);
   });
 }

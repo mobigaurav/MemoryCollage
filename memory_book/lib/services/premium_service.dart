@@ -5,7 +5,6 @@ import 'package:flutter/services.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 
 import '../core/config.dart';
-import '../data/repositories/settings_repository.dart';
 
 class PremiumPlan {
   const PremiumPlan({
@@ -60,9 +59,14 @@ class PremiumState {
   }
 }
 
+class PackPurchase {
+  const PackPurchase({required this.state, this.transactionId});
+
+  final PremiumState state;
+  final String? transactionId;
+}
+
 class PremiumService {
-  PremiumService(this._settings);
-  final SettingsRepository _settings;
   var _listenerAttached = false;
 
   static String get activeKey {
@@ -94,12 +98,11 @@ class PremiumService {
   }
 
   Future<PremiumState> refresh() async {
-    final local = await _settings.getBool(SettingsRepository.localPremiumKey);
     if (activeKey.isEmpty) {
       return PremiumState(
-        isPremium: AppConfig.devUnlockEnabled && local,
-        source: 'local',
-        plans: _devPlans(),
+        isPremium: false,
+        source: 'none',
+        plans: _storePlans(),
         configured: false,
       );
     }
@@ -107,34 +110,44 @@ class PremiumService {
       await _ensureConfigured();
       final info = await Purchases.getCustomerInfo();
       final offerings = await Purchases.getOfferings();
-      return _fromCustomer(
-        info,
-        plans: _plansFrom(offerings),
-        local: local,
-      );
+      return _fromCustomer(info, plans: _plansFrom(offerings));
     } catch (e) {
       return PremiumState(
-        isPremium: AppConfig.devUnlockEnabled && local,
-        source: 'local',
+        isPremium: false,
+        source: 'none',
         error: e.toString(),
-        plans: _devPlans(),
+        plans: _storePlans(),
         configured: false,
       );
     }
   }
 
-  PremiumState applyCustomer(CustomerInfo info, PremiumState current, bool local) {
-    return _fromCustomer(info, plans: current.plans, local: local);
+  PremiumState applyCustomer(CustomerInfo info, PremiumState current) {
+    return _fromCustomer(info, plans: current.plans);
   }
 
-  Future<bool> localUnlocked() {
-    return _settings.getBool(SettingsRepository.localPremiumKey);
+  /// Ties StoreKit and Play purchases to the signed-in account.
+  /// No-ops until a RevenueCat public SDK key is present.
+  Future<void> identify(String appUserId) async {
+    final id = appUserId.trim();
+    if (activeKey.isEmpty || id.isEmpty) return;
+    await _ensureConfigured();
+    await Purchases.logIn(id);
+  }
+
+  Future<void> signOutStore() async {
+    if (activeKey.isEmpty) return;
+    if (!await Purchases.isConfigured) return;
+    final info = await Purchases.getCustomerInfo();
+    if (info.originalAppUserId.startsWith(r'$RCAnonymous')) return;
+    await Purchases.logOut();
   }
 
   Future<PremiumState> purchase(String planId) async {
     if (activeKey.isEmpty) {
-      await _settings.setBool(SettingsRepository.localPremiumKey, true);
-      return refresh();
+      return (await refresh()).copyWith(
+        error: 'Premium purchases are not connected yet.',
+      );
     }
     try {
       await _ensureConfigured();
@@ -178,34 +191,77 @@ class PremiumService {
     }
   }
 
-  Future<PremiumState> unlockLocally() async {
-    await _settings.setBool(SettingsRepository.localPremiumKey, true);
-    return refresh();
-  }
-
-  Future<PremiumState> clearLocalUnlock() async {
-    await _settings.setBool(SettingsRepository.localPremiumKey, false);
-    return refresh();
-  }
-
   PremiumState _fromCustomer(
     CustomerInfo info, {
     required List<PremiumPlan> plans,
-    required bool local,
   }) {
     final entitled =
         info.entitlements.all[AppConfig.premiumEntitlement]?.isActive ?? false;
-    final dev = AppConfig.devUnlockEnabled && local;
     return PremiumState(
-      isPremium: entitled || dev,
-      source: entitled ? 'revenuecat' : (dev ? 'dev' : 'revenuecat'),
-      plans: plans.isEmpty ? _devPlans() : plans,
+      isPremium: entitled,
+      source: entitled ? 'revenuecat' : 'none',
+      plans: plans.isEmpty ? _storePlans() : plans,
       configured: true,
     );
   }
 
+  Future<PackPurchase> purchaseCreditPack() async {
+    if (activeKey.isEmpty) {
+      return PackPurchase(
+        state: (await refresh()).copyWith(
+          error: 'Credit packs are not connected yet.',
+        ),
+      );
+    }
+    try {
+      await _ensureConfigured();
+      final offerings = await Purchases.getOfferings();
+      final pkg = _creditPackage(offerings);
+      if (pkg == null) {
+        throw StateError(
+          'No five-clip pack. Add ${AppConfig.creditPackProductId} to the current offering.',
+        );
+      }
+      final result = await Purchases.purchase(PurchaseParams.package(pkg));
+      final id = result.storeTransaction.transactionIdentifier;
+      return PackPurchase(
+        state: await refresh(),
+        transactionId: id.isEmpty ? null : id,
+      );
+    } on PlatformException catch (e) {
+      if (PurchasesErrorHelper.getErrorCode(e) ==
+          PurchasesErrorCode.purchaseCancelledError) {
+        return PackPurchase(state: (await refresh()).copyWith(clearError: true));
+      }
+      return PackPurchase(
+        state: (await refresh()).copyWith(error: e.message ?? e.code),
+      );
+    } catch (e) {
+      return PackPurchase(state: (await refresh()).copyWith(error: e.toString()));
+    }
+  }
+
+  Package? _creditPackage(Offerings offerings) {
+    final groups = [
+      offerings.current?.availablePackages ?? const <Package>[],
+      for (final offering in offerings.all.values) offering.availablePackages,
+    ];
+    for (final packages in groups) {
+      for (final pkg in packages) {
+        if (pkg.storeProduct.identifier == AppConfig.creditPackProductId) {
+          return pkg;
+        }
+      }
+    }
+    return null;
+  }
+
   List<PremiumPlan> _plansFrom(Offerings offerings) {
-    final packages = offerings.current?.availablePackages ?? [];
+    final packages = (offerings.current?.availablePackages ?? [])
+        .where(
+          (pkg) => pkg.storeProduct.identifier != AppConfig.creditPackProductId,
+        )
+        .toList();
     final plans = packages.map(_planFromPackage).toList();
     plans.sort((a, b) {
       int rank(PremiumPlan p) => p.annual ? 0 : (p.monthly ? 1 : 2);
@@ -232,20 +288,20 @@ class PremiumService {
     );
   }
 
-  List<PremiumPlan> _devPlans() {
+  List<PremiumPlan> _storePlans() {
     return const [
       PremiumPlan(
-        id: 'dev_annual',
+        id: AppConfig.premiumAnnualId,
         title: 'Annual',
-        priceLabel: 'Store price',
-        detail: 'Shows here once RevenueCat has a current offering',
+        priceLabel: 'App Store',
+        detail: 'The family plan',
         annual: true,
       ),
       PremiumPlan(
-        id: 'dev_monthly',
+        id: AppConfig.premiumMonthlyId,
         title: 'Monthly',
-        priceLabel: 'Store price',
-        detail: 'Secondary plan',
+        priceLabel: 'App Store',
+        detail: 'Cancel anytime',
         monthly: true,
       ),
     ];

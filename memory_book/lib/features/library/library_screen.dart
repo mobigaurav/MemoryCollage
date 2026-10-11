@@ -9,6 +9,7 @@ import '../../domain/book_models.dart';
 import '../../data/repositories/settings_repository.dart';
 import '../../providers.dart';
 import '../../domain/book_ops.dart';
+import '../../widgets/brand_hero.dart';
 import '../book/page_canvas.dart';
 import 'album_edit_sheet.dart';
 
@@ -21,46 +22,43 @@ class LibraryScreen extends ConsumerWidget {
     final session = ref.watch(authSessionProvider).value;
     final text = Theme.of(context).textTheme;
     return Scaffold(
-      body: SafeArea(
-        child: Column(
-          children: [
-            const _WeeklyNudge(),
-            Expanded(
-              child: albums.when(
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (e, _) => Center(child: Text('$e')),
-                data: (items) => CustomScrollView(
-                  slivers: [
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: Text(_greeting(), style: text.headlineMedium),
-                                ),
-                                _AccountChip(
-                                  guest: session == null,
-                                  onTap: () => session == null
-                                      ? context.push('/account')
-                                      : context.go('/you'),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Your photo books, on this phone.',
-                              style: text.bodyLarge,
-                            ),
-                            const SizedBox(height: 20),
-                            Text('Start a book', style: text.titleMedium),
+      backgroundColor: MbTokens.cream,
+      body: Column(
+        children: [
+          const _WeeklyNudge(),
+          Expanded(
+            child: albums.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (e, _) => Center(child: Text('$e')),
+              data: (items) => CustomScrollView(
+                slivers: [
+                  SliverToBoxAdapter(
+                    child: MbHero(
+                      eyebrow: 'Books',
+                      title: _greeting(),
+                      subtitle: 'Photo books on this phone. Share sends the whole book.',
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: _AccountChip(
+                          guest: session == null,
+                          onTap: () => session == null
+                              ? context.push('/account')
+                              : context.go('/you'),
+                        ),
+                      ),
+                    ),
+                  ),
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 22, 20, 0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Start a book', style: text.titleMedium),
                             const SizedBox(height: 6),
                             Text(
-                              'A shelf of albums. Pick a cover, then choose the photos yourself.',
-                              style: text.bodyMedium,
+                              'Pick a cover. Empty pages wait for photos.',
+                              style: text.bodyLarge,
                             ),
                             const SizedBox(height: 14),
                             SizedBox(
@@ -154,7 +152,6 @@ class LibraryScreen extends ConsumerWidget {
             ),
           ],
         ),
-      ),
     );
   }
 }
@@ -175,7 +172,7 @@ class _AccountChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.white,
+      color: const Color(0x24FFFFFF),
       borderRadius: BorderRadius.circular(999),
       child: InkWell(
         onTap: onTap,
@@ -190,7 +187,7 @@ class _AccountChip extends StatelessWidget {
                 Icon(
                   guest ? Icons.person_outline : Icons.person,
                   size: 18,
-                  color: MbTokens.leather,
+                  color: MbTokens.cream,
                 ),
                 const SizedBox(width: 6),
                 Text(
@@ -199,7 +196,7 @@ class _AccountChip extends StatelessWidget {
                     fontFamily: MbTokens.sans,
                     fontWeight: FontWeight.w600,
                     fontSize: 14,
-                    color: MbTokens.ink,
+                    color: MbTokens.cream,
                   ),
                 ),
               ],
@@ -271,8 +268,9 @@ class _StyleCard extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     fontFamily: MbTokens.sans,
-                    fontSize: 12,
-                    color: MbTokens.caption,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: MbTokens.inkSoft,
                   ),
                 ),
               ],
@@ -363,7 +361,12 @@ class _NewBookScreenState extends ConsumerState<NewBookScreen> {
           TextField(
             controller: _title,
             decoration: const InputDecoration(labelText: 'Title'),
-            style: const TextStyle(color: MbTokens.cream, fontSize: 22),
+            style: const TextStyle(
+              color: MbTokens.ink,
+              fontFamily: MbTokens.sans,
+              fontSize: 22,
+              fontWeight: FontWeight.w600,
+            ),
           ),
           const SizedBox(height: 20),
           const Text('Cover cloth'),
@@ -384,7 +387,11 @@ class _NewBookScreenState extends ConsumerState<NewBookScreen> {
           const SizedBox(height: 12),
           const Text(
             'Photos are added only when you pick them. Nothing is pulled from the library on its own.',
-            style: TextStyle(color: MbTokens.paperDeep, height: 1.4),
+            style: TextStyle(
+              color: MbTokens.inkSoft,
+              fontFamily: MbTokens.sans,
+              height: 1.4,
+            ),
           ),
           const SizedBox(height: 28),
           FilledButton(
