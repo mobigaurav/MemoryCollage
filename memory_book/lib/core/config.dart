@@ -3,7 +3,8 @@ class AppConfig {
   static const appName = 'Memory Book';
   static const appStoreTitle = 'Memory Book';
   static const supportEmail = 'mobigaurav@gmail.com';
-  static const siteUrl = 'https://memory-book.vercel.app';
+  /// Memory Book's own site. Not memory-book.vercel.app, which is a different project.
+  static const siteUrl = 'https://memory-book-pearl-zeta.vercel.app';
 
   /// Public SDK keys. Prefer the platform key; [revenueCatApiKey] is the fallback.
   /// Empty = local entitlement store so the app still runs.
