@@ -16,9 +16,9 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-# Same name and build on iOS and Android. Live Memory Collage is 1.0.1 (5),
-# so this build must stay above 5 to replace it on TestFlight.
-version: 2.0.0+6
+# Same name and build on iOS and Android. Live Memory Collage is 1.0.1 (5).
+# Play already accepted versionCode 6, so the next upload is 7.
+version: 2.0.0+7
 
 environment:
   sdk: ^3.13.4
