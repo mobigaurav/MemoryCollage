@@ -9,30 +9,66 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:video_player/video_player.dart';
 
+import '../../core/config.dart';
 import '../../core/theme/tokens.dart';
 import '../../providers.dart';
+import '../../widgets/film_player.dart';
 import '../../services/analytics.dart';
 import '../../services/auth_ai.dart';
 import '../../services/slideshow_exporter.dart';
 
 /// Empty string means send the photo with no extra words. Null means cancel.
-Future<String?> askClipPrompt(BuildContext context) async {
-  final controller = TextEditingController();
-  final send = await showDialog<bool>(
+Future<String?> askClipPrompt(BuildContext context) {
+  return showDialog<String>(
     context: context,
-    builder: (ctx) => AlertDialog(
+    builder: (ctx) => const _ClipPrompt(),
+  );
+}
+
+class _ClipPrompt extends ConsumerStatefulWidget {
+  const _ClipPrompt();
+
+  @override
+  ConsumerState<_ClipPrompt> createState() => _ClipPromptState();
+}
+
+class _ClipPromptState extends ConsumerState<_ClipPrompt> {
+  final _controller = TextEditingController();
+  bool _buying = false;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final credits = ref.watch(creditBalanceProvider).value ?? 0;
+    final premium = ref.watch(premiumControllerProvider);
+    return AlertDialog(
       backgroundColor: MbTokens.cream,
       title: const Text('This photo leaves the device'),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Text(
+            'Not free. This spends 1 credit. You have $credits. Premium does not include AI clips.',
+            style: const TextStyle(
+              fontFamily: MbTokens.sans,
+              fontSize: 16,
+              height: 1.4,
+              color: MbTokens.ink,
+            ),
+          ),
+          const SizedBox(height: 8),
           const Text(
-            'One credit animates this photo. Words only describe the motion, such as a breeze or a smile. They do not replace the picture.',
+            'Words only describe the motion, such as a breeze or a smile. They do not replace the picture.',
           ),
           const SizedBox(height: 12),
           TextField(
-            controller: controller,
+            controller: _controller,
             minLines: 2,
             maxLines: 4,
             decoration: const InputDecoration(
@@ -40,24 +76,34 @@ Future<String?> askClipPrompt(BuildContext context) async {
               hintText: 'A slow breeze, a small smile',
             ),
           ),
+          if (premium.error != null) ...[
+            const SizedBox(height: 8),
+            Text(premium.error!, style: const TextStyle(color: MbTokens.ink)),
+          ],
         ],
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.pop(ctx, false),
+          onPressed: _buying
+              ? null
+              : () async {
+                  setState(() => _buying = true);
+                  await ref.read(premiumControllerProvider.notifier).buyCreditPack();
+                  if (mounted) setState(() => _buying = false);
+                },
+          child: Text(_buying ? 'Buying…' : 'Buy ${AppConfig.creditPackSize} clips'),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(context),
           child: const Text('Keep it here'),
         ),
         FilledButton(
-          onPressed: () => Navigator.pop(ctx, true),
-          child: const Text('Send'),
+          onPressed: () => Navigator.pop(context, _controller.text.trim()),
+          child: const Text('Spend 1 credit'),
         ),
       ],
-    ),
-  );
-  final prompt = controller.text.trim();
-  controller.dispose();
-  if (send != true) return null;
-  return prompt;
+    );
+  }
 }
 
 Future<AiJobResult> runCloudClip(
@@ -153,14 +199,14 @@ class _ClipDialogState extends ConsumerState<_ClipDialog> {
     try {
       await next.initialize();
       await ref.read(nativeEncoderProvider).preparePlayback();
-      await next.setLooping(true);
+      await next.setLooping(false);
       await next.setVolume(1);
+      await next.pause();
       if (!mounted) {
         await next.dispose();
         return;
       }
       setState(() => _controller = next);
-      await next.play();
     } catch (error) {
       await next.dispose();
       if (mounted) setState(() => _error = '$error');
@@ -220,7 +266,7 @@ class _ClipDialogState extends ConsumerState<_ClipDialog> {
             const Padding(
               padding: EdgeInsets.fromLTRB(20, 16, 20, 8),
               child: Text(
-                'The clip is silent. Add a score on this phone.',
+                'The clip is silent. Add music on this phone.',
                 style: TextStyle(
                   fontFamily: MbTokens.serif,
                   fontSize: 22,
@@ -228,10 +274,10 @@ class _ClipDialogState extends ConsumerState<_ClipDialog> {
                 ),
               ),
             ),
-            for (var i = 1; i <= 11; i++)
+            for (var i = 0; i < SlideshowExporter.musicNames.length; i++)
               ListTile(
-                title: Text('Score $i'),
-                onTap: () => Navigator.pop(ctx, 'score:$i'),
+                title: Text(SlideshowExporter.musicName(i)),
+                onTap: () => Navigator.pop(ctx, 'score:${i + 1}'),
               ),
             ListTile(
               title: const Text('A file from this phone'),
@@ -299,13 +345,8 @@ class _ClipDialogState extends ConsumerState<_ClipDialog> {
           children: [
                 _error != null
                 ? Text(_error!)
-                : _controller != null && _controller!.value.isInitialized
-                    ? AspectRatio(
-                        aspectRatio: _controller!.value.aspectRatio == 0
-                            ? 9 / 16
-                            : _controller!.value.aspectRatio,
-                        child: VideoPlayer(_controller!),
-                      )
+                : _controller != null
+                    ? MbFilmPlayer(controller: _controller!)
                     : const SizedBox(
                         height: 120,
                         child: Center(child: CircularProgressIndicator()),
@@ -326,20 +367,66 @@ class _ClipDialogState extends ConsumerState<_ClipDialog> {
         ),
       ),
       actions: [
-        TextButton(
+        _ClipAction(
+          icon: Icons.library_music_outlined,
+          label: _scoring ? 'Adding' : 'Music',
           onPressed: _scoring ? null : _addMusic,
-          child: Text(_scoring ? 'Adding…' : 'Add music'),
         ),
-        TextButton(onPressed: _share, child: const Text('Share')),
-        FilledButton(
+        _ClipAction(
+          icon: Icons.ios_share,
+          label: 'Share',
+          onPressed: _share,
+        ),
+        _ClipAction(
+          icon: _saved ? Icons.check : Icons.download_outlined,
+          label: _saved ? 'Saved' : (_saving ? 'Saving' : 'Save'),
           onPressed: _saving || _saved ? null : _save,
-          child: Text(_saved ? 'Saved' : (_saving ? 'Saving…' : 'Save')),
         ),
-        TextButton(
+        _ClipAction(
+          icon: Icons.close,
+          label: 'Close',
           onPressed: () => Navigator.pop(context),
-          child: const Text('Close'),
         ),
       ],
+    );
+  }
+}
+
+class _ClipAction extends StatelessWidget {
+  const _ClipAction({
+    required this.icon,
+    required this.label,
+    required this.onPressed,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = onPressed == null ? MbTokens.inkSoft : MbTokens.leather;
+    return InkWell(
+      onTap: onPressed,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: color),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              style: TextStyle(
+                fontFamily: MbTokens.sans,
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: color,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

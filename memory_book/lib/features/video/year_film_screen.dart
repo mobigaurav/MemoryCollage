@@ -1,12 +1,16 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:video_player/video_player.dart';
 
 import '../../core/theme/tokens.dart';
 import '../../domain/media_options.dart';
 import '../../domain/year_film.dart';
 import '../../providers.dart';
 import '../../widgets/brand_hero.dart';
+import '../../widgets/film_player.dart';
 
 class YearFilmScreen extends ConsumerStatefulWidget {
   const YearFilmScreen({super.key});
@@ -18,6 +22,14 @@ class YearFilmScreen extends ConsumerStatefulWidget {
 class _YearFilmScreenState extends ConsumerState<YearFilmScreen> {
   String? _progress;
   String? _note;
+  String? _title;
+  VideoPlayerController? _player;
+
+  @override
+  void dispose() {
+    _player?.dispose();
+    super.dispose();
+  }
 
   Future<void> _make() async {
     if (_progress != null) return;
@@ -58,8 +70,22 @@ class _YearFilmScreenState extends ConsumerState<YearFilmScreen> {
             kind: 'film',
           );
       ref.invalidate(reelsProvider);
-      if (!mounted) return;
-      context.go('/reels');
+      await ref.read(nativeEncoderProvider).preparePlayback();
+      final player = VideoPlayerController.file(File(file.path));
+      await player.initialize();
+      await player.setLooping(false);
+      await player.pause();
+      if (!mounted) {
+        await player.dispose();
+        return;
+      }
+      await _player?.dispose();
+      setState(() {
+        _progress = null;
+        _title = '$year';
+        _player = player;
+        _note = 'Saved on Reels. Press play when you want it.';
+      });
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -82,10 +108,9 @@ class _YearFilmScreenState extends ConsumerState<YearFilmScreen> {
             subtitle:
                 'Photos in the order the camera kept them. The phone makes the film. Nothing is uploaded, and it does not spend a credit.',
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
               children: [
                 FilledButton(
                   onPressed: _progress == null ? _make : null,
@@ -101,6 +126,15 @@ class _YearFilmScreenState extends ConsumerState<YearFilmScreen> {
                       height: 1.4,
                       color: MbTokens.ink,
                     ),
+                  ),
+                ],
+                if (_player != null) ...[
+                  const SizedBox(height: 16),
+                  MbFilmPlayer(controller: _player!),
+                  const SizedBox(height: 12),
+                  OutlinedButton(
+                    onPressed: () => context.go('/reels'),
+                    child: Text(_title == null ? 'Open Reels' : 'Open $_title in Reels'),
                   ),
                 ],
               ],
