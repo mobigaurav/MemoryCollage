@@ -23,11 +23,41 @@ Parameters:
   VideoVendor:
     Type: String
     Default: none
-    Description: none until a vendor key exists. Then luma, runway, or kling.
+    Description: none, runway, or fal. runway uses the Runway API key.
   VideoVendorApiKey:
     Type: String
     Default: ""
     NoEcho: true
+  CognitoDomainPrefix:
+    Type: String
+    Default: memorybook-dev
+    Description: Hosted UI prefix. The app expects memorybook-dev unless COGNITO_DOMAIN is overridden.
+  GoogleClientId:
+    Type: String
+    Default: ""
+    Description: Google OAuth client id. Leave empty until Google is connected.
+  GoogleClientSecret:
+    Type: String
+    Default: ""
+    NoEcho: true
+  AppleServicesId:
+    Type: String
+    Default: ""
+    Description: Sign in with Apple Services ID. Leave empty until Apple is connected.
+  AppleTeamId:
+    Type: String
+    Default: ""
+  AppleKeyId:
+    Type: String
+    Default: ""
+  ApplePrivateKey:
+    Type: String
+    Default: ""
+    NoEcho: true
+
+Conditions:
+  HasGoogle: !Not [!Equals [!Ref GoogleClientId, ""]]
+  HasApple: !Not [!Equals [!Ref AppleServicesId, ""]]
 
 Globals:
   Function:
@@ -68,6 +98,21 @@ Resources:
         - ALLOW_USER_PASSWORD_AUTH
         - ALLOW_REFRESH_TOKEN_AUTH
       PreventUserExistenceErrors: ENABLED
+      AllowedOAuthFlowsUserPoolClient: true
+      AllowedOAuthFlows:
+        - code
+      AllowedOAuthScopes:
+        - openid
+        - email
+        - profile
+      CallbackURLs:
+        - memorybook://auth
+      LogoutURLs:
+        - memorybook://auth
+      SupportedIdentityProviders:
+        - COGNITO
+        - !If [HasGoogle, !Ref GoogleProvider, !Ref "AWS::NoValue"]
+        - !If [HasApple, !Ref AppleProvider, !Ref "AWS::NoValue"]
       AccessTokenValidity: 24
       IdTokenValidity: 24
       RefreshTokenValidity: 30
@@ -75,6 +120,44 @@ Resources:
         AccessToken: hours
         IdToken: hours
         RefreshToken: days
+
+  UserPoolDomain:
+    Type: AWS::Cognito::UserPoolDomain
+    Properties:
+      Domain: !Ref CognitoDomainPrefix
+      UserPoolId: !Ref UserPool
+
+  GoogleProvider:
+    Type: AWS::Cognito::UserPoolIdentityProvider
+    Condition: HasGoogle
+    Properties:
+      UserPoolId: !Ref UserPool
+      ProviderName: Google
+      ProviderType: Google
+      ProviderDetails:
+        client_id: !Ref GoogleClientId
+        client_secret: !Ref GoogleClientSecret
+        authorize_scopes: openid email profile
+      AttributeMapping:
+        email: email
+        username: sub
+
+  AppleProvider:
+    Type: AWS::Cognito::UserPoolIdentityProvider
+    Condition: HasApple
+    Properties:
+      UserPoolId: !Ref UserPool
+      ProviderName: SignInWithApple
+      ProviderType: SignInWithApple
+      ProviderDetails:
+        client_id: !Ref AppleServicesId
+        team_id: !Ref AppleTeamId
+        key_id: !Ref AppleKeyId
+        private_key: !Ref ApplePrivateKey
+        authorize_scopes: email name
+      AttributeMapping:
+        email: email
+        username: sub
 
   MediaBucket:
     Type: AWS::S3::Bucket
@@ -96,6 +179,38 @@ Resources:
             ExpirationInDays: 7
             Prefix: uploads/
 
+  HouseholdTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "${AppName}-${Env}-households"
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: pk
+          AttributeType: S
+        - AttributeName: sk
+          AttributeType: S
+      KeySchema:
+        - AttributeName: pk
+          KeyType: HASH
+        - AttributeName: sk
+          KeyType: RANGE
+
+  CommunityTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "${AppName}-${Env}-community"
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: pk
+          AttributeType: S
+        - AttributeName: sk
+          AttributeType: S
+      KeySchema:
+        - AttributeName: pk
+          KeyType: HASH
+        - AttributeName: sk
+          KeyType: RANGE
+
   ApiFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -107,12 +222,18 @@ Resources:
           COGNITO_USER_POOL_ID: !Ref UserPool
           COGNITO_APP_CLIENT_ID: !Ref UserPoolClient
           MEDIA_BUCKET: !Ref MediaBucket
+          COMMUNITY_TABLE: !Ref CommunityTable
+          HOUSEHOLD_TABLE: !Ref HouseholdTable
           CORS_ORIGINS: !Ref CorsOrigins
           VIDEO_VENDOR: !Ref VideoVendor
           VIDEO_VENDOR_API_KEY: !Ref VideoVendorApiKey
       Policies:
         - S3CrudPolicy:
             BucketName: !Ref MediaBucket
+        - DynamoDBCrudPolicy:
+            TableName: !Ref CommunityTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref HouseholdTable
       Events:
         ProxyApi:
           Type: Api
@@ -139,7 +260,7 @@ Resources:
       EndpointConfiguration:
         Type: REGIONAL
       Cors:
-        AllowMethods: "'GET,POST,OPTIONS'"
+        AllowMethods: "'GET,POST,DELETE,OPTIONS'"
         AllowHeaders: "'*'"
         AllowOrigin: "'*'"
 
@@ -152,5 +273,11 @@ Outputs:
   UserPoolClientId:
     Description: Pass this as COGNITO_CLIENT_ID
     Value: !Ref UserPoolClient
+  CognitoHost:
+    Description: Hosted UI. Apple and Google redirect here, then back to memorybook://auth.
+    Value: !Sub "${CognitoDomainPrefix}.auth.${AWS::Region}.amazoncognito.com"
+  CognitoIdpResponseUrl:
+    Description: Register this as the Google redirect URI and the Apple Services ID return URL.
+    Value: !Sub "https://${CognitoDomainPrefix}.auth.${AWS::Region}.amazoncognito.com/oauth2/idpresponse"
   MediaBucketName:
     Value: !Ref MediaBucket

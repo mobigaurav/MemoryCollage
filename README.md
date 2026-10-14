@@ -1,93 +1,37 @@
-# MemoryCollage
+# Memory Book
 
-The shipping product is now the Flutter app in [`memory_book/`](memory_book/README.md) (iOS + Android): a living photo book, collage studio, and memory-reel exporter.
+A photo book that lives on the phone, with a collage studio and films made on the device. The store name is Memory Book on iOS and Android.
 
-Long-range docs (so we do not lose the plan): [system design](memory_book/docs/SYSTEM_DESIGN.md), [product roadmap](memory_book/docs/PRODUCT_ROADMAP.md), and [backend](docs/BACKEND.md).
+The old Swift app is no longer in this tree. Its history is still in git if a layout needs to be checked.
 
-This Swift/iOS tree is kept as layout-math and filter reference for the rebuild.
+## Layout
 
-MemoryCollage is a powerful and intuitive iOS application that enables users to create photo collages, generate videos from images with background music and filters, and leverage AI to generate videos from text or images. The app provides a seamless user experience with customizable features for each media creation mode.
+| Path | What it is |
+| --- | --- |
+| [`memory_book/`](memory_book/README.md) | Flutter app for iOS and Android |
+| [`apps/web/`](apps/web) | The public site |
+| [`services/api/`](services/api) | The API: accounts, credits, family books, and one photo sent for a clip |
+| [`infra/lite/`](infra/lite) | Cognito, API Gateway, Lambda, and the private media bucket |
+| [`docs/BACKEND.md`](docs/BACKEND.md) | How the API is run and where dev is deployed |
 
-##  Features
+iOS release builds keep the live bundle id `com.playingview.mobigaurav.MemoryCollage`, so this update replaces the app already on the App Store. Debug and Profile use `com.playingview.mobigaurav.memoryBook` and install beside it. Android is a new Play listing, `com.playingview.mobigaurav.memorybook`.
 
-### **Collage Generator**
-- Drag and drop images to create a freeform collage.
-- Choose from predefined templates (grid, circular, custom shapes, etc.).
-- Add text overlays with customizable fonts and colors.
-- Set background colors or gradients.
-- Export collage in different resolutions and formats (JPEG, PNG, HEIC).
-- Includes watermark removal for premium users.
+## Run the phone
 
-### **Video Generator**
-- Convert selected images into a video.
-- Auto-generate background music.
-- Apply built-in video filters (Sepia, Noir, Bloom, etc.).
-- Add transitions (Crossfade, Slide, Zoom).
-- Save and share videos directly from the app.
+From `memory_book`:
 
-### **AI Video Generator (Upcoming)**
-- Generate AI-powered videos from text prompts or images.
-- Customizable themes and effects.
-- Fine-tuned AI models for creative video generation.
+```bash
+./flutterw pub get
+./flutterw run
+```
 
-## Tech Stack
-- **Swift & SwiftUI** – Core app development.
-- **AVFoundation** – Video processing and export.
-- **Core Image (CIImage)** – Applying filters and effects.
-- **Core Animation (CAAnimation)** – Implementing transitions.
-- **SwiftVideoGenerator** – Video composition from images.
-- **UIKit** – Document picker and system-level integrations.
-- **FFmpegKit (Planned)** – Advanced video and audio merging.
-- **GitHub Actions (Planned)** – Automated CI/CD pipeline.
+## Run the API and the site
 
-## Installation & Setup
-1. Clone this repository:
-   ```bash
-   git clone https://github.com/mobigaurav/MemoryCollage.git
-   ```
-2. Open the project in Xcode:
-   ```bash
-   cd MemoryCollage
-   open MemoryCollage.xcodeproj
-   ```
-3. Install dependencies using CocoaPods (if applicable):
-   ```bash
-   pod install
-   ```
-4. Run the app on a simulator or device:
-   ```bash
-   Xcode > Run
-   ```
-
-## Unit Testing
-- Unit test coverage for image and video processing.
-- XCTest framework integration.
-- Automated validation of export functionalities.
-
-## CI/CD Integration (Planned)
-- GitHub Actions for automated builds and testing.
-- Code quality checks and linting.
+```bash
+make api-dev
+make web-dev
+```
 
 ## License
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## Future Enhancements
-- AI-powered video generation and smart editing.
-- More templates and layouts for collages.
-- Advanced video editing tools with real-time previews.
-
-## Contact
-For feature requests, bugs, or collaboration, feel free to reach out:
-- ✉️ Email: mobigaurav@gmail.com
-- 🔗 GitHub Issues: [Create an Issue](https://github.com/mobigaurav/MemoryCollage/issues)
-
-## Support the Project
-
-If you find this project helpful and want to support its development, you can buy me a coffee! Your support helps keep this project alive.
-
-[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-Support-yellow?style=flat&logo=buy-me-a-coffee)](https://buymeacoffee.com/mobigaurav)
-
-
----
-
-
+MIT. See [LICENSE](LICENSE).

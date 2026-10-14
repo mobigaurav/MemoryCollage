@@ -18,8 +18,9 @@ Future<void> showSlotCropEditor({
 }) {
   return showModalBottomSheet<void>(
     context: context,
-    backgroundColor: MbTokens.leatherDark,
+    backgroundColor: MbTokens.cream,
     isScrollControlled: true,
+    enableDrag: false,
     builder: (_) => SlotCropEditor(slot: slot),
   );
 }
@@ -71,8 +72,29 @@ class _SlotCropEditorState extends ConsumerState<SlotCropEditor> {
               ],
             ),
             const Text(
-              'Spread fingers to zoom in. Pinch together to shrink the photo until it fits. Drag to place it.',
-              style: TextStyle(color: MbTokens.paperDeep),
+              'Pinch to zoom, or use the slider. Fit shows the whole photo, and you can still zoom after that.',
+              style: TextStyle(color: MbTokens.inkSoft, height: 1.35),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                const Icon(Icons.zoom_out, size: 20),
+                Expanded(
+                  child: Slider(
+                    value: _crop.scale.clamp(SlotCrop.minScale, SlotCrop.maxScale),
+                    min: SlotCrop.minScale,
+                    max: SlotCrop.maxScale,
+                    onChanged: (v) => setState(
+                      () => _crop = SlotCrop(
+                        scale: v,
+                        offsetX: _crop.offsetX,
+                        offsetY: _crop.offsetY,
+                      ).clamp(),
+                    ),
+                  ),
+                ),
+                const Icon(Icons.zoom_in, size: 20),
+              ],
             ),
             const SizedBox(height: 16),
             Expanded(

@@ -19,6 +19,7 @@ import '../../services/collage_renderer.dart';
 import '../../widgets/framed_photo.dart';
 import '../../widgets/local_photo.dart';
 import '../../widgets/photo_pinch.dart';
+import '../ai/cloud_clip.dart';
 import 'sticker_painters.dart';
 
 class CollageStudioScreen extends ConsumerStatefulWidget {
@@ -160,7 +161,7 @@ class _CollageStudioScreenState extends ConsumerState<CollageStudioScreen> {
     final path = _photos[index].path;
     final choice = await showModalBottomSheet<String>(
       context: context,
-      backgroundColor: MbTokens.leatherDark,
+      backgroundColor: MbTokens.cream,
       builder: (ctx) => SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(8, 8, 8, 12),
@@ -171,7 +172,7 @@ class _CollageStudioScreenState extends ConsumerState<CollageStudioScreen> {
                 title: Text('Bring this photo to life'),
                 subtitle: Text(
                   'A credit sends it to make a short clip. On this phone, we can pan across it without uploading.',
-                  style: TextStyle(color: MbTokens.paperDeep),
+                  style: TextStyle(color: MbTokens.inkSoft, height: 1.35),
                 ),
               ),
               ListTile(
@@ -200,35 +201,16 @@ class _CollageStudioScreenState extends ConsumerState<CollageStudioScreen> {
       await _filmOnDevice(path);
       return;
     }
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: MbTokens.leather,
-        title: const Text('This photo leaves the device'),
-        content: const Text(
-          'One credit sends this picture to make a short clip. It is not used to train a model. If that fails, the credit comes back and we film it here.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Keep it here'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Send this photo'),
-          ),
-        ],
-      ),
+    final prompt = await askClipPrompt(context);
+    if (prompt == null || !mounted) return;
+    final result = await runCloudClip(
+      context,
+      ref,
+      imagePath: path,
+      prompt: prompt,
     );
-    if (confirmed != true || !mounted) return;
-    final result = await ref.read(aiVideoClientProvider).generateFromImage(
-          imagePath: path,
-        );
     if (!mounted) return;
-    if (result.ok && !result.fallbackToOnDevice) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(result.message ?? 'Clip queued')),
-      );
+    if (result.ok && result.videoUrl != null && result.videoUrl!.isNotEmpty) {
       return;
     }
     if (result.message?.startsWith('Sign in') == true) {
@@ -514,43 +496,46 @@ class _CollageStudioScreenState extends ConsumerState<CollageStudioScreen> {
     final photo = _photos[index];
     return Positioned.fromRect(
       rect: rect,
-      child: PhotoPinch(
-        crop: SlotCrop(scale: photo.scale, offsetX: photo.ox, offsetY: photo.oy),
-        onTap: () => setState(() {
-          _selectedPhoto = index;
-          _selectedSticker = null;
-          _selectedText = null;
-        }),
-        onChanged: (next) {
-          setState(() {
-            _selectedPhoto = index;
-            photo.scale = next.scale;
-            photo.ox = next.offsetX;
-            photo.oy = next.offsetY;
-          });
-          _scheduleSave();
-        },
         child: Stack(
+          clipBehavior: Clip.none,
           fit: StackFit.expand,
           children: [
-            DecoratedBox(
-          decoration: BoxDecoration(
-            border: _selectedPhoto == index
-                ? Border.all(color: MbTokens.leather, width: 2)
-                : null,
-          ),
-          child: FramedPhoto(
-            path: photo.path,
-            crop: SlotCrop(
-              scale: photo.scale,
-              offsetX: photo.ox,
-              offsetY: photo.oy,
+            PhotoPinch(
+              crop: SlotCrop(scale: photo.scale, offsetX: photo.ox, offsetY: photo.oy),
+              onTap: () => setState(() {
+                _selectedPhoto = index;
+                _selectedSticker = null;
+                _selectedText = null;
+              }),
+              onChanged: (next) {
+                setState(() {
+                  _selectedPhoto = index;
+                  photo.scale = next.scale;
+                  photo.ox = next.offsetX;
+                  photo.oy = next.offsetY;
+                });
+                _scheduleSave();
+              },
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  border: _selectedPhoto == index
+                      ? Border.all(color: MbTokens.leather, width: 2)
+                      : null,
+                ),
+                child: FramedPhoto(
+                  path: photo.path,
+                  crop: SlotCrop(
+                    scale: photo.scale,
+                    offsetX: photo.ox,
+                    offsetY: photo.oy,
+                  ),
+                  colorFilter: _photoFilter(photo),
+                ),
+              ),
             ),
-            colorFilter: _photoFilter(photo),
-          ),
-        ),
             if (_selectedPhoto == index)
               _ResizeHandle(
+                onTap: () => _editPhoto(index),
                 onDrag: (delta) {
                   setState(() {
                     photo.scale = (photo.scale + delta / 140)
@@ -561,7 +546,6 @@ class _CollageStudioScreenState extends ConsumerState<CollageStudioScreen> {
               ),
           ],
         ),
-      ),
     );
   }
 
@@ -596,6 +580,7 @@ class _CollageStudioScreenState extends ConsumerState<CollageStudioScreen> {
           _filteredPhoto(photo, Size(side, side)),
           if (_selectedPhoto == index)
             _ResizeHandle(
+              onTap: () => _editPhoto(index),
               onDrag: (delta) {
                 setState(() {
                   photo.scale = (photo.scale + delta / 160).clamp(0.45, 3);
@@ -720,7 +705,7 @@ class _CollageStudioScreenState extends ConsumerState<CollageStudioScreen> {
   Future<void> _openAdjust() async {
     await showModalBottomSheet<void>(
       context: context,
-      backgroundColor: MbTokens.leatherDark,
+      backgroundColor: MbTokens.cream,
       builder: (ctx) => SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
@@ -779,7 +764,7 @@ class _CollageStudioScreenState extends ConsumerState<CollageStudioScreen> {
   Future<void> _pickExport() async {
     final choice = await showModalBottomSheet<String>(
       context: context,
-      backgroundColor: MbTokens.leatherDark,
+      backgroundColor: MbTokens.cream,
       builder: (ctx) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -836,7 +821,7 @@ class _CollageStudioScreenState extends ConsumerState<CollageStudioScreen> {
   Future<void> _pickSticker() async {
     final kind = await showModalBottomSheet<StickerKind>(
       context: context,
-      backgroundColor: MbTokens.leather,
+      backgroundColor: MbTokens.cream,
       builder: (ctx) => Padding(
         padding: const EdgeInsets.all(20),
         child: Wrap(
@@ -862,6 +847,76 @@ class _CollageStudioScreenState extends ConsumerState<CollageStudioScreen> {
     _scheduleSave();
   }
 
+  Future<void> _editPhoto(int index) async {
+    if (index < 0 || index >= _photos.length) return;
+    final photo = _photos[index];
+    var scale = photo.scale;
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: MbTokens.cream,
+      isScrollControlled: true,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setSheet) {
+            return Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text('Edit photo', style: Theme.of(ctx).textTheme.titleLarge),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    height: 220,
+                    child: LocalPhoto(path: photo.path, cacheSize: const Size(320, 220)),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text('Drag the corner circle to resize. This slider zooms the photo in its frame.'),
+                  Slider(
+                    value: scale.clamp(SlotCrop.minScale, 3),
+                    min: SlotCrop.minScale,
+                    max: 3,
+                    onChanged: (v) {
+                      setSheet(() => scale = v);
+                      setState(() => photo.scale = v);
+                      _scheduleSave();
+                    },
+                  ),
+                  OutlinedButton(
+                    onPressed: () async {
+                      final path = await ref.read(photoServiceProvider).pickSingle();
+                      if (path == null) return;
+                      setState(() {
+                        _photos[index] = PlacedPhoto(
+                          path: path,
+                          nx: photo.nx,
+                          ny: photo.ny,
+                          scale: photo.scale,
+                          ox: photo.ox,
+                          oy: photo.oy,
+                          filter: photo.filter,
+                        );
+                        _selectedPhoto = index;
+                      });
+                      _scheduleSave();
+                      if (ctx.mounted) Navigator.pop(ctx);
+                    },
+                    child: const Text('Replace photo'),
+                  ),
+                  const SizedBox(height: 8),
+                  FilledButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: const Text('Done'),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   void _deleteSelected() {
     setState(() {
       if (_selectedPhoto != null && _selectedPhoto! < _photos.length) {
@@ -883,7 +938,7 @@ class _CollageStudioScreenState extends ConsumerState<CollageStudioScreen> {
     final colors = MbTokens.collagePapers;
     final picked = await showModalBottomSheet<Color>(
       context: context,
-      backgroundColor: MbTokens.leather,
+      backgroundColor: MbTokens.cream,
       builder: (ctx) => Padding(
         padding: const EdgeInsets.all(20),
         child: Wrap(
@@ -927,36 +982,13 @@ class _CollageStudioScreenState extends ConsumerState<CollageStudioScreen> {
           size: _exportSize,
         ),
       );
-      final premium = ref.read(premiumControllerProvider).isPremium;
       final bytes = await ref.read(exportServiceProvider).encodeStill(
             image: image,
             format: toPrinter ? 'JPEG' : _format,
-            watermark: !premium,
+            watermark: false,
           );
       final ext = _format.toLowerCase() == 'png' ? 'png' : 'jpg';
       final file = await ref.read(exportServiceProvider).writeBytes(bytes, ext);
-      if (!premium && mounted && !toPrinter) {
-        final goPaywall = await showDialog<bool>(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: const Text('Saved with a watermark'),
-            content: const Text(
-              'Upgrade to export clean collages at full resolution.',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx, false),
-                child: const Text('Keep watermark'),
-              ),
-              FilledButton(
-                onPressed: () => Navigator.pop(ctx, true),
-                child: const Text('Upgrade'),
-              ),
-            ],
-          ),
-        );
-        if (goPaywall == true && mounted) context.push('/paywall');
-      }
       await ref.read(exportHistoryProvider).add(
             toPrinter
                 ? 'Printed collage'
@@ -986,9 +1018,10 @@ class _CollageStudioScreenState extends ConsumerState<CollageStudioScreen> {
 }
 
 class _ResizeHandle extends StatelessWidget {
-  const _ResizeHandle({required this.onDrag});
+  const _ResizeHandle({required this.onDrag, this.onTap});
 
   final ValueChanged<double> onDrag;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -996,17 +1029,18 @@ class _ResizeHandle extends StatelessWidget {
       right: -4,
       bottom: -4,
       child: GestureDetector(
+        onTap: onTap,
         onPanUpdate: (d) => onDrag(d.delta.dx + d.delta.dy),
         child: Container(
-          width: 36,
-          height: 36,
+          width: 44,
+          height: 44,
           alignment: Alignment.center,
           decoration: BoxDecoration(
             color: MbTokens.leather,
             shape: BoxShape.circle,
             border: Border.all(color: Colors.white, width: 2),
           ),
-          child: const Icon(Icons.open_in_full, size: 16, color: MbTokens.cream),
+          child: const Icon(Icons.open_in_full, size: 18, color: MbTokens.cream),
         ),
       ),
     );

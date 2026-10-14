@@ -1,9 +1,13 @@
-# Deploys the Memory Book marketing site when `dev` is updated.
+# Deploys the Memory Book site when `dev` is updated.
 # VERCEL_TOKEN is required. Optional: VERCEL_ORG_ID (team scope).
 #
-# Do not set VERCEL_PROJECT_ID to Arogya's `web` project. `vercel --yes`
-# from a folder named `apps/web` will otherwise link to that existing
-# project and steal https://web-liart-six-83.vercel.app.
+# The public site is https://memory-book-pearl-zeta.vercel.app
+# on Vercel project `memory-book`.
+#
+# Do not set VERCEL_PROJECT_ID. A folder named apps/web plus `vercel --yes`
+# will attach to an existing project named `web` and take over that site.
+# This job links only to the project named memory-book, then refuses to
+# continue if the linked name is anything else.
 
 name: web
 
@@ -23,21 +27,33 @@ jobs:
           node-version: "22"
           cache: npm
           cache-dependency-path: apps/web/package-lock.json
-      - name: Deploy apps/web to Vercel
+      - name: Deploy apps/web to the Memory Book Vercel project
         working-directory: apps/web
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
         run: |
+          set -euo pipefail
           if [ -z "$VERCEL_TOKEN" ]; then
             echo "VERCEL_TOKEN is not set on this repo. Skipping the site deploy."
             exit 0
           fi
           npm install --global vercel@latest
-          # Ignore a copied Arogya project id if one is still on this repo.
           unset VERCEL_PROJECT_ID
-          args=(deploy --prod --yes --name memory-book --token "$VERCEL_TOKEN")
-          if [ -n "$VERCEL_ORG_ID" ]; then
-            args+=(--scope "$VERCEL_ORG_ID")
+          scope=()
+          if [ -n "${VERCEL_ORG_ID:-}" ]; then
+            scope=(--scope "$VERCEL_ORG_ID" --team "$VERCEL_ORG_ID")
           fi
-          vercel "${args[@]}"
+          vercel link --yes --project memory-book "${scope[@]}" --token "$VERCEL_TOKEN"
+          name=$(vercel project inspect memory-book "${scope[@]}" --token "$VERCEL_TOKEN" --format json | node -e "let s='';process.stdin.on('data',d=>s+=d);process.stdin.on('end',()=>{const j=JSON.parse(s); if(j.name!=='memory-book'){console.error('Refusing project '+j.name); process.exit(1)} console.log(j.name)})")
+          echo "Linked project: $name"
+          log=$(vercel deploy --prod --yes "${scope[@]}" --token "$VERCEL_TOKEN")
+          printf '%s\n' "$log"
+          if printf '%s\n' "$log" | grep -Eiq 'web-liart-six|arogya|health-twin|/web[^-]'; then
+            echo "Refusing to publish onto another product."
+            exit 1
+          fi
+          if ! printf '%s\n' "$log" | grep -q 'memory-book'; then
+            echo "Deploy did not stay on the memory-book project."
+            exit 1
+          fi

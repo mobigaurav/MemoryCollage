@@ -2,6 +2,8 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 
+import '../services/photo_files.dart';
+
 /// File image decoded at display size so page turns and taps stay responsive.
 class LocalPhoto extends StatelessWidget {
   const LocalPhoto({
@@ -25,7 +27,7 @@ class LocalPhoto extends StatelessWidget {
     final logical = cacheSize?.width ?? width ?? 360;
     final cacheWidth = (logical * dpr).round().clamp(64, 1440);
     return Image.file(
-      File(path),
+      File(PhotoFiles.resolve(path)),
       width: width,
       height: height,
       fit: fit,

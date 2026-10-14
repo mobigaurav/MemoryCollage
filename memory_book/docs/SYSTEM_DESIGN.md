@@ -5,7 +5,17 @@
 **Store framing:** Memory Book. iOS updates the live Memory Collage listing. Android is a new Play listing.  
 **Principle:** a living photobook that also exports collages and reels. Photos stay on-device until the user exports, signs in, or spends an AI credit.
 
-This document is the technical source of truth for what we have shipped and how we grow it into a world-class image + video memory app. Pair it with [PRODUCT_ROADMAP.md](PRODUCT_ROADMAP.md).
+This document is the map. The publishable architecture notes live next to it. Each one stands alone if you lift it into a journal or onto Medium.
+
+- [Sign-in without a login wall](features/authentication.md)
+- [Purchases that follow the account](features/revenuecat.md)
+- [A book, not a gallery](features/photo-album.md)
+- [Collage as a canvas](features/collage.md)
+- [A film from stills, encoded on the phone](features/memory-film.md)
+- [A website that is only the front door](features/web.md)
+- [One photo, one clip](features/ai-video.md)
+
+Operators still use [the backend notes](../../docs/BACKEND.md) for deploy commands. Those notes are not the essays. Pair the map with [PRODUCT_ROADMAP.md](PRODUCT_ROADMAP.md).
 
 ---
 
@@ -24,17 +34,16 @@ Implications:
 
 ## 2. Current vs target
 
-| Layer | Today (v1 client) | Target (world-class) |
+| Layer | Shipped | Still open |
 | --- | --- | --- |
-| Client | Flutter 3, Riverpod, go_router, Drift | Same, plus crash/analytics, notification service, richer editors |
-| Identity | None required | Sign in with Apple / Google only when cloud or AI wallet is needed |
-| Entitlements | RevenueCat if keyed; else local unlock | RevenueCat only: premium + consumable AI credits |
-| Photos | Copied into app sandbox; slot pan/zoom; date-range fill | Same + original asset IDs, limited-library handling, face-aware crop |
-| Export stills | `PictureRecorder` → JPEG/PNG; HEIC via iOS channel | True HEIC Android where supported; 4K; stickers/fonts |
-| Export video | Native H.264 (AVAssetWriter / MediaCodec) | Transitions, Ken Burns, beat-sync, HDR where device allows |
-| AI | Client stub + credit ledger; on-device reel fallback | Backend proxy to image-to-video / enhance; no keys in app |
-| Push | None | Local reminders + (after login) remote: export ready, credit, anniversary |
-| Sync | Device-only | Optional encrypted cloud albums |
+| Client | Flutter, Riverpod, go_router, Drift. Tabs: Books, Studio, Reels, You | Crash reporting, richer type, reduce-motion |
+| Identity | Cognito email, plus Apple and Google through the hosted UI. See [authentication](features/authentication.md) | Durable user row in a database |
+| Entitlements | RevenueCat when a public SDK key is set. Release builds do not fake a purchase. See [RevenueCat](features/revenuecat.md) | Signed webhook, credit packs |
+| Photos | Relative sandbox paths, one-page reader, spread, crop and zoom. See [photo album](features/photo-album.md) | Face-aware crop, original asset ids |
+| Collage | Normalized templates, freeform, canvas export. See [collage](features/collage.md) | More paper textures |
+| Film | Native H.264, upright stills, music mix, Reels shelf. See [memory film](features/memory-film.md) | Scene-matched audio on AI clips |
+| AI | API proxy to Runway. One photo, one credit. See [AI video](features/ai-video.md) | Neon ledger, optional sound model |
+| Web | Next.js on its own Vercel project. See [web](features/web.md) | Store URLs when the listings are live |
 
 The Swift/iOS tree at the repo root is **reference only** (template math, filters, bundled scores). Do not port screenshot export or the old video god-view.
 
@@ -42,61 +51,92 @@ The Swift/iOS tree at the repo root is **reference only** (template math, filter
 
 ## 3. High-level architecture
 
+```
+  +--------------------------- phone -------------------------------+
+  |  Books        Studio         Reels            You               |
+  |  Drift albums   collage        films + clips    account         |
+  |  photos/        PictureRecorder  AVAssetWriter  Cognito tokens  |
+  |                 freeform         MediaCodec     RevenueCat      |
+  +--------+--------------+------------------+----------+----------+
+           |              |                  |          |
+           |              |                  |          |  privacy, terms, support
+           |              |                  |          v
+           |              |                  |     Next.js on Vercel
+           |              |                  |     (no photos, no tokens)
+           |              v                  v
+           |         native encoder     system share sheet
+           |
+           |  only when a credit is spent
+           v
+  +---------------------- account and one photo -------------------+
+  |  Cognito hosted UI                                              |
+  |    email  USER_PASSWORD_AUTH                                    |
+  |    Apple / Google  ->  memorybook://auth  ->  tokens            |
+  |                                                                 |
+  |  API Gateway -> Lambda (FastAPI)                                |
+  |    Bearer id token                                              |
+  |    POST /v1/ai/video  ->  Runway Gen-4 Turbo (photo)            |
+  |                          or Gen-4.5 (words only)                |
+  |    GET  /v1/ai/jobs/{id}                                        |
+  |    POST /v1/billing/revenuecat   (answers, does not grant)      |
+  |                                                                 |
+  |  private S3 for that one uploaded image                         |
+  +-----------------------------------------------------------------+
+```
+
+Each box is written out with libraries and source in the essays linked above. GitHub will also render this Mermaid view of the same split:
+
 ```mermaid
 flowchart TB
   subgraph client [Flutter app]
-    UI[Library / Book / Collage / Video / Paywall]
+    UI[Books / Studio / Reels / You]
     Domain[Albums pages slots projects]
     Local[(Drift + photo files)]
     IAP[RevenueCat]
     Export[Canvas + native encoder]
-    Notify[Local notifications]
     UI --> Domain --> Local
     UI --> IAP
     Domain --> Export
-    UI --> Notify
   end
 
-  subgraph later [v1.5 plus]
-    Auth[Sign in with Apple and Google]
-    API[Backend: identity credits jobs]
-    Storage[Optional encrypted album backup]
-    AI[Runway Luma Kling or similar]
-    Push[APNs FCM]
+  subgraph cloud [Account and one photo]
+    Auth[Cognito hosted UI]
+    API[API Gateway + Lambda]
+    S3[Private media bucket]
+    Vendor[Runway]
+    Site[Next.js on Vercel]
     Auth --> API
-    API --> Storage
-    API --> AI
-    API --> Push
+    API --> S3
+    API --> Vendor
   end
 
-  client -.-> later
+  client --> Auth
+  client --> API
+  client -.-> Site
 ```
 
 ### 3.1 Client stack (locked)
 
 - **UI:** Flutter 3 / Dart 3, custom paper-and-film theme (`lib/core/theme`)
 - **State:** Riverpod
-- **Nav:** go_router (`/library`, `/book/:id`, `/collage`, `/video`, `/paywall`, `/settings`, `/ai`)
+- **Nav:** go_router. Tabs are Books, Studio, Reels, and You. Full-screen routes cover the book, collage, film studio, paywall, account, and AI lab
 - **DB:** Drift (`lib/data/db/app_database.dart`)
-- **Photos:** `photo_manager` + `image_picker`; copies persist under app documents
-- **IAP:** `purchases_flutter` (RevenueCat). Empty `REVENUECAT_API_KEY` → local entitlement for development only
+- **Photos:** `photo_manager` + `image_picker`; copies persist under app documents as relative paths
+- **IAP:** `purchases_flutter`. A release build with an empty SDK key does not unlock locally
 - **Share / save:** `share_plus`, `gal`
-- **Video encode:** MethodChannel `memory_book/video_encoder` (not FFmpeg — avoids IPA/APK bloat)
-- **Auth (scaffolded, not required):** Sign in with Apple, Google Sign-In
-- **iOS plugins:** Swift Package Manager (CocoaPods deintegrated)
+- **Video encode:** MethodChannel `memory_book/video_encoder` (not FFmpeg)
+- **Auth:** Cognito. Email is `USER_PASSWORD_AUTH`. Apple and Google return through `memorybook://auth`
+- **Web:** `apps/web`, deployed on its own Vercel project
 
-### 3.2 Backend (not required for v1)
+### 3.2 Backend
 
-When AI credits or cloud backup ship:
+The account, the credit call, and the one photo sent for a clip:
 
-- **Auth:** Sign in with Apple + Google; RevenueCat `appUserID` = our user id after login
-- **API:** thin proxy (Cloud Run / Supabase Edge / similar)
-  - `POST /v1/ai/video` — image-to-video job
-  - `GET /v1/ai/jobs/:id` — status + signed URL
-  - `POST /v1/credits/grant` — webhook from RevenueCat
-- **Ledger:** server is source of truth; client Drift `CreditEvents` is a cache
-- **Secrets:** Runway/Luma/Kling keys only on the server
-- **Storage:** optional encrypted object store for album packages (user opt-in)
+- **Auth:** Cognito user pool. Apple and Google are identity providers on that pool. Essay: [authentication](features/authentication.md)
+- **API:** FastAPI on Lambda, behind API Gateway. `POST /v1/ai/video`, `GET /v1/ai/jobs/{id}`, `POST /v1/billing/revenuecat`
+- **Ledger:** in-memory until Neon. A cold start forgets credits and jobs
+- **Secrets:** Runway and the social-provider secrets stay on the stack. The phone holds a public Cognito client id and, when set, a public RevenueCat SDK key
+- **Site:** Next.js. Essay: [web](features/web.md)
 
 ---
 
@@ -105,29 +145,29 @@ When AI credits or cloud backup ship:
 ```mermaid
 flowchart LR
   Splash --> Onboarding
-  Onboarding --> Shelf[Library shelf]
+  Onboarding --> Shelf[Books]
   Shelf --> Book[Living photo book]
-  Shelf --> Collage[Collage studio]
-  Shelf --> Video[Memory film studio]
+  Shelf --> Studio[Collage and film]
+  Shelf --> Reels
   Book --> EditSlot[Edit slot]
-  Book --> SpreadPNG[Share spread]
-  Book --> FlipReel[Album to reel]
-  Collage --> StillExport[JPEG PNG HEIC]
-  Video --> Mp4[Save and share MP4]
-  Any[Any export] --> Paywall
-  Settings --> AILab[AI lab]
-  Settings --> AuthLater[Sign in later]
+  Studio --> StillExport[Collage still]
+  Studio --> Mp4[Memory film]
+  Mp4 --> Reels
+  AI[One photo clip] --> Reels
+  You --> Account
+  You --> Paywall
 ```
 
 | Surface | Responsibility |
 | --- | --- |
 | Shelf | Local albums as physical covers; create book |
-| Book reader | Cover open, two-page spread, page-turn, slot edit |
-| Collage studio | Templates, canvas render, watermark for free |
-| Video studio | Slideshow/film: aspect, filter, transition, music |
-| Paywall | Premium: no watermark, all templates, unlimited books, 4K |
-| Settings | Premium, privacy, optional identity, AI credits |
-| AI lab | Spend credit → proxy or on-device fallback |
+| Book reader | One page by default, two-page spread on demand, slot crop |
+| Collage studio | Templates and freeform, canvas render, watermark for free |
+| Video studio | Memory film: aspect, filter, transition, music |
+| Reels | Finished films and AI clips, share and delete |
+| Paywall | Premium: no watermark, all templates, unlimited books |
+| You | Account, Premium, weekly reminder, privacy, terms, support, version |
+| AI | Spend a credit on one chosen photo |
 
 ---
 
@@ -221,90 +261,36 @@ Pipeline:
 1. Flutter prepares image paths + music (bundled `assets/audio/1.mp3`–`11.mp3` materialized to tmp, or user file)
 2. Channel `encodeSlideshow` / `encodeFrames`
 3. **iOS:** `AVAssetWriter` H.264 + optional `AVMutableComposition` audio mix (`ios/Runner/AppDelegate.swift`)
-4. **Android:** `MediaCodec` surface encoder + `MediaMuxer` (`MainActivity.kt`); audio mix is a follow-up
+4. **Android:** `MediaCodec` plus `MediaMuxer`, including the audio mix (`MainActivity.kt`)
 5. Preview `video_player` → `gal` save and/or `share_plus`
 
-Transitions (Crossfade / Slide / Zoom) must be **encoded**, not UI-only. v1 channel currently holds frames; implement real ramps in the native encoder (roadmap).
+The essay is [A film from stills](features/memory-film.md). Transitions are encoded into the file. The Reels tab is where the finished mp4 lives.
 
 ### 7.2 Album → Reel
 
 Ken Burns-ish stills of spreads + page-turn frames, 12 fps class, 9:16, share as Reels/TikTok/Shorts.
 
-### 7.3 AI video (v1.5+)
+### 7.3 AI video
 
-Client never calls the model vendor.
+The essay is [One photo, one clip](features/ai-video.md). The phone posts one image to our API. The API calls Runway and returns a job the phone polls. Gen-4 Turbo does not take an audio field. The clip is filed on the Reels tab.
 
-```mermaid
-sequenceDiagram
-  actor User
-  participant App
-  participant RC as RevenueCat
-  participant API as Our proxy
-  participant Vendor as Image-to-video vendor
+Account is optional until that call. The id token is `Authorization: Bearer`.
 
-  User->>App: Spend 1 credit on a page photo
-  App->>App: Require session if none
-  App->>API: POST /v1/ai/video plus image
-  API->>API: Debit ledger
-  API->>Vendor: Create job
-  Vendor-->>API: job id
-  API-->>App: job id
-  loop Poll or push
-    App->>API: GET job
-  end
-  API-->>App: signed MP4 URL
-  App->>User: Save or share
-```
-
-If `AI_BASE_URL` is empty: refund the local credit and offer on-device Memory Reel (`AiVideoClient`).
-
-Account is optional. Email registration uses Memory Book’s own Cognito app client (`COGNITO_CLIENT_ID`, `USER_PASSWORD_AUTH`), the same call shape as Arogya, never Arogya’s pool. The id token is sent as `Authorization: Bearer` on `/v1/ai/video`. With no client id, a local account still grants welcome credits so the credit path can be tested.
-
-**Do not lead** with text-to-video. That is a different, expensive product. Our AI is in service of **their photos**.
+**Do not lead** with text-to-video. Words alone are a different, more expensive request. The product is their photo, moving.
 
 ---
 
 ## 8. Monetization (RevenueCat)
 
-### 8.1 Products
+The essay is [Purchases that follow the account](features/revenuecat.md).
 
-| ID (intent) | Type | Unlocks |
-| --- | --- | --- |
-| `com.memorycollage.premium.annual` | Auto-renew | Unlimited books, no watermark, all templates, 4K, extra music, sticker packs |
-| `com.memorycollage.premium.monthly` | Auto-renew | Same |
-| `com.memorycollage.premium` | Legacy / lifetime if kept | Same |
-| `com.memorycollage.credits.10` later | Consumable | AI jobs |
+Entitlement: `premium`. Products: `com.memorycollage.premium.annual`, `com.memorycollage.premium.monthly`, and the legacy `com.memorycollage.premium`. After sign-in, `Purchases.logIn` uses `provider:subject`. A release build does not unlock locally. The webhook route exists and does not grant credits until it can verify a signature against a durable ledger.
 
-Entitlement: `premium`.
+## 9. Identity
 
-### 8.2 Client rules
+The essay is [Sign-in without a login wall](features/authentication.md).
 
-- `PremiumService` reads RevenueCat `CustomerInfo` when API key is set
-- **Never** treat “restore completed” as purchased without an active entitlement (bug in old `IAPManager`)
-- Dev-only `localPremium` KV when key is empty — strip from store builds (`kReleaseMode` + no key → paywall cannot fake-unlock, or hide the button)
-- Paywall copy must match gated features (templates actually locked)
-
-### 8.3 After login
-
-`Purchases.logIn(ourUserId)` so credits and premium survive reinstall and devices.
-
----
-
-## 9. Identity and login (later)
-
-Login is **not** a v1 gate.
-
-Trigger login when the user:
-
-- Turns on iCloud-style album backup
-- Buys or spends AI credits that must survive reinstall
-- Enables multi-device shelf
-
-Providers: **Sign in with Apple** (required if any third-party login on iOS) and **Google**. Session in `AuthSessions`. Sign out clears session, not local albums.
-
-Privacy: family photos. Default is anonymous device.
-
----
+Login is not required to open a book. It is required to spend a credit. Email, Apple, and Google all end as Cognito tokens. Sign-out clears the session, not the albums.
 
 ## 10. Notifications
 
@@ -347,7 +333,7 @@ v1 store answers: **no tracking, no collected photos, no required account.** See
 | Photo library add | Save exports |
 | Camera optional | Capture a new page |
 | Notifications | Only after opt-in |
-| Network | Fonts (consider bundling), IAP, later AI |
+| Network | IAP, account, and the one photo sent for a clip |
 
 - ITSAppUsesNonExemptEncryption = false until we add custom crypto for cloud
 - AI: images leave device only on explicit credit spend; say so in the confirmation sheet
@@ -371,29 +357,26 @@ v1 store answers: **no tracking, no collected photos, no required account.** See
 ## 14. Repository map
 
 ```
-memory_book/
-  lib/core/           theme, router, config
-  lib/data/           Drift, repositories
-  lib/domain/         templates, layouts, filters
-  lib/features/       book, collage, video, paywall, settings, onboarding
-  lib/services/       export, encode, IAP, auth/AI
-  ios/Runner/         AVAssetWriter encoder (SPM, no CocoaPods)
-  android/.../        MediaCodec encoder
-  assets/audio/       bundled scores 1–11.mp3
-  store/              ASO + privacy labels
-  docs/               this file + roadmap
+memory_book/          Flutter app
+  docs/features/      the essays linked above
+  lib/                book, collage, film, reels, auth, paywall
+  ios/ android/       native encode
+apps/web/             Next.js site
+services/api/         FastAPI
+infra/lite/           Cognito, API Gateway, Lambda, private bucket
 ```
 
-Root `MemoryCollage/` Swift app: do not ship; mine layout math only.
+Root `MemoryCollage/` Swift app: reference for layout math. Do not ship it.
+
+Store version for this revamp is **2.0.0 (6)** on both platforms, above the live Memory Collage build 1.0.1 (5). iOS Release keeps `com.playingview.mobigaurav.MemoryCollage`. Play is `com.playingview.mobigaurav.memorybook`. Profile stays on `com.playingview.mobigaurav.memoryBook` so a desk install does not replace the store app.
 
 ---
 
-## 15. Open engineering decisions
+## 15. Still open
 
-- **Bundle IDs:** decided. iOS Release uses `com.playingview.mobigaurav.MemoryCollage` so the App Store update keeps reviews and `com.memorycollage.premium`. Debug and Profile stay `com.playingview.mobigaurav.memoryBook` so a test install does not replace the App Store app. Play package is `com.playingview.mobigaurav.memorybook`.
-- **Android audio mix** on slideshow (not in v1 encoder).
-- **FFmpeg** only if native transitions/HDR cannot hit quality; trim codecs if so.
-- **Cloud provider** (Supabase vs Firebase vs custom) when Phase 5 starts.
-- **Print:** Mixbook/Chatbooks-class partner vs in-house PDF.
+- Neon for credits and jobs. The Lambda ledger forgets them on a cold start.
+- RevenueCat webhook signature, then grants. The route currently accepts the call and writes nothing.
+- Sound on an AI clip that matches the picture. Gen-4 Turbo does not do that. A Memory film uses music the person chose.
+- Optional encrypted album backup. Signing in does not upload the shelf.
 
-Do not start backend work until the book feels magical on device. That is the moat.
+The book on the phone is still the product. The essays describe the pieces around it. They are written so a section can be published without the deploy notes.

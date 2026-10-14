@@ -19,6 +19,11 @@ class CreditLedger {
         );
   }
 
+  Future<bool> hasReason(String reason) async {
+    final rows = await _db.select(_db.creditEvents).get();
+    return rows.any((row) => row.reason == reason);
+  }
+
   Future<void> grant(int amount, String reason) async {
     await _db.into(_db.creditEvents).insert(
           CreditEventsCompanion.insert(
@@ -34,6 +39,11 @@ class CreditLedger {
     if (await balance() < amount) return false;
     await grant(-amount, reason);
     return true;
+  }
+
+  Future<void> matchServer(int target) async {
+    final delta = target - await balance();
+    if (delta != 0) await grant(delta, 'server_balance');
   }
 }
 

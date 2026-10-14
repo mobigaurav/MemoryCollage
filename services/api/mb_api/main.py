@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from mb_api.config import get_settings
 from mb_api.middleware import AuthMiddleware
-from mb_api.routers import ai, billing, health, me
+from mb_api.routers import ai, billing, community, health, household, me, notifications
 
 
 def create_app() -> FastAPI:
@@ -19,9 +19,12 @@ def create_app() -> FastAPI:
         allow_credentials=False,
     )
     app.include_router(health.router)
+    app.include_router(community.router)
+    app.include_router(household.router)
     app.include_router(me.router)
     app.include_router(ai.router)
     app.include_router(billing.router)
+    app.include_router(notifications.router)
     return app
 
 

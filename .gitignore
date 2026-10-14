@@ -92,6 +92,9 @@ memory_book/ios/Flutter/Flutter.framework
 memory_book/ios/Flutter/Flutter.podspec
 memory_book/android/.gradle/
 memory_book/android/local.properties
+memory_book/android/keystore.properties
+memory_book/android/app/*.keystore
+memory_book/android/app/*.jks
 
 # Memory Book API and marketing site
 services/api/.venv/

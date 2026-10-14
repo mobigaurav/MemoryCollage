@@ -1,5 +1,7 @@
 import 'dart:convert';
+import 'dart:math';
 
+import 'package:crypto/crypto.dart';
 import 'package:http/http.dart' as http;
 
 import '../core/config.dart';
@@ -22,10 +24,14 @@ class CognitoSignUpResult {
   const CognitoSignUpResult({
     required this.userConfirmed,
     required this.userSub,
+    this.codeSentTo,
   });
 
   final bool userConfirmed;
   final String userSub;
+
+  /// Masked address Cognito actually emailed, when it sent a code.
+  final String? codeSentTo;
 }
 
 /// Same Cognito calls Arogya uses: public app client, USER_PASSWORD_AUTH.
@@ -49,9 +55,12 @@ class CognitoAuth {
       'Password': password,
       'UserAttributes': attrs,
     });
+    final delivery = out['CodeDeliveryDetails'];
+    final sentTo = delivery is Map ? delivery['Destination'] as String? : null;
     return CognitoSignUpResult(
       userConfirmed: out['UserConfirmed'] == true,
       userSub: out['UserSub'] as String? ?? '',
+      codeSentTo: sentTo,
     );
   }
 
@@ -103,6 +112,55 @@ class CognitoAuth {
       },
     });
     return _tokens(out);
+  }
+
+  /// Hosted UI for this pool. The browser returns to the app with a code.
+  Uri authorizeUri({
+    required String identityProvider,
+    required String codeChallenge,
+  }) {
+    return cognitoAuthorizeUri(
+      host: AppConfig.cognitoDomain,
+      clientId: AppConfig.cognitoClientId,
+      redirectUri: AppConfig.cognitoRedirectUri,
+      identityProvider: identityProvider,
+      codeChallenge: codeChallenge,
+    );
+  }
+
+  Future<CognitoTokens> exchangeAuthorizationCode({
+    required String code,
+    required String codeVerifier,
+  }) async {
+    final response = await http.post(
+      Uri.https(AppConfig.cognitoDomain, '/oauth2/token'),
+      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+      body: {
+        'grant_type': 'authorization_code',
+        'client_id': AppConfig.cognitoClientId,
+        'code': code,
+        'redirect_uri': AppConfig.cognitoRedirectUri,
+        'code_verifier': codeVerifier,
+      },
+    );
+    final json = jsonDecode(response.body);
+    final map = json is Map<String, dynamic> ? json : <String, dynamic>{};
+    if (response.statusCode >= 400) {
+      final detail = map['error_description'] ?? map['error'] ?? 'Sign-in failed';
+      throw StateError(friendlyCognitoError('$detail'));
+    }
+    final id = map['id_token'] as String?;
+    final access = map['access_token'] as String?;
+    final refresh = map['refresh_token'] as String?;
+    if (id == null || access == null || refresh == null) {
+      throw StateError('Cognito did not finish sign-in.');
+    }
+    return CognitoTokens(
+      idToken: id,
+      accessToken: access,
+      refreshToken: refresh,
+      expiresIn: (map['expires_in'] as num?)?.toInt() ?? 3600,
+    );
   }
 
   Future<void> forgotPassword(String email) {
@@ -165,7 +223,7 @@ class CognitoAuth {
   }
 }
 
-String? jwtSubject(String token) {
+Map<String, dynamic>? jwtPayload(String token) {
   try {
     final parts = token.split('.');
     if (parts.length < 2) return null;
@@ -174,17 +232,89 @@ String? jwtSubject(String token) {
       b64 += '=';
     }
     final payload = jsonDecode(utf8.decode(base64Decode(b64)));
-    if (payload is Map && payload['sub'] is String) return payload['sub'] as String;
+    if (payload is Map<String, dynamic>) return payload;
+    if (payload is Map) return Map<String, dynamic>.from(payload);
     return null;
   } catch (_) {
     return null;
   }
 }
 
+String? jwtSubject(String token) {
+  final sub = jwtPayload(token)?['sub'];
+  return sub is String ? sub : null;
+}
+
+/// PKCE verifier for the public Cognito app client.
+String cognitoCodeVerifier() {
+  final random = Random.secure();
+  final bytes = List<int>.generate(32, (_) => random.nextInt(256));
+  return base64UrlEncode(bytes).replaceAll('=', '');
+}
+
+String cognitoCodeChallenge(String verifier) {
+  final digest = sha256.convert(utf8.encode(verifier));
+  return base64UrlEncode(digest.bytes).replaceAll('=', '');
+}
+
+Uri cognitoAuthorizeUri({
+  required String host,
+  required String clientId,
+  required String redirectUri,
+  required String identityProvider,
+  required String codeChallenge,
+}) {
+  return Uri.https(host, '/oauth2/authorize', {
+    'response_type': 'code',
+    'client_id': clientId,
+    'redirect_uri': redirectUri,
+    'scope': 'openid email profile',
+    'identity_provider': identityProvider,
+    'code_challenge_method': 'S256',
+    'code_challenge': codeChallenge,
+  });
+}
+
+/// Reads the code Cognito appended to `memorybook://auth`.
+String cognitoAuthorizationCode(Uri callback) {
+  final error = callback.queryParameters['error'];
+  if (error != null && error.isNotEmpty) {
+    final detail = callback.queryParameters['error_description'];
+    throw StateError(friendlyCognitoOAuthError(error, detail));
+  }
+  final code = callback.queryParameters['code'];
+  if (code == null || code.isEmpty) {
+    throw StateError('Cognito did not return a sign-in code.');
+  }
+  return code;
+}
+
+String friendlyCognitoOAuthError(String error, String? detail) {
+  final text = '$error ${detail ?? ''}'.toLowerCase();
+  if (text.contains('invalid_request') ||
+      text.contains('identity_provider') ||
+      text.contains('unauthorized')) {
+    return 'Cognito does not have that provider yet. Connect Google or Apple on the pool, then try again.';
+  }
+  if (detail != null && detail.isNotEmpty) return detail;
+  return error;
+}
+
+bool jwtEmailVerified(String token) {
+  final value = jwtPayload(token)?['email_verified'];
+  return value == true || value == 'true';
+}
+
 String friendlyCognitoError(String raw) {
   final text = raw.toLowerCase();
-  if (text.contains('not confirmed') || text.contains('usernotconfirmed')) {
+  if (text.contains('not confirmed') ||
+      text.contains('usernotconfirmed') ||
+      text.contains('no registered/verified') ||
+      text.contains('not verified')) {
     return 'Confirm the code we emailed you, then sign in.';
+  }
+  if (text.contains('expiredcode') || text.contains('expired')) {
+    return 'That code expired. Request a new one.';
   }
   if (text.contains('not authorized') ||
       text.contains('notauthorized') ||

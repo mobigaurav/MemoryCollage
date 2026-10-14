@@ -13,7 +13,7 @@ Future<void> showPageManagerSheet({
 }) {
   return showModalBottomSheet<void>(
     context: context,
-    backgroundColor: MbTokens.leatherDark,
+    backgroundColor: MbTokens.cream,
     isScrollControlled: true,
     builder: (_) => PageManagerSheet(albumId: albumId),
   );
@@ -71,7 +71,11 @@ class PageManagerSheet extends ConsumerWidget {
                   alignment: Alignment.centerLeft,
                   child: Text(
                     'Drag the handle to reorder. Duplicate or remove any page.',
-                    style: TextStyle(color: MbTokens.paperDeep),
+                    style: TextStyle(
+                      color: MbTokens.inkSoft,
+                      fontFamily: MbTokens.sans,
+                      height: 1.35,
+                    ),
                   ),
                 ),
               ),

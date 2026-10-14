@@ -14,6 +14,12 @@ class AuthMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
 
         header = request.headers.get("authorization", "")
+        world_read = request.method == "GET" and request.url.path.rstrip("/") == "/v1/community"
+        if world_read and not header.lower().startswith("bearer "):
+            request.state.sub = ""
+            request.state.email = None
+            request.state.name = ""
+            return await call_next(request)
         if not header.lower().startswith("bearer "):
             return JSONResponse({"error": "Sign in required"}, status_code=401)
         token = header.split(" ", 1)[1].strip()
@@ -22,6 +28,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
         if settings.allow_dev_token and token == "dev":
             request.state.sub = "dev-local-user"
             request.state.email = "dev@memorybook.local"
+            request.state.name = "Dev"
             return await call_next(request)
 
         try:
@@ -31,6 +38,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
 
         request.state.sub = str(claims.get("sub") or "")
         request.state.email = claims.get("email")
+        request.state.name = claims.get("name") or ""
         if not request.state.sub:
             return JSONResponse({"error": "Token has no subject"}, status_code=401)
         return await call_next(request)

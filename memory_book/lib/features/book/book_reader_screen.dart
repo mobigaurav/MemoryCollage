@@ -16,6 +16,7 @@ import '../../domain/media_options.dart';
 import '../../providers.dart';
 import '../../services/book_export.dart';
 import '../../widgets/framed_photo.dart';
+import '../ai/cloud_clip.dart';
 import '../library/album_edit_sheet.dart';
 import 'page_canvas.dart';
 import 'page_curl.dart';
@@ -32,9 +33,25 @@ class BookReaderScreen extends ConsumerStatefulWidget {
 
 class _BookReaderScreenState extends ConsumerState<BookReaderScreen> {
   bool _coverOpen = false;
+  bool _onePage = true;
   int _spread = 0;
+  int _page = 0;
   bool _busy = false;
+  String? _progress;
   Offset _coverTilt = Offset.zero;
+
+  Future<void> _showProgress(String text) async {
+    setState(() {
+      _busy = true;
+      _progress = text;
+    });
+    await WidgetsBinding.instance.endOfFrame;
+  }
+
+  void _hideProgress() {
+    if (!mounted || _progress == null) return;
+    setState(() => _progress = null);
+  }
 
   void _leave() {
     final router = GoRouter.of(context);
@@ -73,19 +90,28 @@ class _BookReaderScreenState extends ConsumerState<BookReaderScreen> {
         MbHaptics.success();
       case 'share':
         await _shareSpread(detail);
+      case 'shareBook':
+        await _shareBook(detail);
       case 'print':
         await _printBook(detail, whole: false);
       case 'printBook':
         await _printBook(detail, whole: true);
       case 'reel':
         await _exportReel(detail);
+      case 'family':
+        final title = Uri.encodeComponent(detail?.album.title ?? 'Our book');
+        if (mounted) {
+          context.push('/family?album=${widget.albumId}&title=$title');
+        }
+      case 'year':
+        if (mounted) context.push('/year');
     }
   }
 
   Future<void> _choosePhotos() async {
     final photos = await ref.read(photoServiceProvider).pickImages(limit: 40);
     if (photos.isEmpty) return;
-    setState(() => _busy = true);
+    await _showProgress('Placing the photos');
     try {
       final used = await ref
           .read(albumRepositoryProvider)
@@ -101,7 +127,12 @@ class _BookReaderScreenState extends ConsumerState<BookReaderScreen> {
         ),
       );
     } finally {
-      if (mounted) setState(() => _busy = false);
+      if (mounted) {
+        setState(() {
+          _busy = false;
+          _progress = null;
+        });
+      }
     }
   }
 
@@ -115,7 +146,6 @@ class _BookReaderScreenState extends ConsumerState<BookReaderScreen> {
         _handleBack();
       },
       child: Scaffold(
-        backgroundColor: MbTokens.leatherDark,
         appBar: AppBar(
           automaticallyImplyLeading: false,
           leading: IconButton(
@@ -125,13 +155,29 @@ class _BookReaderScreenState extends ConsumerState<BookReaderScreen> {
           ),
           title: Text(async.value?.album.title ?? 'Album'),
           actions: [
+            if (_coverOpen)
+              IconButton(
+                tooltip: _onePage ? 'Open as two pages' : 'One page',
+                onPressed: () => setState(() {
+                  if (_onePage) {
+                    _spread = _page ~/ 2;
+                  } else {
+                    _page = _spread * 2;
+                  }
+                  _onePage = !_onePage;
+                }),
+                icon: Icon(_onePage ? Icons.auto_stories_outlined : Icons.crop_portrait),
+              ),
             PopupMenuButton<String>(
               tooltip: 'Book',
               onSelected: (value) => _menu(value, async.value),
               itemBuilder: (context) => const [
-                PopupMenuItem(value: 'share', child: Text('Share this spread')),
-                PopupMenuItem(value: 'print', child: Text('Print this spread')),
+                PopupMenuItem(value: 'shareBook', child: Text('Share this book')),
+                PopupMenuItem(value: 'share', child: Text('Share this page')),
                 PopupMenuItem(value: 'printBook', child: Text('Print this book')),
+                PopupMenuItem(value: 'print', child: Text('Print this page')),
+                PopupMenuItem(value: 'family', child: Text('Share with family')),
+                PopupMenuItem(value: 'year', child: Text('Film this year')),
                 PopupMenuItem(value: 'reel', child: Text('Flip the book as a reel')),
                 PopupMenuItem(value: 'pages', child: Text('Manage pages')),
                 PopupMenuItem(value: 'fill', child: Text('Choose photos')),
@@ -141,7 +187,9 @@ class _BookReaderScreenState extends ConsumerState<BookReaderScreen> {
             ),
           ],
         ),
-        body: async.when(
+        body: Stack(
+          children: [
+            async.when(
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (e, _) => Center(child: Text('$e')),
           data: (detail) {
@@ -210,6 +258,93 @@ class _BookReaderScreenState extends ConsumerState<BookReaderScreen> {
                     ],
                   ),
                 ),
+              );
+            }
+            if (_onePage) {
+              final pageIndex = detail.pages.isEmpty
+                  ? 0
+                  : _page.clamp(0, detail.pages.length - 1);
+              final page = detail.pages.isEmpty ? null : detail.pages[pageIndex];
+              return Column(
+                children: [
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          final maxW = constraints.maxWidth;
+                          final maxH = constraints.maxHeight;
+                          var pageW = maxW;
+                          var pageH = pageW / MbTokens.pageAspect;
+                          if (pageH > maxH) {
+                            pageH = maxH;
+                            pageW = pageH * MbTokens.pageAspect;
+                          }
+                          return Center(
+                            child: SizedBox(
+                              width: pageW,
+                              height: pageH,
+                              child: GestureDetector(
+                                onHorizontalDragEnd: (d) {
+                                  final v = d.primaryVelocity ?? 0;
+                                  if (v < -200 && pageIndex < detail.pages.length - 1) {
+                                    setState(() => _page = pageIndex + 1);
+                                  } else if (v > 200 && pageIndex > 0) {
+                                    setState(() => _page = pageIndex - 1);
+                                  }
+                                },
+                                child: page == null
+                                    ? const ColoredBox(color: MbTokens.paper)
+                                    : PaperPage(
+                                        child: PageCanvas(
+                                          page: page,
+                                          onSlotTap: (slot) => _editSlot(page, slot),
+                                          onSlotLongPress: _cropSlot,
+                                          onCropCommit: _commitCrop,
+                                        ),
+                                      ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(8, 0, 8, 18),
+                    child: Row(
+                      children: [
+                        IconButton(
+                          tooltip: 'Previous page',
+                          onPressed: pageIndex > 0
+                              ? () => setState(() => _page = pageIndex - 1)
+                              : null,
+                          icon: const Icon(Icons.chevron_left),
+                        ),
+                        Expanded(
+                          child: Text(
+                            'Page ${pageIndex + 1} of ${detail.pages.length}\n'
+                            'One photo gets the whole page. Tap the book icon for a two-page spread.',
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              color: MbTokens.ink,
+                              fontFamily: MbTokens.sans,
+                              fontSize: 14,
+                              height: 1.35,
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          tooltip: 'Next page',
+                          onPressed: pageIndex < detail.pages.length - 1
+                              ? () => setState(() => _page = pageIndex + 1)
+                              : null,
+                          icon: const Icon(Icons.chevron_right),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               );
             }
             final spread = _spread.clamp(0, detail.spreadCount - 1);
@@ -281,8 +416,10 @@ class _BookReaderScreenState extends ConsumerState<BookReaderScreen> {
                           'Swipe to turn. Spread fingers to zoom in. Pinch together to shrink a photo into the frame.',
                           textAlign: TextAlign.center,
                           style: const TextStyle(
-                            color: MbTokens.paperDeep,
-                            height: 1.3,
+                            color: MbTokens.ink,
+                            fontFamily: MbTokens.sans,
+                            fontSize: 14,
+                            height: 1.35,
                           ),
                         ),
                       ),
@@ -299,6 +436,43 @@ class _BookReaderScreenState extends ConsumerState<BookReaderScreen> {
               ],
             );
           },
+        ),
+            if (_progress != null)
+              Positioned.fill(
+                child: ColoredBox(
+                  color: const Color(0x99000000),
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 300),
+                      child: Material(
+                        color: MbTokens.cream,
+                        borderRadius: BorderRadius.circular(20),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 18),
+                          child: Row(
+                            children: [
+                              const CircularProgressIndicator(),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Text(
+                                  _progress!,
+                                  style: const TextStyle(
+                                    fontFamily: MbTokens.sans,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: MbTokens.ink,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
         ),
       ),
     );
@@ -318,7 +492,7 @@ class _BookReaderScreenState extends ConsumerState<BookReaderScreen> {
   Future<void> _editSlot(PageDetail page, PhotoSlot slot) async {
     await showModalBottomSheet<void>(
       context: context,
-      backgroundColor: MbTokens.leather,
+      backgroundColor: MbTokens.cream,
       isScrollControlled: true,
       builder: (ctx) => SlotEditorSheet(
         albumId: widget.albumId,
@@ -330,7 +504,7 @@ class _BookReaderScreenState extends ConsumerState<BookReaderScreen> {
 
   Future<void> _shareSpread(AlbumDetail? detail) async {
     if (detail == null || _busy) return;
-    setState(() => _busy = true);
+    await _showProgress('Preparing this page to share');
     try {
       final left = _spread * 2 < detail.pages.length
           ? detail.pages[_spread * 2]
@@ -347,64 +521,87 @@ class _BookReaderScreenState extends ConsumerState<BookReaderScreen> {
       final bytes = await ref.read(exportServiceProvider).encodeStill(
             image: image,
             format: 'JPEG',
-            watermark: !ref.read(premiumControllerProvider).isPremium,
+            watermark: false,
           );
       final file = await ref.read(exportServiceProvider).writeBytes(bytes, 'jpg');
       await ref.read(exportHistoryProvider).add('Shared spread');
-      await ref.read(exportServiceProvider).shareFile(file);
+      _hideProgress();
+      await ref.read(exportServiceProvider).shareFile(
+            file,
+            mimeType: 'image/jpeg',
+            name: '${detail.album.title}.jpg',
+          );
     } finally {
-      if (mounted) setState(() => _busy = false);
+      if (mounted) {
+        setState(() {
+          _busy = false;
+          _progress = null;
+        });
+      }
     }
   }
 
-  Future<void> _printBook(AlbumDetail? detail, {required bool whole}) async {
+  Future<void> _shareBook(AlbumDetail? detail) async {
     if (detail == null || _busy) return;
-    setState(() => _busy = true);
+    await _showProgress('Preparing this book to share');
     try {
-      final painter = BookPainter();
-      final export = ref.read(exportServiceProvider);
-      final premium = ref.read(premiumControllerProvider).isPremium;
-      final pages = <Uint8List>[];
-      Future<void> addImage(ui.Image image) async {
-        pages.add(
-          await export.encodeStill(
-            image: image,
-            format: 'JPEG',
-            watermark: !premium,
-          ),
+      final pages = await _pageImages(detail, whole: true);
+      final pdf = await ref.read(printServiceProvider).pdfFromImages(pages);
+      final file = await ref.read(exportServiceProvider).writeBytes(pdf, 'pdf');
+      await ref.read(exportHistoryProvider).add('Shared book');
+      _hideProgress();
+      await ref.read(exportServiceProvider).shareFile(
+            file,
+            mimeType: 'application/pdf',
+            name: '${detail.album.title}.pdf',
+          );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not share this book: $e')),
         );
       }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _busy = false;
+          _progress = null;
+        });
+      }
+    }
+  }
 
-      if (whole) {
-        await addImage(
-          await painter.paintCover(
-            title: detail.album.title,
-            theme: detail.theme,
-            coverPath: detail.album.coverPhotoPath,
-            size: const Size(1600, 2000),
-          ),
-        );
-        final spreads = detail.spreadCount;
-        for (var i = 0; i < spreads; i++) {
-          final left = i * 2 < detail.pages.length ? detail.pages[i * 2] : null;
-          final right =
-              i * 2 + 1 < detail.pages.length ? detail.pages[i * 2 + 1] : null;
-          await addImage(
-            await painter.paintSpread(
-              left: left,
-              right: right,
-              theme: detail.theme,
-              size: const Size(2000, 1400),
-            ),
-          );
-        }
-      } else {
-        final left = _spread * 2 < detail.pages.length
-            ? detail.pages[_spread * 2]
-            : null;
-        final right = _spread * 2 + 1 < detail.pages.length
-            ? detail.pages[_spread * 2 + 1]
-            : null;
+  Future<List<Uint8List>> _pageImages(
+    AlbumDetail detail, {
+    required bool whole,
+  }) async {
+    final painter = BookPainter();
+    final export = ref.read(exportServiceProvider);
+    final pages = <Uint8List>[];
+    Future<void> addImage(ui.Image image) async {
+      pages.add(
+        await export.encodeStill(
+          image: image,
+          format: 'JPEG',
+          watermark: false,
+        ),
+      );
+    }
+
+    if (whole) {
+      await addImage(
+        await painter.paintCover(
+          title: detail.album.title,
+          theme: detail.theme,
+          coverPath: detail.album.coverPhotoPath,
+          size: const Size(1600, 2000),
+        ),
+      );
+      final spreads = detail.spreadCount;
+      for (var i = 0; i < spreads; i++) {
+        final left = i * 2 < detail.pages.length ? detail.pages[i * 2] : null;
+        final right =
+            i * 2 + 1 < detail.pages.length ? detail.pages[i * 2 + 1] : null;
         await addImage(
           await painter.paintSpread(
             left: left,
@@ -414,8 +611,33 @@ class _BookReaderScreenState extends ConsumerState<BookReaderScreen> {
           ),
         );
       }
+    } else {
+      final left = _spread * 2 < detail.pages.length
+          ? detail.pages[_spread * 2]
+          : null;
+      final right = _spread * 2 + 1 < detail.pages.length
+          ? detail.pages[_spread * 2 + 1]
+          : null;
+      await addImage(
+        await painter.paintSpread(
+          left: left,
+          right: right,
+          theme: detail.theme,
+          size: const Size(2000, 1400),
+        ),
+      );
+    }
+    return pages;
+  }
+
+  Future<void> _printBook(AlbumDetail? detail, {required bool whole}) async {
+    if (detail == null || _busy) return;
+    await _showProgress(whole ? 'Preparing this book to print' : 'Preparing this page to print');
+    try {
+      final pages = await _pageImages(detail, whole: whole);
+      _hideProgress();
       await ref.read(exportHistoryProvider).add(
-            whole ? 'Printed book' : 'Printed spread',
+            whole ? 'Printed book' : 'Printed page',
           );
       await ref.read(printServiceProvider).printImages(
             pages,
@@ -428,23 +650,34 @@ class _BookReaderScreenState extends ConsumerState<BookReaderScreen> {
         );
       }
     } finally {
-      if (mounted) setState(() => _busy = false);
+      if (mounted) {
+        setState(() {
+          _busy = false;
+          _progress = null;
+        });
+      }
     }
   }
 
   Future<void> _exportReel(AlbumDetail? detail) async {
     if (detail == null || _busy) return;
-    setState(() => _busy = true);
+    await _showProgress('Filming this book as a reel');
     try {
       final file = await ref.read(flipReelExporterProvider).exportAlbum(
             detail: detail,
           );
       if (!ref.read(premiumControllerProvider).isPremium) {
+        _hideProgress();
         if (mounted) context.push('/paywall');
+        return;
       }
       await ref.read(exportHistoryProvider).add('Album reel');
       await ref.read(exportServiceProvider).saveVideoToGallery(file);
-      await ref.read(exportServiceProvider).shareFile(file);
+      _hideProgress();
+      await ref.read(exportServiceProvider).shareVideo(
+            file,
+            title: detail.album.title,
+          );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Reel saved to your library')),
@@ -457,7 +690,12 @@ class _BookReaderScreenState extends ConsumerState<BookReaderScreen> {
         );
       }
     } finally {
-      if (mounted) setState(() => _busy = false);
+      if (mounted) {
+        setState(() {
+          _busy = false;
+          _progress = null;
+        });
+      }
     }
   }
 }
@@ -528,7 +766,7 @@ class _SlotEditorSheetState extends ConsumerState<SlotEditorSheet> {
             const SizedBox(height: 4),
             _action(Icons.add_photo_alternate_outlined, 'Replace photo', _pick),
             if (widget.slot.imagePath != null) ...[
-              _action(Icons.fit_screen, 'Fit in frame', _fitInFrame),
+              _action(Icons.fit_screen, 'Show the whole photo', _fitInFrame),
               _action(Icons.crop, 'Crop and zoom', () {
                 Navigator.pop(context);
                 showSlotCropEditor(context: context, slot: widget.slot);
@@ -542,15 +780,18 @@ class _SlotEditorSheetState extends ConsumerState<SlotEditorSheet> {
               controller: _caption,
               decoration: const InputDecoration(
                 labelText: 'Caption',
-                labelStyle: TextStyle(color: MbTokens.paper),
               ),
-              style: const TextStyle(color: MbTokens.cream),
+              style: const TextStyle(
+                color: MbTokens.ink,
+                fontFamily: MbTokens.sans,
+                fontSize: 16,
+              ),
               onSubmitted: (_) => _save(),
             ),
             const SizedBox(height: 12),
             DropdownButton<String>(
               value: _filter,
-              dropdownColor: MbTokens.leather,
+              dropdownColor: Colors.white,
               items: PhotoFilterId.values
                   .map(
                     (f) => DropdownMenuItem(
@@ -652,7 +893,7 @@ class _SlotEditorSheetState extends ConsumerState<SlotEditorSheet> {
     if (path == null) return;
     final choice = await showModalBottomSheet<String>(
       context: context,
-      backgroundColor: MbTokens.leatherDark,
+      backgroundColor: MbTokens.cream,
       builder: (ctx) => SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(8, 8, 8, 12),
@@ -663,7 +904,11 @@ class _SlotEditorSheetState extends ConsumerState<SlotEditorSheet> {
                 title: Text('Bring this photo to life'),
                 subtitle: Text(
                   'A credit sends it to make a short clip. On this phone, we can pan across it without uploading.',
-                  style: TextStyle(color: MbTokens.paperDeep),
+                  style: TextStyle(
+                    color: MbTokens.inkSoft,
+                    fontFamily: MbTokens.sans,
+                    height: 1.35,
+                  ),
                 ),
               ),
               ListTile(
@@ -693,36 +938,17 @@ class _SlotEditorSheetState extends ConsumerState<SlotEditorSheet> {
       if (mounted) Navigator.pop(context);
       return;
     }
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: MbTokens.leather,
-        title: const Text('This photo leaves the device'),
-        content: const Text(
-          'One credit sends this picture to make a short clip. It is not used to train a model. If that fails, the credit comes back and we film it here.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Keep it here'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Send this photo'),
-          ),
-        ],
-      ),
+    final prompt = await askClipPrompt(context);
+    if (prompt == null || !mounted) return;
+    final result = await runCloudClip(
+      context,
+      ref,
+      imagePath: path,
+      prompt: prompt,
     );
-    if (confirmed != true || !mounted) return;
-    final result = await ref.read(aiVideoClientProvider).generateFromImage(
-          imagePath: path,
-        );
     if (!mounted) return;
-    if (result.ok && !result.fallbackToOnDevice) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(result.message ?? 'Clip queued')),
-      );
-      Navigator.pop(context);
+    if (result.ok && result.videoUrl != null && result.videoUrl!.isNotEmpty) {
+      if (mounted) Navigator.pop(context);
       return;
     }
     if (result.message?.startsWith('Sign in') == true) {

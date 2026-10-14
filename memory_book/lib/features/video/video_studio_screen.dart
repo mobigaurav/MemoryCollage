@@ -105,7 +105,7 @@ class _VideoStudioScreenState extends ConsumerState<VideoStudioScreen> {
           ),
           const SizedBox(height: 12),
           SizedBox(
-            height: 96,
+            height: 180,
             child: _photos.isEmpty
                 ? const Center(child: Text('Add stills to build a film'))
                 : ListView.separated(
@@ -114,9 +114,9 @@ class _VideoStudioScreenState extends ConsumerState<VideoStudioScreen> {
                     separatorBuilder: (_, _) => const SizedBox(width: 8),
                     itemBuilder: (_, i) => LocalPhoto(
                       path: _photos[i],
-                      width: 88,
-                      height: 88,
-                      cacheSize: const Size(88, 88),
+                      width: 140,
+                      height: 180,
+                      cacheSize: const Size(140, 180),
                     ),
                   ),
           ),
@@ -136,7 +136,7 @@ class _VideoStudioScreenState extends ConsumerState<VideoStudioScreen> {
             'Aspect',
             DropdownButton<VideoAspect>(
               value: _aspect,
-              dropdownColor: MbTokens.leather,
+              dropdownColor: Colors.white,
               items: VideoAspect.values
                   .map(
                     (a) => DropdownMenuItem(value: a, child: Text(a.label)),
@@ -152,7 +152,7 @@ class _VideoStudioScreenState extends ConsumerState<VideoStudioScreen> {
             'Filter',
             DropdownButton<PhotoFilterId>(
               value: _filter,
-              dropdownColor: MbTokens.leather,
+              dropdownColor: Colors.white,
               items: PhotoFilterId.values
                   .map(
                     (f) => DropdownMenuItem(value: f, child: Text(f.label)),
@@ -168,7 +168,7 @@ class _VideoStudioScreenState extends ConsumerState<VideoStudioScreen> {
             'Transition',
             DropdownButton<VideoTransitionId>(
               value: _transition,
-              dropdownColor: MbTokens.leather,
+              dropdownColor: Colors.white,
               items: VideoTransitionId.values
                   .map(
                     (t) => DropdownMenuItem(value: t, child: Text(t.label)),
@@ -187,17 +187,20 @@ class _VideoStudioScreenState extends ConsumerState<VideoStudioScreen> {
             decoration: const InputDecoration(
               labelText: 'Opening title (optional)',
             ),
-            style: const TextStyle(color: MbTokens.cream),
           ),
+          const SizedBox(height: 12),
           TextField(
             controller: _endCard,
             decoration: const InputDecoration(labelText: 'End card'),
-            style: const TextStyle(color: MbTokens.cream),
           ),
           const SizedBox(height: 8),
           const Text(
-            '9:16 keeps the film inside a Reels frame. Leave faces off the top and bottom bands.',
-            style: TextStyle(color: MbTokens.paperDeep),
+            '9:16 keeps a portrait photo tall. 16:9 is a wide film. Photos stay upright either way.',
+            style: TextStyle(
+              fontFamily: MbTokens.sans,
+              color: MbTokens.ink,
+              height: 1.4,
+            ),
           ),
           Text('Seconds per still  ${_seconds.toStringAsFixed(1)}'),
           Slider(
@@ -267,9 +270,12 @@ class _VideoStudioScreenState extends ConsumerState<VideoStudioScreen> {
                 ),
                 const SizedBox(width: 8),
                 OutlinedButton(
-                  onPressed: () => ref
-                      .read(exportServiceProvider)
-                      .shareFile(File(_output!)),
+                  onPressed: () => ref.read(exportServiceProvider).shareVideo(
+                        File(_output!),
+                        title: _title.text.trim().isEmpty
+                            ? 'Memory film'
+                            : _title.text.trim(),
+                      ),
                   child: const Text('Share'),
                 ),
               ],
@@ -322,12 +328,31 @@ class _VideoStudioScreenState extends ConsumerState<VideoStudioScreen> {
             endCard: _endCard.text,
           );
       await ref.read(exportHistoryProvider).add('Memory film');
+      final title = _title.text.trim().isEmpty ? 'Memory film' : _title.text.trim();
+      try {
+        await ref.read(reelLibraryProvider).keep(
+              source: file,
+              title: title,
+              kind: 'film',
+            );
+        ref.invalidate(reelsProvider);
+      } catch (_) {}
+      await ref.read(nativeEncoderProvider).preparePlayback();
       await _player?.dispose();
       _player = VideoPlayerController.file(file);
       await _player!.initialize();
+      await ref.read(nativeEncoderProvider).preparePlayback();
       await _player!.setLooping(true);
+      await _player!.setVolume(1);
       await _player!.play();
       setState(() => _output = file.path);
+      if (!file.path.contains('.mixed.') && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('The film is ready. The music did not attach to this one.'),
+          ),
+        );
+      }
       await ref.read(localNotifyProvider).show(
             title: 'Your reel is ready',
             body: 'Open Memory Book to watch or save the film.',
