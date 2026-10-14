@@ -2,7 +2,7 @@
 
 The phone is the product. The website is the public explanation: what Memory Book is, a short journal, and the pages a store listing has to link to. Privacy, terms, and support are real routes. The You tab opens them in the browser. They are not placeholders inside the app.
 
-The site is a Next.js app in `apps/web`. It ships on Vercel as project `memory-book`, at https://memory-book-pearl-zeta.vercel.app. A push to `dev` links that project by name and refuses any other project. The action unsets `VERCEL_PROJECT_ID` before it deploys.
+The site is a Next.js app in `apps/web`. It ships on Vercel as project `memory-book`, at https://memory-book-pearl-zeta.vercel.app. A merge into `main` links that project by name and refuses any other project. A merge into `dev` does not deploy. The action unsets `VERCEL_PROJECT_ID` before it deploys.
 
 That unset is the whole lesson. Vercel will attach a folder named `apps/web` to an existing project when an organization already has one and the CLI is told to say yes. Two products then share a deployment, and one of them loses its public URL. Memory Book’s site is a separate project. Its token and, if needed, its team id live in this repository’s secrets. Another product’s project id must not.
 
@@ -21,7 +21,7 @@ The operational notes for the API and the pool stay in the backend document. Thi
 ## Diagram
 
 ```
-  GitHub  dev branch
+  GitHub  main branch
         |
         |  .github/workflows/web.yml
         |  unset VERCEL_PROJECT_ID

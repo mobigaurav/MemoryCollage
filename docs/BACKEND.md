@@ -48,7 +48,7 @@ The app already has this API URL, the Cognito client id, and `us-east-1` in `mem
 
 ## Deploy the site
 
-Merging into `dev` runs [`.github/workflows/web.yml`](../.github/workflows/web.yml). That action links only to the Vercel project named `memory-book` and publishes https://memory-book-pearl-zeta.vercel.app. Add `VERCEL_TOKEN` on [MemoryCollage](https://github.com/mobigaurav/MemoryCollage). Optional: `VERCEL_ORG_ID` for the team. Do not set `VERCEL_PROJECT_ID`. A folder named `apps/web` plus `vercel --yes` will otherwise attach to another product's project `web`.
+Merging into `main` runs [`.github/workflows/web.yml`](../.github/workflows/web.yml). A merge into `dev` runs checks and does not deploy. That action links only to the Vercel project named `memory-book` and publishes https://memory-book-pearl-zeta.vercel.app. Add `VERCEL_TOKEN` on [MemoryCollage](https://github.com/mobigaurav/MemoryCollage). Optional: `VERCEL_ORG_ID` for the team. Do not set `VERCEL_PROJECT_ID`. A folder named `apps/web` plus `vercel --yes` will otherwise attach to another product's project `web`.
 
 Store buttons appear when these Vercel env vars are set:
 
