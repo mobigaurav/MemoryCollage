@@ -1,5 +1,6 @@
-# Deploys the Memory Book site when `dev` is updated.
-# VERCEL_TOKEN is required. Optional: VERCEL_ORG_ID (team scope).
+# Deploys the Memory Book site when `main` is updated.
+# A merge into `dev` does not deploy. VERCEL_TOKEN is required.
+# Optional: VERCEL_ORG_ID (team scope).
 #
 # The public site is https://memory-book-pearl-zeta.vercel.app
 # on Vercel project `memory-book`.
@@ -13,7 +14,7 @@ name: web
 
 on:
   push:
-    branches: [dev]
+    branches: [main]
   workflow_dispatch:
 
 jobs:
@@ -34,6 +35,10 @@ jobs:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
         run: |
           set -euo pipefail
+          if [ "${GITHUB_REF:-}" != "refs/heads/main" ]; then
+            echo "Refusing to deploy ${GITHUB_REF:-unknown}. The site deploys from main only."
+            exit 1
+          fi
           if [ -z "$VERCEL_TOKEN" ]; then
             echo "VERCEL_TOKEN is not set on this repo. Skipping the site deploy."
             exit 0
