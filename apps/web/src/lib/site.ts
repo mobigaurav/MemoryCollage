@@ -5,7 +5,7 @@ export const site = {
   url:
     process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
     "https://memory-book-pearl-zeta.vercel.app",
-  supportEmail: "mobigaurav@gmail.com",
+  supportEmail: "support@mysticvedic.com",
   appStoreUrl: process.env.NEXT_PUBLIC_APP_STORE_URL?.trim() || "",
   playStoreUrl: process.env.NEXT_PUBLIC_PLAY_STORE_URL?.trim() || "",
 };
