@@ -1,0 +1,83 @@
+:root {
+  --paper: #f6efe3;
+  --paper-deep: #e4d0b8;
+  --ink: #1c1410;
+  --ink-soft: #5c4a3a;
+  --leather: #6b3a2a;
+  --foil: #c4a574;
+  --serif: var(--font-serif), "Iowan Old Style", Georgia, serif;
+  --sans: var(--font-sans), "Avenir Next", sans-serif;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--sans);
+  line-height: 1.5;
+}
+a { color: var(--leather); }
+img { max-width: 100%; }
+
+.wrap { width: min(880px, calc(100% - 40px)); margin: 0 auto; }
+.site-header, .site-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 22px 0;
+}
+.wordmark {
+  font-family: var(--serif);
+  font-size: 1.4rem;
+  color: var(--ink);
+  text-decoration: none;
+}
+.nav { display: flex; gap: 18px; flex-wrap: wrap; }
+.nav a { color: var(--ink-soft); text-decoration: none; font-size: 0.95rem; }
+.nav a:hover { color: var(--ink); }
+
+.hero { padding: 48px 0 24px; }
+.hero h1 {
+  font-family: var(--serif);
+  font-weight: 400;
+  font-size: clamp(2.6rem, 6vw, 4.4rem);
+  line-height: 1.05;
+  margin: 0 0 16px;
+}
+.lede { font-size: 1.2rem; max-width: 38rem; color: var(--ink-soft); }
+.actions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 24px; }
+.button, .button-quiet {
+  display: inline-flex;
+  align-items: center;
+  min-height: 48px;
+  padding: 0 18px;
+  border-radius: 999px;
+  text-decoration: none;
+  font-weight: 600;
+}
+.button { background: var(--ink); color: var(--paper); }
+.button-quiet { border: 1px solid var(--paper-deep); color: var(--ink); }
+
+.section { padding: 28px 0 8px; }
+.section h2, .page h1 {
+  font-family: var(--serif);
+  font-weight: 400;
+  font-size: 2.2rem;
+  margin: 0 0 8px;
+}
+.cards, .posts { display: grid; gap: 14px; }
+.card, .post {
+  background: white;
+  border-radius: 18px;
+  padding: 18px 18px 16px;
+  text-decoration: none;
+  color: inherit;
+}
+.card h3, .post strong { margin: 0 0 6px; font-size: 1.05rem; }
+.card p, .post span, .meta { color: var(--ink-soft); margin: 0; }
+.post { display: grid; gap: 6px; }
+.page { padding-bottom: 64px; }
+.page p { max-width: 40rem; }
+.site-footer { color: var(--ink-soft); font-size: 0.9rem; border-top: 1px solid var(--paper-deep); margin-top: 36px; }

@@ -1,0 +1,283 @@
+# Memory Book lite stack. Own Cognito pool. Do not point this at Arogya.
+#
+#   cd infra/lite && sam build && sam deploy --guided
+#
+# First deploy needs Docker (the API is a container image) and an AWS
+# account in us-east-1. Neon and the video vendor key can wait.
+
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: Memory Book lite — Cognito + API + private media bucket
+
+Parameters:
+  Env:
+    Type: String
+    AllowedValues: [dev, prod]
+    Default: dev
+  AppName:
+    Type: String
+    Default: memorybook
+  CorsOrigins:
+    Type: String
+    Default: "*"
+  VideoVendor:
+    Type: String
+    Default: none
+    Description: none, runway, or fal. runway uses the Runway API key.
+  VideoVendorApiKey:
+    Type: String
+    Default: ""
+    NoEcho: true
+  CognitoDomainPrefix:
+    Type: String
+    Default: memorybook-dev
+    Description: Hosted UI prefix. The app expects memorybook-dev unless COGNITO_DOMAIN is overridden.
+  GoogleClientId:
+    Type: String
+    Default: ""
+    Description: Google OAuth client id. Leave empty until Google is connected.
+  GoogleClientSecret:
+    Type: String
+    Default: ""
+    NoEcho: true
+  AppleServicesId:
+    Type: String
+    Default: ""
+    Description: Sign in with Apple Services ID. Leave empty until Apple is connected.
+  AppleTeamId:
+    Type: String
+    Default: ""
+  AppleKeyId:
+    Type: String
+    Default: ""
+  ApplePrivateKey:
+    Type: String
+    Default: ""
+    NoEcho: true
+
+Conditions:
+  HasGoogle: !Not [!Equals [!Ref GoogleClientId, ""]]
+  HasApple: !Not [!Equals [!Ref AppleServicesId, ""]]
+
+Globals:
+  Function:
+    Timeout: 29
+    MemorySize: 512
+    Architectures: [arm64]
+
+Resources:
+  UserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: !Sub "${AppName}-${Env}-users"
+      AutoVerifiedAttributes: [email]
+      UsernameAttributes: [email]
+      MfaConfiguration: "OFF"
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 8
+          RequireUppercase: false
+          RequireLowercase: true
+          RequireNumbers: true
+          RequireSymbols: false
+      AccountRecoverySetting:
+        RecoveryMechanisms:
+          - { Name: verified_email, Priority: 1 }
+      Schema:
+        - { Name: email, AttributeDataType: String, Required: true, Mutable: true }
+      AdminCreateUserConfig:
+        AllowAdminCreateUserOnly: false
+
+  UserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ClientName: !Sub "${AppName}-${Env}-app"
+      UserPoolId: !Ref UserPool
+      GenerateSecret: false
+      ExplicitAuthFlows:
+        - ALLOW_USER_PASSWORD_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
+      PreventUserExistenceErrors: ENABLED
+      AllowedOAuthFlowsUserPoolClient: true
+      AllowedOAuthFlows:
+        - code
+      AllowedOAuthScopes:
+        - openid
+        - email
+        - profile
+      CallbackURLs:
+        - memorybook://auth
+      LogoutURLs:
+        - memorybook://auth
+      SupportedIdentityProviders:
+        - COGNITO
+        - !If [HasGoogle, !Ref GoogleProvider, !Ref "AWS::NoValue"]
+        - !If [HasApple, !Ref AppleProvider, !Ref "AWS::NoValue"]
+      AccessTokenValidity: 24
+      IdTokenValidity: 24
+      RefreshTokenValidity: 30
+      TokenValidityUnits:
+        AccessToken: hours
+        IdToken: hours
+        RefreshToken: days
+
+  UserPoolDomain:
+    Type: AWS::Cognito::UserPoolDomain
+    Properties:
+      Domain: !Ref CognitoDomainPrefix
+      UserPoolId: !Ref UserPool
+
+  GoogleProvider:
+    Type: AWS::Cognito::UserPoolIdentityProvider
+    Condition: HasGoogle
+    Properties:
+      UserPoolId: !Ref UserPool
+      ProviderName: Google
+      ProviderType: Google
+      ProviderDetails:
+        client_id: !Ref GoogleClientId
+        client_secret: !Ref GoogleClientSecret
+        authorize_scopes: openid email profile
+      AttributeMapping:
+        email: email
+        username: sub
+
+  AppleProvider:
+    Type: AWS::Cognito::UserPoolIdentityProvider
+    Condition: HasApple
+    Properties:
+      UserPoolId: !Ref UserPool
+      ProviderName: SignInWithApple
+      ProviderType: SignInWithApple
+      ProviderDetails:
+        client_id: !Ref AppleServicesId
+        team_id: !Ref AppleTeamId
+        key_id: !Ref AppleKeyId
+        private_key: !Ref ApplePrivateKey
+        authorize_scopes: email name
+      AttributeMapping:
+        email: email
+        username: sub
+
+  MediaBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "${AppName}-${Env}-media-${AWS::AccountId}"
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      LifecycleConfiguration:
+        Rules:
+          - Id: expire-uploads
+            Status: Enabled
+            ExpirationInDays: 7
+            Prefix: uploads/
+
+  HouseholdTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "${AppName}-${Env}-households"
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: pk
+          AttributeType: S
+        - AttributeName: sk
+          AttributeType: S
+      KeySchema:
+        - AttributeName: pk
+          KeyType: HASH
+        - AttributeName: sk
+          KeyType: RANGE
+
+  CommunityTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "${AppName}-${Env}-community"
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: pk
+          AttributeType: S
+        - AttributeName: sk
+          AttributeType: S
+      KeySchema:
+        - AttributeName: pk
+          KeyType: HASH
+        - AttributeName: sk
+          KeyType: RANGE
+
+  ApiFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "${AppName}-${Env}-api"
+      PackageType: Image
+      Environment:
+        Variables:
+          ENV: !Ref Env
+          COGNITO_USER_POOL_ID: !Ref UserPool
+          COGNITO_APP_CLIENT_ID: !Ref UserPoolClient
+          MEDIA_BUCKET: !Ref MediaBucket
+          COMMUNITY_TABLE: !Ref CommunityTable
+          HOUSEHOLD_TABLE: !Ref HouseholdTable
+          CORS_ORIGINS: !Ref CorsOrigins
+          VIDEO_VENDOR: !Ref VideoVendor
+          VIDEO_VENDOR_API_KEY: !Ref VideoVendorApiKey
+      Policies:
+        - S3CrudPolicy:
+            BucketName: !Ref MediaBucket
+        - DynamoDBCrudPolicy:
+            TableName: !Ref CommunityTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref HouseholdTable
+      Events:
+        ProxyApi:
+          Type: Api
+          Properties:
+            Path: /{proxy+}
+            Method: ANY
+            RestApiId: !Ref RestApi
+        RootApi:
+          Type: Api
+          Properties:
+            Path: /
+            Method: ANY
+            RestApiId: !Ref RestApi
+    Metadata:
+      Dockerfile: services/api/Dockerfile
+      DockerContext: ../..
+      DockerTag: !Sub "${Env}"
+
+  RestApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: !Sub "${AppName}-${Env}-api"
+      StageName: !Ref Env
+      EndpointConfiguration:
+        Type: REGIONAL
+      Cors:
+        AllowMethods: "'GET,POST,DELETE,OPTIONS'"
+        AllowHeaders: "'*'"
+        AllowOrigin: "'*'"
+
+Outputs:
+  ApiUrl:
+    Description: Pass this as AI_BASE_URL. No trailing slash.
+    Value: !Sub "https://${RestApi}.execute-api.${AWS::Region}.amazonaws.com/${Env}"
+  UserPoolId:
+    Value: !Ref UserPool
+  UserPoolClientId:
+    Description: Pass this as COGNITO_CLIENT_ID
+    Value: !Ref UserPoolClient
+  CognitoHost:
+    Description: Hosted UI. Apple and Google redirect here, then back to memorybook://auth.
+    Value: !Sub "${CognitoDomainPrefix}.auth.${AWS::Region}.amazoncognito.com"
+  CognitoIdpResponseUrl:
+    Description: Register this as the Google redirect URI and the Apple Services ID return URL.
+    Value: !Sub "https://${CognitoDomainPrefix}.auth.${AWS::Region}.amazoncognito.com/oauth2/idpresponse"
+  MediaBucketName:
+    Value: !Ref MediaBucket
