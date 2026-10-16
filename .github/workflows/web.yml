@@ -1,5 +1,6 @@
-# Deploys the Memory Book site when `dev` is updated.
-# VERCEL_TOKEN is required. Optional: VERCEL_ORG_ID (team scope).
+# Deploys the Memory Book site when `main` is updated.
+# A merge into `dev` does not deploy. VERCEL_TOKEN is required.
+# Optional: VERCEL_ORG_ID (team scope).
 #
 # The public site is https://memory-book-pearl-zeta.vercel.app
 # on Vercel project `memory-book`.
@@ -13,8 +14,13 @@ name: web
 
 on:
   push:
-    branches: [dev]
+    branches: [main]
   workflow_dispatch:
+    inputs:
+      preview_refs:
+        description: Comma-separated branches to rebuild after the project root is apps/web
+        required: false
+        default: ""
 
 jobs:
   deploy:
@@ -32,10 +38,68 @@ jobs:
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          PREVIEW_REFS: ${{ inputs.preview_refs }}
         run: |
           set -euo pipefail
           if [ -z "$VERCEL_TOKEN" ]; then
             echo "VERCEL_TOKEN is not set on this repo. Skipping the site deploy."
+            exit 0
+          fi
+          qs=""
+          if [ -n "${VERCEL_ORG_ID:-}" ]; then
+            qs="?teamId=${VERCEL_ORG_ID}"
+          fi
+          code=$(curl -sS -o /tmp/vercel-project.json -w "%{http_code}" -X PATCH \
+            "https://api.vercel.com/v9/projects/memory-book${qs}" \
+            -H "Authorization: Bearer ${VERCEL_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d '{"rootDirectory":"apps/web"}')
+          node -e '
+            const fs = require("fs");
+            const code = process.argv[1];
+            const j = JSON.parse(fs.readFileSync("/tmp/vercel-project.json", "utf8"));
+            if (code !== "200" && code !== "201") {
+              const message = j.error && j.error.message ? j.error.message : "no message";
+              console.error("Could not set the project root. HTTP " + code + ": " + message);
+              process.exit(1);
+            }
+            if (j.name !== "memory-book" || j.rootDirectory !== "apps/web") {
+              console.error("Refusing project " + j.name + " at " + j.rootDirectory);
+              process.exit(1);
+            }
+            console.log("memory-book rootDirectory=apps/web");
+          ' "$code"
+          rm -f /tmp/vercel-project.json
+          if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ] && [ -n "${PREVIEW_REFS:-}" ]; then
+            repo_id="${{ github.event.repository.id }}"
+            IFS=',' read -ra refs <<< "$PREVIEW_REFS"
+            for ref in "${refs[@]}"; do
+              ref="$(printf '%s' "$ref" | tr -d '[:space:]')"
+              [ -z "$ref" ] && continue
+              git fetch origin "$ref"
+              sha="$(git rev-parse "origin/$ref")"
+              payload="$(node -e 'console.log(JSON.stringify({name:"memory-book",project:"memory-book",gitSource:{type:"github",repoId:Number(process.argv[1]),ref:process.argv[2],sha:process.argv[3]}}))' "$repo_id" "$ref" "$sha")"
+              dcode=$(curl -sS -o /tmp/vercel-deploy.json -w "%{http_code}" -X POST \
+                "https://api.vercel.com/v13/deployments${qs}" \
+                -H "Authorization: Bearer ${VERCEL_TOKEN}" \
+                -H "Content-Type: application/json" \
+                -d "$payload")
+              node -e '
+                const fs = require("fs");
+                const code = process.argv[1];
+                const j = JSON.parse(fs.readFileSync("/tmp/vercel-deploy.json", "utf8"));
+                if (code !== "200" && code !== "201") {
+                  const message = j.error && j.error.message ? j.error.message : "no message";
+                  console.error("Could not rebuild " + process.argv[2] + ". HTTP " + code + ": " + message);
+                  process.exit(1);
+                }
+                console.log("rebuilding " + process.argv[2] + " " + (j.url || j.id || ""));
+              ' "$dcode" "$ref"
+              rm -f /tmp/vercel-deploy.json
+            done
+          fi
+          if [ "${GITHUB_REF:-}" != "refs/heads/main" ]; then
+            echo "Project root is set. Production deploy runs only from main."
             exit 0
           fi
           npm install --global vercel@latest

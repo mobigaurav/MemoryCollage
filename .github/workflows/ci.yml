@@ -1,3 +1,4 @@
+# Checks only. A merge into main is what deploys the site.
 name: ci
 
 on:

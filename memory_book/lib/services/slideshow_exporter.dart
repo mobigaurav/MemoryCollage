@@ -67,6 +67,22 @@ class SlideshowExporter {
     return file.path;
   }
 
+  static const musicNames = <String>[
+    'Bright',
+    'Light',
+    'Warm',
+    'Soft',
+    'Still',
+    'Long evening',
+    'Lively',
+    'Steady',
+    'Full',
+    'Calm',
+    'Airy',
+  ];
+
+  static String musicName(int index) => musicNames[index % musicNames.length];
+
   static String? bundledMusic(int index) {
     final n = (index % 11) + 1;
     return 'assets/audio/$n.mp3';

@@ -16,6 +16,7 @@ import '../../services/community_api.dart';
 import '../../services/export_service.dart';
 import '../../services/reel_library.dart';
 import '../../widgets/brand_hero.dart';
+import '../../widgets/film_player.dart';
 
 class WorldScreen extends ConsumerStatefulWidget {
   const WorldScreen({super.key});
@@ -561,8 +562,9 @@ class _WorldPlayerState extends State<_WorldPlayer> {
     _controller = VideoPlayerController.networkUrl(Uri.parse(widget.url));
     _controller.initialize().then((_) async {
       if (!mounted) return;
+      await _controller.setLooping(false);
+      await _controller.pause();
       setState(() {});
-      await _controller.play();
     });
   }
 
@@ -581,15 +583,11 @@ class _WorldPlayerState extends State<_WorldPlayer> {
         foregroundColor: Colors.white,
         title: Text(widget.title),
       ),
-      body: Center(
-        child: _controller.value.isInitialized
-            ? AspectRatio(
-                aspectRatio: _controller.value.aspectRatio == 0
-                    ? 9 / 16
-                    : _controller.value.aspectRatio,
-                child: VideoPlayer(_controller),
-              )
-            : const CircularProgressIndicator(color: Colors.white),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+        children: [
+          MbFilmPlayer(controller: _controller, onDark: true),
+        ],
       ),
     );
   }

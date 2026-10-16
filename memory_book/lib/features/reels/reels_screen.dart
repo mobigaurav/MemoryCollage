@@ -9,6 +9,7 @@ import '../../core/theme/tokens.dart';
 import '../../providers.dart';
 import '../../services/reel_library.dart';
 import '../../widgets/brand_hero.dart';
+import '../../widgets/film_player.dart';
 
 class ReelsScreen extends ConsumerWidget {
   const ReelsScreen({super.key});
@@ -375,9 +376,9 @@ class _ReelStageState extends ConsumerState<_ReelStage> {
     _controller.initialize().then((_) async {
       if (!mounted) return;
       await _controller.setVolume(1);
-      await _controller.setLooping(true);
+      await _controller.setLooping(false);
+      await _controller.pause();
       setState(() {});
-      await _controller.play();
     });
   }
 
@@ -403,18 +404,12 @@ class _ReelStageState extends ConsumerState<_ReelStage> {
               ),
             ),
             Expanded(
-              child: _controller.value.isInitialized
-                  ? Center(
-                      child: AspectRatio(
-                        aspectRatio: _controller.value.aspectRatio == 0
-                            ? 9 / 16
-                            : _controller.value.aspectRatio,
-                        child: VideoPlayer(_controller),
-                      ),
-                    )
-                  : const Center(
-                      child: CircularProgressIndicator(color: Colors.white),
-                    ),
+              child: ListView(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                children: [
+                  MbFilmPlayer(controller: _controller, onDark: true),
+                ],
+              ),
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
