@@ -12,6 +12,7 @@ import '../../core/theme/tokens.dart';
 import '../../providers.dart';
 import '../../services/reel_library.dart';
 import '../ai/cloud_clip.dart';
+import '../../widgets/film_player.dart';
 
 class ClipEditorScreen extends ConsumerStatefulWidget {
   const ClipEditorScreen({super.key, required this.reelId});
@@ -70,7 +71,7 @@ class _ClipEditorScreenState extends ConsumerState<ClipEditorScreen> {
       _durationMs = duration;
       _endMs = duration;
     });
-    await player.play();
+    await player.pause();
   }
 
   void _followTrim() {
@@ -86,10 +87,11 @@ class _ClipEditorScreenState extends ConsumerState<ClipEditorScreen> {
   }
 
   void _holdInside(VideoPlayerController player, int startMs, int endMs) {
+    if (!player.value.isPlaying) return;
     final end = Duration(milliseconds: endMs);
     if (player.value.position >= end) {
       player.seekTo(Duration(milliseconds: startMs));
-      if (!player.value.isPlaying) player.play();
+      player.pause();
     }
   }
 
@@ -100,22 +102,6 @@ class _ClipEditorScreenState extends ConsumerState<ClipEditorScreen> {
     _player?.dispose();
     _joinPlayer?.dispose();
     super.dispose();
-  }
-
-  double get _previewAspect {
-    switch (_aspect) {
-      case '9:16':
-        return 9 / 16;
-      case '1:1':
-        return 1;
-      case '4:5':
-        return 4 / 5;
-      case '16:9':
-        return 16 / 9;
-      default:
-        final ratio = _player?.value.aspectRatio ?? 0;
-        return ratio == 0 ? 9 / 16 : ratio;
-    }
   }
 
   Future<void> _pickJoin() async {
@@ -177,7 +163,7 @@ class _ClipEditorScreenState extends ConsumerState<ClipEditorScreen> {
       _joinEndMs = duration;
     });
     await previous?.dispose();
-    await player.play();
+    await player.pause();
   }
 
   Future<void> _save() async {
@@ -284,7 +270,7 @@ class _ClipEditorScreenState extends ConsumerState<ClipEditorScreen> {
         actions: [
           TextButton(
             onPressed: _busy || _reel == null ? null : _save,
-            child: Text(_busy ? 'Saving' : 'Save'),
+            child: Text(_busy ? 'Saving' : (_join == null ? 'Save' : 'Join and save')),
           ),
         ],
       ),
@@ -302,7 +288,6 @@ class _ClipEditorScreenState extends ConsumerState<ClipEditorScreen> {
                       firstTitle: _reel?.title ?? 'This cut',
                       second: _joinPlayer,
                       secondTitle: _join?.title,
-                      aspect: _previewAspect,
                     ),
                     const SizedBox(height: 16),
                     Text(
@@ -424,14 +409,12 @@ class _PreviewRow extends StatelessWidget {
     required this.firstTitle,
     required this.second,
     required this.secondTitle,
-    required this.aspect,
   });
 
   final VideoPlayerController first;
   final String firstTitle;
   final VideoPlayerController? second;
   final String? secondTitle;
-  final double aspect;
 
   @override
   Widget build(BuildContext context) {
@@ -439,7 +422,7 @@ class _PreviewRow extends StatelessWidget {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _pane(first, firstTitle, aspect, tall: true),
+          _pane(first, firstTitle),
         ],
       );
     }
@@ -448,14 +431,14 @@ class _PreviewRow extends StatelessWidget {
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(child: _pane(first, '1  ·  $firstTitle', aspect, tall: false)),
+            Expanded(child: _pane(first, '1  ·  $firstTitle')),
             const SizedBox(width: 10),
-            Expanded(child: _pane(second!, '2  ·  $secondTitle', aspect, tall: false)),
+            Expanded(child: _pane(second!, '2  ·  $secondTitle')),
           ],
         ),
         const SizedBox(height: 8),
         const Text(
-          'Save plays 1, then 2.',
+          'Join and save plays 1, then 2, as a new reel.',
           style: TextStyle(
             fontFamily: MbTokens.sans,
             fontSize: 14,
@@ -467,12 +450,7 @@ class _PreviewRow extends StatelessWidget {
     );
   }
 
-  Widget _pane(
-    VideoPlayerController player,
-    String label,
-    double ratio, {
-    required bool tall,
-  }) {
+  Widget _pane(VideoPlayerController player, String label) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -488,23 +466,7 @@ class _PreviewRow extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 6),
-        ConstrainedBox(
-          constraints: BoxConstraints(maxHeight: tall ? 420 : 280),
-          child: AspectRatio(
-            aspectRatio: ratio,
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(18),
-              child: FittedBox(
-                fit: BoxFit.cover,
-                child: SizedBox(
-                  width: player.value.size.width,
-                  height: player.value.size.height,
-                  child: VideoPlayer(player),
-                ),
-              ),
-            ),
-          ),
-        ),
+        MbFilmPlayer(controller: player),
       ],
     );
   }
@@ -598,8 +560,8 @@ class _JoinCard extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               join == null
-                  ? 'Add a second reel. Both stay on screen. Save plays this cut, then that one.'
-                  : 'First: this cut. Then: ${join!.title}.',
+                  ? 'Choose a second reel, then tap Join and save. A new reel is added. These two stay as they are.'
+                  : 'Join and save plays this cut, then ${join!.title}.',
               style: const TextStyle(
                 fontFamily: MbTokens.sans,
                 fontSize: 15,

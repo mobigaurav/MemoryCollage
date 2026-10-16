@@ -32,9 +32,11 @@ class PlacedPhoto {
     this.ox = 0,
     this.oy = 0,
     this.filter = 'none',
+    this.slot,
   });
 
   final String path;
+  int? slot;
   double nx;
   double ny;
   double scale;
@@ -50,6 +52,7 @@ class PlacedPhoto {
         'ox': ox,
         'oy': oy,
         'filter': filter,
+        if (slot != null) 'slot': slot,
       };
 
   static PlacedPhoto fromJson(Map<String, Object?> json) => PlacedPhoto(
@@ -60,6 +63,7 @@ class PlacedPhoto {
         ox: (json['ox'] as num?)?.toDouble() ?? 0,
         oy: (json['oy'] as num?)?.toDouble() ?? 0,
         filter: json['filter'] as String? ?? 'none',
+        slot: (json['slot'] as num?)?.toInt(),
       );
 }
 
