@@ -22,6 +22,17 @@ abstract final class MbTokens {
   static const studio = Color(0xFFF6EFE3);
   static const studioDeep = Color(0xFFE4D0B8);
 
+  /// Frosted paper. Ink text sits on this. Cream text sits on [ink].
+  static const glass = Color(0xEEFFFBF6);
+  static const glassEdge = Color(0x99C4A35A);
+
+  static RoundedRectangleBorder glassShape(double radius) {
+    return RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(radius),
+      side: const BorderSide(color: glassEdge),
+    );
+  }
+
   static const collagePapers = <Color>[
     Color(0xFFF7F1E8),
     Color(0xFFFFFFFF),

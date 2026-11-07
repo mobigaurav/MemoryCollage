@@ -5,6 +5,8 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:http/http.dart' as http;
+import 'package:share_plus/share_plus.dart';
 import 'package:video_player/video_player.dart';
 
 import '../../core/theme/tokens.dart';
@@ -78,7 +80,7 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
     final text = Theme.of(context).textTheme;
     final signedIn = ref.watch(authSessionProvider).value != null;
     return Scaffold(
-      backgroundColor: MbTokens.cream,
+      backgroundColor: Colors.transparent,
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
@@ -426,8 +428,10 @@ class _PostCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(24),
+      color: MbTokens.glass,
+      elevation: 8,
+      shadowColor: const Color(0x40301810),
+      shape: MbTokens.glassShape(24),
       clipBehavior: Clip.antiAlias,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -578,15 +582,39 @@ class _WorldPlayerState extends State<_WorldPlayer> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      appBar: AppBar(
-        backgroundColor: Colors.black,
-        foregroundColor: Colors.white,
-        title: Text(widget.title),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-        children: [
-          MbFilmPlayer(controller: _controller, onDark: true),
+      body: MbFilmPlayer(
+        controller: _controller,
+        shorts: true,
+        title: widget.title,
+        onClose: () => Navigator.pop(context),
+        actions: [
+          MbFilmAction(
+            icon: Icons.ios_share,
+            label: 'Share',
+            onPressed: () => SharePlus.instance.share(
+              ShareParams(text: widget.url, subject: widget.title),
+            ),
+          ),
+          MbFilmAction(
+            icon: Icons.download_outlined,
+            label: 'Save',
+            onPressed: () async {
+              final response = await http.get(Uri.parse(widget.url));
+              if (response.statusCode != 200) {
+                throw StateError('Could not save this film.');
+              }
+              final file = File('${Directory.systemTemp.path}/memory_book_world.mp4');
+              await file.writeAsBytes(response.bodyBytes);
+              if (!context.mounted) return;
+              await ProviderScope.containerOf(context)
+                  .read(exportServiceProvider)
+                  .saveVideoToGallery(file);
+              if (!context.mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Saved to camera roll')),
+              );
+            },
+          ),
         ],
       ),
     );

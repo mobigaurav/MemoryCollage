@@ -9,10 +9,12 @@ import 'package:share_plus/share_plus.dart';
 import '../../core/theme/tokens.dart';
 import '../../domain/book_models.dart';
 import '../../domain/book_ops.dart';
+import '../../domain/family_collage.dart';
 import '../../providers.dart';
 import '../../services/household_api.dart';
 import '../../services/photo_files.dart';
 import '../../widgets/brand_hero.dart';
+import '../collage/collage_studio_screen.dart';
 
 class FamilyScreen extends ConsumerStatefulWidget {
   const FamilyScreen({super.key, this.albumId, this.albumTitle});
@@ -78,6 +80,65 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
     }
   }
 
+  Future<String?> _askTitle(String fallback) async {
+    final controller = TextEditingController(text: fallback);
+    final title = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: MbTokens.cream,
+        title: const Text('Name it'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          textCapitalization: TextCapitalization.sentences,
+          maxLength: 40,
+          decoration: const InputDecoration(labelText: 'Title'),
+          onSubmitted: (value) => Navigator.pop(ctx, value.trim()),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, controller.text.trim()),
+            child: const Text('Start'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    final trimmed = title?.trim() ?? '';
+    return trimmed.isEmpty ? null : trimmed;
+  }
+
+  Future<void> _startCollage() async {
+    final title = await _askTitle('Family collage');
+    if (title == null || !mounted) return;
+    setState(() => _progress = 'Starting the family collage');
+    try {
+      final book = await ref.read(householdApiProvider).create(
+            title,
+            kind: 'collage',
+            layout: const SharedCollageLayout(
+              templateId: 'grid_3x3',
+              background: 0xFFF3E6D0,
+              paper: 'plain',
+              frames: 9,
+            ),
+          );
+      if (!mounted) return;
+      setState(() {
+        _open = book;
+        _progress = null;
+        _error = null;
+      });
+    } on HouseholdException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _progress = null;
+        _error = e.message;
+      });
+    }
+  }
+
   Future<void> _start() async {
     final title = (widget.albumTitle ?? '').trim().isEmpty
         ? 'Our book'
@@ -137,13 +198,18 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
   Future<void> _invite(HouseholdBook book) async {
     await SharePlus.instance.share(
       ShareParams(
-        text:
-            'Join our book in Memory Book. The code is ${book.code}. Only people with the code can add photos.',
+        text: book.isCollage
+            ? 'Join our collage in Memory Book. The code is ${book.code}. Only people with the code can add a photo to an empty frame.'
+            : 'Join our book in Memory Book. The code is ${book.code}. Only people with the code can add photos.',
       ),
     );
   }
 
   Future<void> _addPhotos(HouseholdBook book) async {
+    if (book.isCollage) {
+      await _addToCollage(book);
+      return;
+    }
     final paths = await ref.read(photoServiceProvider).pickImages(limit: 12);
     if (paths.isEmpty) return;
     setState(() => _progress = 'Sending ${paths.length} photos');
@@ -168,6 +234,106 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
         _progress = null;
         _error = e.message;
       });
+    }
+  }
+
+  Future<void> _addToCollage(HouseholdBook book) async {
+    final layout = book.layout;
+    if (layout == null) return;
+    final open = openCollageSlots(
+      frameCount: layout.frames,
+      taken: [for (final photo in book.photos) photo.slot],
+    );
+    if (open.isEmpty) {
+      setState(() => _error = 'Every frame of this collage is full.');
+      return;
+    }
+    final paths = await ref.read(photoServiceProvider).pickImages(limit: open.length.clamp(1, 12));
+    if (paths.isEmpty) return;
+    setState(() => _progress = 'Sending ${paths.length} photos into empty frames');
+    try {
+      final api = ref.read(householdApiProvider);
+      final uploads = await api.reserve(book.code, paths.length);
+      final keys = <String>[];
+      final slots = <int>[];
+      for (var i = 0; i < paths.length && i < uploads.length && i < open.length; i++) {
+        final bytes = await File(PhotoFiles.resolve(paths[i])).readAsBytes();
+        await api.putJpeg(uploads[i], bytes);
+        keys.add(uploads[i].key);
+        slots.add(open[i]);
+      }
+      final updated = await api.commit(book.code, keys, slots: slots);
+      if (!mounted) return;
+      setState(() {
+        _open = updated;
+        _progress = null;
+        _error = null;
+      });
+    } on HouseholdException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _progress = null;
+        _error = e.message;
+      });
+    }
+  }
+
+  Future<void> _openCollage(HouseholdBook book) async {
+    final layout = book.layout;
+    if (layout == null || book.photos.isEmpty) {
+      setState(() => _error = 'Add a photo before opening the collage.');
+      return;
+    }
+    final go = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: MbTokens.cream,
+        title: const Text('Open this collage here?'),
+        content: const Text(
+          'It replaces the collage you were editing on this phone. The family copy stays as it is.',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Open')),
+        ],
+      ),
+    );
+    if (go != true || !mounted) return;
+    setState(() => _progress = 'Bringing the collage onto this phone');
+    try {
+      final paths = <String>[];
+      final slots = <int>[];
+      final keys = <String>[];
+      for (final photo in book.photos) {
+        if (photo.slot == null || photo.url.isEmpty) continue;
+        final response = await http.get(Uri.parse(photo.url));
+        if (response.statusCode >= 400) continue;
+        paths.add(await ref.read(photoServiceProvider).persistBytes(response.bodyBytes));
+        slots.add(photo.slot!);
+        keys.add(photo.key);
+      }
+      if (paths.isEmpty) {
+        throw HouseholdException('The photos could not be brought onto this phone.');
+      }
+      if (!mounted) return;
+      await context.push(
+        '/collage',
+        extra: CollageSeed(
+          photos: paths,
+          slots: slots,
+          remoteKeys: keys,
+          templateId: layout.templateId,
+          paper: layout.paper,
+          background: layout.background,
+          packId: layout.packId,
+          householdCode: book.code,
+        ),
+      );
+    } on HouseholdException catch (e) {
+      if (!mounted) return;
+      setState(() => _error = e.message);
+    } finally {
+      if (mounted) setState(() => _progress = null);
     }
   }
 
@@ -225,7 +391,7 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
     final signedIn = ref.watch(authSessionProvider).value != null;
     final open = _open;
     return Scaffold(
-      backgroundColor: MbTokens.cream,
+      backgroundColor: Colors.transparent,
       body: ListView(
         padding: EdgeInsets.zero,
         children: [
@@ -234,8 +400,10 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
             eyebrow: 'Family',
             title: open?.title ?? 'Family book',
             subtitle: open == null
-                ? 'One person starts it. A few people with the code add photos. This is not the public World.'
-                : 'Code ${open.code}. ${open.memberCount} ${open.memberCount == 1 ? 'person' : 'people'}, ${open.photos.length} photos.',
+                ? 'One person starts a book or a collage. A few people with the code add photos. This is not the public World.'
+                : open.isCollage
+                    ? 'Code ${open.code}. ${open.memberCount} ${open.memberCount == 1 ? 'person' : 'people'}, ${open.photos.length} of ${open.layout!.frames} frames filled.'
+                    : 'Code ${open.code}. ${open.memberCount} ${open.memberCount == 1 ? 'person' : 'people'}, ${open.photos.length} photos.',
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
@@ -265,6 +433,11 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
           onPressed: _progress == null ? _start : null,
           child: Text(_progress ?? 'Start a family book'),
         ),
+        const SizedBox(height: 12),
+        OutlinedButton(
+          onPressed: _progress == null ? _startCollage : null,
+          child: const Text('Start a family collage'),
+        ),
         const SizedBox(height: 18),
         TextField(
           controller: _code,
@@ -291,7 +464,7 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
             ListTile(
               contentPadding: EdgeInsets.zero,
               title: Text(book.title),
-              subtitle: Text(book.code),
+              subtitle: Text(book.isCollage ? 'Collage · ${book.code}' : 'Book · ${book.code}'),
               onTap: () => setState(() => _open = book),
             ),
         ],
@@ -312,12 +485,16 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
         const SizedBox(height: 12),
         OutlinedButton(
           onPressed: _progress == null ? () => _addPhotos(book) : null,
-          child: const Text('Add photos'),
+          child: Text(book.isCollage ? 'Add my photos' : 'Add photos'),
         ),
         const SizedBox(height: 12),
         OutlinedButton(
-          onPressed: _progress == null ? () => _place(book) : null,
-          child: const Text('Place them in a book on this phone'),
+          onPressed: _progress == null
+              ? () => book.isCollage ? _openCollage(book) : _place(book)
+              : null,
+          child: Text(
+            book.isCollage ? 'Open the collage' : 'Place them in a book on this phone',
+          ),
         ),
         const SizedBox(height: 12),
         TextButton(

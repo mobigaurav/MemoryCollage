@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import '../../core/theme/tokens.dart';
 import '../../providers.dart';
 import '../../widgets/brand_hero.dart';
+import '../memories/event_collage.dart';
+import '../memories/on_this_day_card.dart';
 
 class StudioScreen extends ConsumerWidget {
   const StudioScreen({super.key});
@@ -54,26 +56,36 @@ class StudioScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
-      backgroundColor: MbTokens.cream,
+      backgroundColor: Colors.transparent,
       body: ListView(
         padding: EdgeInsets.zero,
         children: [
           const MbHero(
             eyebrow: 'Make',
             title: 'Studio',
-            subtitle: 'A still collage, a film, or a cut of a reel you already made.',
+            subtitle: 'Collages, films, and cuts from the photos and clips you already have.',
           ),
           const SizedBox(height: 8),
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
             child: Column(
               children: [
+            const OnThisDayCard(),
+            const SizedBox(height: 14),
             _StudioCard(
               icon: Icons.grid_view_rounded,
               kicker: 'Still',
               title: 'Collage',
-              body: 'Place photos in a frame or drag them free. Export is the picture, not a screenshot.',
+              body: 'Place photos in a frame or drag them free. Save the picture, or turn it into a reel.',
               onTap: () => context.push('/collage'),
+            ),
+            const SizedBox(height: 14),
+            _StudioCard(
+              icon: Icons.event_outlined,
+              kicker: 'Auto',
+              title: 'From an event',
+              body: 'Pick a weekend or a trip. We choose the best photos and lay them out, with a theme if you like.',
+              onTap: () => startEventCollage(context, ref),
             ),
             const SizedBox(height: 14),
             _StudioCard(
@@ -82,14 +94,6 @@ class StudioScreen extends ConsumerWidget {
               title: 'Memory film',
               body: 'Stills, a frame shape, and a song you pick. The phone encodes the file.',
               onTap: () => context.push('/video'),
-            ),
-            const SizedBox(height: 14),
-            _StudioCard(
-              icon: Icons.calendar_month_outlined,
-              kicker: 'This year',
-              title: 'Year film',
-              body: 'A film from the dates already on the photos. Made on this phone. No credit.',
-              onTap: () => context.push('/year'),
             ),
             const SizedBox(height: 14),
             _StudioCard(
@@ -126,11 +130,13 @@ class _StudioCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(MbTokens.radiusLg),
+      color: MbTokens.glass,
+      elevation: 8,
+      shadowColor: const Color(0x40301810),
+      shape: MbTokens.glassShape(MbTokens.radiusLg),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(MbTokens.radiusLg),
+        customBorder: MbTokens.glassShape(MbTokens.radiusLg),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(18, 18, 16, 18),
           child: Row(

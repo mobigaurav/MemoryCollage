@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/services.dart';
 import 'package:image/image.dart' as img;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
@@ -86,5 +87,15 @@ class SlideshowExporter {
   static String? bundledMusic(int index) {
     final n = (index % 11) + 1;
     return 'assets/audio/$n.mp3';
+  }
+
+  /// The encoder reads files, not bundled assets.
+  static Future<String> bundledMusicFile(int index) async {
+    final asset = bundledMusic(index)!;
+    final data = await rootBundle.load(asset);
+    final dir = await getTemporaryDirectory();
+    final file = File(p.join(dir.path, p.basename(asset)));
+    await file.writeAsBytes(data.buffer.asUint8List());
+    return file.path;
   }
 }

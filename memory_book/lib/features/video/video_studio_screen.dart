@@ -14,7 +14,9 @@ import '../../core/theme/tokens.dart';
 import '../../domain/collage_craft.dart';
 import '../../domain/media_options.dart';
 import '../../providers.dart';
+import '../../services/reel_jobs.dart';
 import '../../services/slideshow_exporter.dart';
+import '../../widgets/making_note.dart';
 import '../../widgets/film_player.dart';
 import '../../widgets/local_photo.dart';
 
@@ -37,7 +39,6 @@ class _VideoStudioScreenState extends ConsumerState<VideoStudioScreen> {
   String? _customMusic;
   final _title = TextEditingController();
   final _endCard = TextEditingController(text: 'Memory Book');
-  bool _busy = false;
   String? _output;
   VideoPlayerController? _player;
   Timer? _saveDebounce;
@@ -257,39 +258,46 @@ class _VideoStudioScreenState extends ConsumerState<VideoStudioScreen> {
             ),
           const SizedBox(height: 16),
           FilledButton(
-            onPressed: _photos.isEmpty || _busy ? null : _generate,
-            child: Text(_busy ? 'Cutting the film…' : 'Generate video'),
+            onPressed: _photos.isEmpty ? null : _generate,
+            child: const Text('Generate video'),
           ),
+          if (ref.watch(reelJobsProvider).isNotEmpty)
+            const Padding(
+              padding: EdgeInsets.only(top: 10),
+              child: Center(child: MbMakingNote()),
+            ),
           if (_output != null) ...[
             const SizedBox(height: 16),
-            if (_player != null) MbFilmPlayer(controller: _player!),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                OutlinedButton(
-                  onPressed: () async {
-                    await ref
-                        .read(exportServiceProvider)
-                        .saveVideoToGallery(File(_output!));
-                    if (!context.mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Saved to camera roll')),
-                    );
-                  },
-                  child: const Text('Save'),
-                ),
-                const SizedBox(width: 8),
-                OutlinedButton(
-                  onPressed: () => ref.read(exportServiceProvider).shareVideo(
-                        File(_output!),
-                        title: _title.text.trim().isEmpty
-                            ? 'Memory film'
-                            : _title.text.trim(),
-                      ),
-                  child: const Text('Share'),
-                ),
-              ],
-            ),
+            if (_player != null)
+              MbFilmPlayer(
+                controller: _player!,
+                title: _title.text.trim().isEmpty ? 'Memory film' : _title.text.trim(),
+                actions: [
+                  MbFilmAction(
+                    icon: Icons.ios_share,
+                    label: 'Share',
+                    onPressed: () => ref.read(exportServiceProvider).shareVideo(
+                          File(_output!),
+                          title: _title.text.trim().isEmpty
+                              ? 'Memory film'
+                              : _title.text.trim(),
+                        ),
+                  ),
+                  MbFilmAction(
+                    icon: Icons.download_outlined,
+                    label: 'Save',
+                    onPressed: () async {
+                      await ref
+                          .read(exportServiceProvider)
+                          .saveVideoToGallery(File(_output!));
+                      if (!context.mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Saved to camera roll')),
+                      );
+                    },
+                  ),
+                ],
+              ),
           ],
         ],
       ),
@@ -320,65 +328,74 @@ class _VideoStudioScreenState extends ConsumerState<VideoStudioScreen> {
   }
 
   Future<void> _generate() async {
-    setState(() => _busy = true);
     await ref.read(localNotifyProvider).request();
+    final images = [..._photos];
+    final aspect = _aspect;
+    final filter = _filter;
+    final transition = _transition;
+    final seconds = _seconds;
+    final customMusic = _customMusic;
+    final musicIndex = _musicIndex;
+    final opening = _title.text;
+    final endCard = _endCard.text;
+    final title = opening.trim().isEmpty ? 'Memory film' : opening.trim();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Making your film. It shows up on Reels when it is ready. Keep going.'),
+      ),
+    );
+    final reel = await ref.read(reelJobsProvider.notifier).run(
+          label: title,
+          failure: 'The film did not finish',
+          work: (ref) async {
+            final musicPath = customMusic ??
+                await _materializeAsset(
+                  SlideshowExporter.bundledMusic(musicIndex - 1)!,
+                );
+            final file = await ref.read(slideshowExporterProvider).export(
+                  images: images,
+                  aspect: aspect,
+                  filter: filter,
+                  transition: transition,
+                  secondsPerSlide: seconds,
+                  audioPath: musicPath,
+                  title: opening,
+                  endCard: endCard,
+                );
+            await ref.read(exportHistoryProvider).add('Memory film');
+            return ref.read(reelLibraryProvider).keep(
+                  source: file,
+                  title: title,
+                  kind: 'film',
+                );
+          },
+        );
+    if (reel == null || !mounted) return;
+    final player = VideoPlayerController.file(File(reel.path));
     try {
-      final musicPath = _customMusic ??
-          await _materializeAsset(
-            SlideshowExporter.bundledMusic(_musicIndex - 1)!,
-          );
-      final file = await ref.read(slideshowExporterProvider).export(
-            images: _photos,
-            aspect: _aspect,
-            filter: _filter,
-            transition: _transition,
-            secondsPerSlide: _seconds,
-            audioPath: musicPath,
-            title: _title.text,
-            endCard: _endCard.text,
-          );
-      await ref.read(exportHistoryProvider).add('Memory film');
-      final title = _title.text.trim().isEmpty ? 'Memory film' : _title.text.trim();
-      try {
-        await ref.read(reelLibraryProvider).keep(
-              source: file,
-              title: title,
-              kind: 'film',
-            );
-        ref.invalidate(reelsProvider);
-      } catch (_) {}
       await ref.read(nativeEncoderProvider).preparePlayback();
-      await _player?.dispose();
-      _player = VideoPlayerController.file(file);
-      await _player!.initialize();
-      await ref.read(nativeEncoderProvider).preparePlayback();
-      await _player!.setLooping(false);
-      await _player!.setVolume(1);
-      await _player!.pause();
-      setState(() => _output = file.path);
-      if (!file.path.contains('.mixed.') && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('The film is ready. The music did not attach to this one.'),
-          ),
-        );
-      }
-      await ref.read(localNotifyProvider).show(
-            title: 'Your reel is ready',
-            body: 'Open Memory Book to watch or save the film.',
-          );
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Export failed: $e')),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _busy = false);
+      await player.initialize();
+      await player.setLooping(false);
+      await player.setVolume(1);
+      await player.pause();
+    } catch (_) {
+      await player.dispose();
+      return;
     }
+    if (!mounted) {
+      await player.dispose();
+      return;
+    }
+    final previous = _player;
+    setState(() {
+      _player = player;
+      _output = reel.path;
+    });
+    await previous?.dispose();
   }
 
-  Future<String> _materializeAsset(String asset) async {
+  static Future<String> _materializeAsset(String asset) async {
     final data = await rootBundle.load(asset);
     final dir = await getTemporaryDirectory();
     final file = File(p.join(dir.path, p.basename(asset)));

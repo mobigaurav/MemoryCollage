@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 
 import '../core/config.dart';
 import '../data/repositories/settings_repository.dart';
+import '../domain/family_collage.dart';
 
 class HouseholdPhoto {
   const HouseholdPhoto({
@@ -12,12 +13,16 @@ class HouseholdPhoto {
     required this.author,
     required this.yours,
     required this.url,
+    this.key = '',
+    this.slot,
   });
 
   final String id;
   final String author;
   final bool yours;
   final String url;
+  final String key;
+  final int? slot;
 
   static HouseholdPhoto fromJson(Map<String, dynamic> json) {
     return HouseholdPhoto(
@@ -25,6 +30,8 @@ class HouseholdPhoto {
       author: json['author'] as String? ?? 'Member',
       yours: json['yours'] == true,
       url: json['url'] as String? ?? '',
+      key: json['key'] as String? ?? '',
+      slot: (json['slot'] as num?)?.toInt(),
     );
   }
 }
@@ -36,6 +43,8 @@ class HouseholdBook {
     required this.owner,
     required this.memberCount,
     required this.photos,
+    this.kind = 'book',
+    this.layout,
   });
 
   final String code;
@@ -43,6 +52,10 @@ class HouseholdBook {
   final bool owner;
   final int memberCount;
   final List<HouseholdPhoto> photos;
+  final String kind;
+  final SharedCollageLayout? layout;
+
+  bool get isCollage => kind == 'collage' && layout != null;
 
   static HouseholdBook fromJson(Map<String, dynamic> json) {
     final members = json['members'];
@@ -52,6 +65,8 @@ class HouseholdBook {
       title: json['title'] as String? ?? 'Family book',
       owner: json['owner'] == true,
       memberCount: members is List ? members.length : 0,
+      kind: json['kind'] as String? ?? 'book',
+      layout: SharedCollageLayout.fromJson(json['layout']),
       photos: photos is List
           ? [
               for (final item in photos)
@@ -85,9 +100,31 @@ class HouseholdApi {
     ];
   }
 
-  Future<HouseholdBook> create(String title) async {
+  Future<HouseholdBook> create(
+    String title, {
+    String kind = 'book',
+    SharedCollageLayout? layout,
+  }) async {
+    final book = HouseholdBook.fromJson(
+      await _send(
+        'POST',
+        '/v1/households',
+        body: {
+          'title': title,
+          'kind': kind,
+          if (layout != null) 'layout': layout.toJson(),
+        },
+      ),
+    );
+    if (kind == 'collage' && !book.isCollage) {
+      throw HouseholdException('Family collages are not on this server yet.');
+    }
+    return book;
+  }
+
+  Future<HouseholdBook> setLayout(String code, SharedCollageLayout layout) async {
     return HouseholdBook.fromJson(
-      await _send('POST', '/v1/households', body: {'title': title}),
+      await _send('POST', '/v1/households/$code/layout', body: layout.toJson()),
     );
   }
 
@@ -129,12 +166,19 @@ class HouseholdApi {
     }
   }
 
-  Future<HouseholdBook> commit(String code, List<String> keys) async {
+  Future<HouseholdBook> commit(
+    String code,
+    List<String> keys, {
+    List<int>? slots,
+  }) async {
     return HouseholdBook.fromJson(
       await _send(
         'POST',
         '/v1/households/$code/photos/commit',
-        body: {'keys': keys},
+        body: {
+          'keys': keys,
+          'slots': ?slots,
+        },
       ),
     );
   }

@@ -4,9 +4,13 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 
 import '../domain/collage_craft.dart';
+import '../domain/collage_paper.dart';
 import '../domain/collage_templates.dart';
 import '../domain/media_options.dart';
 import '../domain/slot_crop.dart';
+import '../features/collage/ink_pad.dart';
+import '../features/collage/voice_mark.dart';
+import '../features/collage/paper_painter.dart';
 import '../features/collage/sticker_painters.dart';
 import '../services/photo_files.dart';
 
@@ -34,19 +38,25 @@ class CollageRenderRequest {
     this.offsetYs = const [],
     this.texts = const [],
     this.stickers = const [],
+    this.inks = const [],
+    this.voices = const [],
     this.size = const Size(2160, 2160),
     this.freeformOrigins = const [],
     this.placedPhotos = const [],
+    this.paper = CollagePaper.plain,
   });
 
   final CollageTemplate template;
   final List<String> imagePaths;
   final Color background;
+  final CollagePaper paper;
   final List<double> scales;
   final List<double> offsetXs;
   final List<double> offsetYs;
   final List<CollageTextOverlay> texts;
   final List<PlacedSticker> stickers;
+  final List<PlacedInk> inks;
+  final List<PlacedVoice> voices;
   final Size size;
   final List<Offset> freeformOrigins;
   final List<PlacedPhoto> placedPhotos;
@@ -57,7 +67,7 @@ class CollageRenderer {
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder);
     final size = request.size;
-    canvas.drawRect(Offset.zero & size, Paint()..color = request.background);
+    paintPaper(canvas, size, request.paper, request.background);
 
     final images = <ui.Image?>[];
     for (final path in request.imagePaths) {
@@ -141,7 +151,34 @@ class CollageRenderer {
       );
       canvas.save();
       canvas.translate(dest.left, dest.top);
-      StickerPainter(sticker.kind).paint(canvas, dest.size);
+      StickerPainter(sticker.kind, text: sticker.text).paint(canvas, dest.size);
+      canvas.restore();
+    }
+
+    for (final ink in request.inks) {
+      final width = size.width * 0.72 * ink.scale;
+      final height = width * PlacedInk.aspect;
+      final dest = Rect.fromCenter(
+        center: Offset(ink.nx * size.width, ink.ny * size.height),
+        width: width,
+        height: height,
+      );
+      canvas.save();
+      canvas.translate(dest.left, dest.top);
+      paintInk(canvas, dest.size, ink);
+      canvas.restore();
+    }
+
+    for (final voice in request.voices) {
+      final side = size.width * 0.22 * voice.scale;
+      final dest = Rect.fromCenter(
+        center: Offset(voice.nx * size.width, voice.ny * size.height),
+        width: side,
+        height: side,
+      );
+      canvas.save();
+      canvas.translate(dest.left, dest.top);
+      paintVoiceMark(canvas, dest.size, voice.url);
       canvas.restore();
     }
 

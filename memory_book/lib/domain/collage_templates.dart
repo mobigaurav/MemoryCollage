@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:ui';
 
 import 'collage_library.dart';
@@ -86,20 +87,9 @@ abstract final class CollageCatalog {
     });
   }
 
-  static double _cos(double a) {
-    // Enough precision for layout.
-    var x = a;
-    while (x > 3.14159265) {
-      x -= 6.2831853;
-    }
-    while (x < -3.14159265) {
-      x += 6.2831853;
-    }
-    final x2 = x * x;
-    return 1 - x2 / 2 + x2 * x2 / 24 - x2 * x2 * x2 / 720;
-  }
+  static double _cos(double a) => math.cos(a);
 
-  static double _sin(double a) => _cos(a - 1.57079632679);
+  static double _sin(double a) => math.sin(a);
 }
 
 final _all = <CollageTemplate>[

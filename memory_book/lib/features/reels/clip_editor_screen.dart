@@ -1,6 +1,9 @@
+import 'dart:async';
 import 'dart:io';
 
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:path/path.dart' as p;
@@ -10,7 +13,9 @@ import 'package:video_player/video_player.dart';
 import '../../core/nav.dart';
 import '../../core/theme/tokens.dart';
 import '../../providers.dart';
+import '../../services/reel_jobs.dart';
 import '../../services/reel_library.dart';
+import '../../services/slideshow_exporter.dart';
 import '../ai/cloud_clip.dart';
 import '../../widgets/film_player.dart';
 
@@ -38,6 +43,11 @@ class _ClipEditorScreenState extends ConsumerState<ClipEditorScreen> {
   int _joinDurationMs = 1;
   int _joinStartMs = 0;
   int _joinEndMs = 1;
+  final _name = TextEditingController();
+
+  /// Null keeps the sound the reel has. 1 to 11 is a bundled track.
+  int? _musicIndex;
+  String? _musicFile;
 
   @override
   void initState() {
@@ -65,6 +75,7 @@ class _ClipEditorScreenState extends ConsumerState<ClipEditorScreen> {
       await player.dispose();
       return;
     }
+    _name.text = reel.title;
     setState(() {
       _reel = reel;
       _player = player;
@@ -101,7 +112,99 @@ class _ClipEditorScreenState extends ConsumerState<ClipEditorScreen> {
     _joinPlayer?.removeListener(_followJoin);
     _player?.dispose();
     _joinPlayer?.dispose();
+    _name.dispose();
     super.dispose();
+  }
+
+  bool get _cutChanged =>
+      _startMs > 0 ||
+      _endMs < _durationMs ||
+      _aspect != 'original' ||
+      _mute ||
+      _join != null ||
+      _musicIndex != null ||
+      _musicFile != null;
+
+  Future<void> _pickMusic() async {
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: MbTokens.cream,
+      builder: (ctx) => SafeArea(
+        child: ListView(
+          shrinkWrap: true,
+          children: [
+            const Padding(
+              padding: EdgeInsets.fromLTRB(20, 16, 20, 8),
+              child: Text(
+                'Music',
+                style: TextStyle(
+                  fontFamily: MbTokens.serif,
+                  fontSize: 22,
+                  color: MbTokens.ink,
+                ),
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.music_off_outlined),
+              title: const Text('Keep the sound it has'),
+              onTap: () => Navigator.pop(ctx, 'none'),
+            ),
+            for (var i = 0; i < SlideshowExporter.musicNames.length; i++)
+              ListTile(
+                leading: const Icon(Icons.music_note_outlined),
+                title: Text(SlideshowExporter.musicName(i)),
+                onTap: () => Navigator.pop(ctx, 'score:${i + 1}'),
+              ),
+            ListTile(
+              leading: const Icon(Icons.folder_open_outlined),
+              title: const Text('A file from this phone'),
+              onTap: () => Navigator.pop(ctx, 'file'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (choice == null || !mounted) return;
+    if (choice == 'none') {
+      setState(() {
+        _musicIndex = null;
+        _musicFile = null;
+      });
+      return;
+    }
+    if (choice == 'file') {
+      final files = await FilePicker.pickFiles(type: FileType.audio);
+      final picked = files.isEmpty ? null : files.first.path;
+      if (picked == null || !mounted) return;
+      setState(() {
+        _musicIndex = null;
+        _musicFile = picked;
+      });
+      return;
+    }
+    setState(() {
+      _musicFile = null;
+      _musicIndex = int.parse(choice.split(':').last);
+    });
+  }
+
+  String get _musicLabel {
+    if (_musicFile != null) return p.basename(_musicFile!);
+    final index = _musicIndex;
+    if (index != null) return SlideshowExporter.musicName(index - 1);
+    return 'Keep the sound it has';
+  }
+
+  Future<String?> _musicPath() async {
+    if (_musicFile != null) return _musicFile;
+    final index = _musicIndex;
+    if (index == null) return null;
+    final asset = SlideshowExporter.bundledMusic(index - 1)!;
+    final data = await rootBundle.load(asset);
+    final dir = await getTemporaryDirectory();
+    final audio = File(p.join(dir.path, p.basename(asset)));
+    await audio.writeAsBytes(data.buffer.asUint8List());
+    return audio.path;
   }
 
   Future<void> _pickJoin() async {
@@ -177,8 +280,19 @@ class _ClipEditorScreenState extends ConsumerState<ClipEditorScreen> {
     }
     setState(() => _busy = true);
     try {
-      final dir = await getTemporaryDirectory();
-      final output = p.join(dir.path, 'mb-edit-${reel.id}.mp4');
+      final library = ref.read(reelLibraryProvider);
+      final name = _name.text.trim();
+      final title = name.isEmpty ? reel.title : name;
+      if (title != reel.title) await library.rename(reel.id, title);
+      ref.invalidate(reelsProvider);
+      if (!_cutChanged) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Saved.')),
+        );
+        context.pop();
+        return;
+      }
       final clips = <Map<String, Object>>[
         {'path': reel.path, 'startMs': _startMs, 'endMs': _endMs},
         if (_join != null)
@@ -188,29 +302,35 @@ class _ClipEditorScreenState extends ConsumerState<ClipEditorScreen> {
             'endMs': _joinEndMs,
           },
       ];
-      final path = await ref.read(nativeEncoderProvider).editClip(
-            clips: clips,
-            outputPath: output,
-            aspect: _aspect,
-            mute: _mute,
-          );
-      await ref.read(reelLibraryProvider).keep(
-            source: File(path),
-            title: nextReelTitle(
-              await ref.read(reelLibraryProvider).load(),
-              'Edit of ${reel.title}',
+      final aspect = _aspect;
+      final mute = _mute;
+      final music = await _musicPath();
+      unawaited(
+        ref.read(reelJobsProvider.notifier).run(
+              label: title,
+              failure: 'Could not save the edit of $title',
+              work: (ref) async {
+                final dir = await getTemporaryDirectory();
+                final stamp = DateTime.now().millisecondsSinceEpoch;
+                final output = p.join(dir.path, 'mb-edit-${reel.id}-$stamp.mp4');
+                final encoder = ref.read(nativeEncoderProvider);
+                var path = await encoder.editClip(
+                  clips: clips,
+                  outputPath: output,
+                  aspect: aspect,
+                  mute: mute,
+                );
+                if (music != null) {
+                  path = await encoder.mixAudio(videoPath: path, audioPath: music);
+                }
+                return ref.read(reelLibraryProvider).replaceVideo(reel.id, File(path));
+              },
             ),
-            kind: 'edit',
-          );
-      ref.invalidate(reelsProvider);
+      );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            _join == null
-                ? 'Saved on Reels. The original is still there.'
-                : 'Joined and saved on Reels. Both originals are still there.',
-          ),
+        const SnackBar(
+          content: Text('Saving the edit. Reels updates when it is ready. Keep going.'),
         ),
       );
       context.pop();
@@ -290,11 +410,17 @@ class _ClipEditorScreenState extends ConsumerState<ClipEditorScreen> {
                       secondTitle: _join?.title,
                     ),
                     const SizedBox(height: 16),
-                    Text(
-                      _reel?.title ?? 'Reel',
+                    TextField(
+                      controller: _name,
+                      textCapitalization: TextCapitalization.sentences,
+                      textInputAction: TextInputAction.done,
                       style: Theme.of(context).textTheme.titleLarge,
+                      decoration: const InputDecoration(
+                        labelText: 'Name',
+                        prefixIcon: Icon(Icons.edit_outlined),
+                      ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 12),
                     Text(
                       '${_clock(_startMs)} – ${_clock(_endMs)}',
                       style: const TextStyle(
@@ -355,6 +481,15 @@ class _ClipEditorScreenState extends ConsumerState<ClipEditorScreen> {
                       activeThumbColor: MbTokens.leather,
                       onChanged: (keep) => setState(() => _mute = !keep),
                     ),
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(Icons.library_music_outlined),
+                      title: const Text('Music'),
+                      subtitle: Text(_musicLabel),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: _busy ? null : _pickMusic,
+                    ),
+                    const SizedBox(height: 8),
                     _JoinCard(
                       join: _join,
                       startMs: _joinStartMs,
@@ -438,7 +573,7 @@ class _PreviewRow extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         const Text(
-          'Join and save plays 1, then 2, as a new reel.',
+          'Join and save plays 1, then 2, in this reel.',
           style: TextStyle(
             fontFamily: MbTokens.sans,
             fontSize: 14,
@@ -542,8 +677,10 @@ class _JoinCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(20),
+      color: MbTokens.glass,
+      elevation: 6,
+      shadowColor: const Color(0x40301810),
+      shape: MbTokens.glassShape(20),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
         child: Column(
@@ -560,8 +697,8 @@ class _JoinCard extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               join == null
-                  ? 'Choose a second reel, then tap Join and save. A new reel is added. These two stay as they are.'
-                  : 'Join and save plays this cut, then ${join!.title}.',
+                  ? 'Choose a second reel to play after this one. This reel becomes the joined film. The second reel stays as it is.'
+                  : 'This reel will play, then ${join!.title}. ${join!.title} stays as it is.',
               style: const TextStyle(
                 fontFamily: MbTokens.sans,
                 fontSize: 15,

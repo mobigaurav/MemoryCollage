@@ -112,7 +112,7 @@ class MbHero extends StatelessWidget {
                   fontFamily: MbTokens.sans,
                   fontSize: 14,
                   height: 1.4,
-                  color: Color(0xB3F3E6D0),
+                  color: MbTokens.cream,
                 ),
               ),
             ],

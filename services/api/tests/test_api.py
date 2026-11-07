@@ -5,6 +5,7 @@ from fastapi.testclient import TestClient
 
 from mb_api.community_store import reset_memory
 from mb_api.household_store import MemoryHouseholds, reset_households
+from mb_api.notes_store import reset_notes
 from mb_api.config import get_settings
 from mb_api.main import app
 from mb_api.store import store
@@ -26,6 +27,7 @@ def _clean(monkeypatch):
     store.reset()
     reset_memory()
     reset_households()
+    reset_notes()
     yield
     get_settings.cache_clear()
 
@@ -321,3 +323,102 @@ def test_family_book_stays_with_the_people_who_have_the_code():
     books.join(sub="cousin", name="Ravi", code=owner.code)
     assert books.get(owner.code, "stranger") is None
     assert books.get(owner.code, "cousin") is not None
+
+
+def test_family_collage_puts_each_photo_in_an_empty_frame():
+    created = client.post(
+        "/v1/households",
+        headers={"Authorization": "Bearer dev"},
+        json={
+            "title": "Sunday",
+            "kind": "collage",
+            "layout": {"templateId": "grid_2x2", "frames": 4, "paper": "linen"},
+        },
+    )
+    assert created.status_code == 200
+    body = created.json()
+    code = body["code"]
+    assert body["kind"] == "collage"
+    assert body["layout"]["frames"] == 4
+    assert body["layout"]["paper"] == "linen"
+
+    def add(slot):
+        reserved = client.post(
+            f"/v1/households/{code}/photos",
+            headers={"Authorization": "Bearer dev"},
+            json={"count": 1},
+        )
+        assert reserved.status_code == 200
+        key = reserved.json()["uploads"][0]["key"]
+        saved = client.post(
+            f"/v1/households/{code}/photos/commit",
+            headers={"Authorization": "Bearer dev"},
+            json={"keys": [key], "slots": [slot]},
+        )
+        assert saved.status_code == 200
+        return saved.json()
+
+    first = add(0)
+    assert first["photos"][0]["slot"] == 0
+    second = add(0)
+    assert [photo["slot"] for photo in second["photos"]] == [0, 1]
+    full = client.post(
+        f"/v1/households/{code}/photos",
+        headers={"Authorization": "Bearer dev"},
+        json={"count": 4},
+    )
+    assert full.status_code == 400
+
+    moved = client.post(
+        f"/v1/households/{code}/layout",
+        headers={"Authorization": "Bearer dev"},
+        json={"templateId": "grid_2x2", "frames": 4, "paper": "kraft"},
+    )
+    assert moved.status_code == 200
+    assert moved.json()["layout"]["paper"] == "kraft"
+    shrunk = client.post(
+        f"/v1/households/{code}/layout",
+        headers={"Authorization": "Bearer dev"},
+        json={"templateId": "two_up", "frames": 1, "paper": "kraft"},
+    )
+    assert shrunk.status_code == 400
+
+    book = client.post(
+        "/v1/households",
+        headers={"Authorization": "Bearer dev"},
+        json={"title": "The book"},
+    )
+    refused = client.post(
+        f"/v1/households/{book.json()['code']}/layout",
+        headers={"Authorization": "Bearer dev"},
+        json={"templateId": "grid_2x2", "frames": 4},
+    )
+    assert refused.status_code == 400
+
+
+def test_a_voice_note_plays_for_anyone_with_the_page():
+    denied = client.post("/v1/notes", content=b"x" * 1000)
+    assert denied.status_code == 401
+    short = client.post(
+        "/v1/notes",
+        headers={"Authorization": "Bearer dev"},
+        content=b"hi",
+    )
+    assert short.status_code == 400
+    made = client.post(
+        "/v1/notes",
+        headers={"Authorization": "Bearer dev", "Content-Type": "audio/mp4"},
+        content=b"x" * 1000,
+    )
+    assert made.status_code == 200
+    note_id = made.json()["id"]
+    page = client.get(f"/v1/notes/{note_id}")
+    assert page.status_code == 200
+    assert b"dev@memorybook.local" not in page.content
+    assert b"@" not in page.content
+    assert f"{note_id}/audio".encode() in page.content
+    audio = client.get(f"/v1/notes/{note_id}/audio")
+    assert audio.status_code == 200
+    assert audio.content == b"x" * 1000
+    missing = client.get("/v1/notes/not-a-real-note")
+    assert missing.status_code == 404

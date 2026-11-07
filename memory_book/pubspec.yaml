@@ -17,8 +17,8 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
 # Same name and build on iOS and Android. Live Memory Collage is 1.0.1 (5).
-# Play already accepted versionCode 6, so the next upload is 7.
-version: 2.0.0+7
+# Play accepted versionCode 6, and 7 was the last store build. This upload is 8.
+version: 2.0.0+8
 
 environment:
   sdk: ^3.13.4
@@ -64,6 +64,8 @@ dependencies:
   crypto: ^3.0.6
   firebase_core: ^3.15.2
   firebase_messaging: ^15.2.10
+  qr: ^3.0.3
+  record: ^7.1.2
 
 dev_dependencies:
   flutter_test:
