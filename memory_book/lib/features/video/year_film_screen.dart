@@ -9,6 +9,7 @@ import '../../core/theme/tokens.dart';
 import '../../domain/media_options.dart';
 import '../../domain/year_film.dart';
 import '../../providers.dart';
+import '../../services/reel_jobs.dart';
 import '../../widgets/brand_hero.dart';
 import '../../widgets/film_player.dart';
 
@@ -23,7 +24,9 @@ class _YearFilmScreenState extends ConsumerState<YearFilmScreen> {
   String? _progress;
   String? _note;
   String? _title;
+  File? _film;
   VideoPlayerController? _player;
+  bool _watching = false;
 
   @override
   void dispose() {
@@ -54,24 +57,34 @@ class _YearFilmScreenState extends ConsumerState<YearFilmScreen> {
         return;
       }
       final chosen = takeEvenly(frames, 24);
-      setState(() => _progress = 'Filming $year on this phone');
-      final file = await ref.read(slideshowExporterProvider).export(
-            images: chosen,
-            aspect: VideoAspect.reel,
-            filter: PhotoFilterId.none,
-            transition: VideoTransitionId.crossfade,
-            secondsPerSlide: 2.5,
-            title: '$year',
-            endCard: 'Memory Book',
+      setState(() {
+        _progress = null;
+        _note = 'Filming $year in the background. It shows up on Reels. You can leave this screen.';
+      });
+      final reel = await ref.read(reelJobsProvider.notifier).run(
+            label: '$year',
+            failure: 'Could not film this year',
+            work: (ref) async {
+              final file = await ref.read(slideshowExporterProvider).export(
+                    images: chosen,
+                    aspect: VideoAspect.reel,
+                    filter: PhotoFilterId.none,
+                    transition: VideoTransitionId.crossfade,
+                    secondsPerSlide: 2.5,
+                    title: '$year',
+                    endCard: 'Memory Book',
+                  );
+              return ref.read(reelLibraryProvider).keep(
+                    source: file,
+                    title: '$year',
+                    kind: 'film',
+                  );
+            },
           );
-      await ref.read(reelLibraryProvider).keep(
-            source: file,
-            title: '$year',
-            kind: 'film',
-          );
-      ref.invalidate(reelsProvider);
+      if (reel == null || !mounted) return;
+      final file = File(reel.path);
       await ref.read(nativeEncoderProvider).preparePlayback();
-      final player = VideoPlayerController.file(File(file.path));
+      final player = VideoPlayerController.file(file);
       await player.initialize();
       await player.setLooping(false);
       await player.pause();
@@ -82,9 +95,10 @@ class _YearFilmScreenState extends ConsumerState<YearFilmScreen> {
       await _player?.dispose();
       setState(() {
         _progress = null;
-        _title = '$year';
+        _title = reel.title;
+        _film = file;
         _player = player;
-        _note = 'Saved on Reels. Press play when you want it.';
+        _note = 'Saved on Reels.';
       });
     } catch (e) {
       if (!mounted) return;
@@ -97,8 +111,50 @@ class _YearFilmScreenState extends ConsumerState<YearFilmScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final player = _player;
+    if (_watching && player != null) {
+      return Scaffold(
+        backgroundColor: Colors.black,
+        body: MbFilmPlayer(
+          controller: player,
+          shorts: true,
+          title: _title ?? 'This year',
+          onClose: () => setState(() => _watching = false),
+          actions: [
+            MbFilmAction(
+              icon: Icons.ios_share,
+              label: 'Share',
+              onPressed: _film == null
+                  ? null
+                  : () => ref.read(exportServiceProvider).shareVideo(
+                        _film!,
+                        title: _title ?? 'Year film',
+                      ),
+            ),
+            MbFilmAction(
+              icon: Icons.download_outlined,
+              label: 'Save',
+              onPressed: _film == null
+                  ? null
+                  : () async {
+                      await ref.read(exportServiceProvider).saveVideoToGallery(_film!);
+                      if (!context.mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Saved to camera roll')),
+                      );
+                    },
+            ),
+            MbFilmAction(
+              icon: Icons.video_library_outlined,
+              label: 'Reels',
+              onPressed: () => context.go('/reels'),
+            ),
+          ],
+        ),
+      );
+    }
     return Scaffold(
-      backgroundColor: MbTokens.cream,
+      backgroundColor: Colors.transparent,
       body: Column(
         children: [
           MbHero(
@@ -128,15 +184,18 @@ class _YearFilmScreenState extends ConsumerState<YearFilmScreen> {
                     ),
                   ),
                 ],
-                if (_player != null) ...[
-                  const SizedBox(height: 16),
-                  MbFilmPlayer(controller: _player!),
-                  const SizedBox(height: 12),
-                  OutlinedButton(
-                    onPressed: () => context.go('/reels'),
-                    child: Text(_title == null ? 'Open Reels' : 'Open $_title in Reels'),
+                if (player != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 16),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextButton.icon(
+                        onPressed: () => setState(() => _watching = true),
+                        icon: const Icon(Icons.play_arrow),
+                        label: Text(_title == null ? 'Watch' : 'Watch $_title'),
+                      ),
+                    ),
                   ),
-                ],
               ],
             ),
           ),

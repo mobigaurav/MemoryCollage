@@ -21,7 +21,7 @@ class AppConfig {
     defaultValue: '',
   );
 
-  static const premiumEntitlement = 'premium';
+  static const premiumEntitlement = 'memorycollage_pro';
   static const premiumProductId = 'com.memorycollage.premium';
   static const premiumAnnualId = 'com.memorycollage.premium.annual';
   static const premiumMonthlyId = 'com.memorycollage.premium.monthly';

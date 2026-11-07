@@ -1,29 +1,107 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../core/config.dart';
+import '../../data/repositories/draft_repository.dart';
 import '../../core/haptics.dart';
 import '../../core/nav.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/tokens.dart';
 import '../../domain/collage_craft.dart';
+import '../../domain/collage_paper.dart';
+import '../../domain/collage_sizes.dart';
 import '../../domain/collage_templates.dart';
+import '../../domain/family_collage.dart';
 import '../../domain/media_options.dart';
 import '../../domain/slot_crop.dart';
+import '../../domain/theme_packs.dart';
 import '../../providers.dart';
 import '../../services/collage_renderer.dart';
+import '../../services/household_api.dart';
+import '../../services/photo_files.dart';
+import '../../services/reel_jobs.dart';
+import '../../services/voice_notes.dart';
+import '../../services/slideshow_exporter.dart';
 import '../../widgets/framed_photo.dart';
 import '../../widgets/local_photo.dart';
 import '../../widgets/photo_pinch.dart';
 import '../ai/cloud_clip.dart';
+import 'ink_pad.dart';
+import 'voice_mark.dart';
+import 'voice_sheet.dart';
+import 'paper_painter.dart';
+import 'safe_zone.dart';
+import 'paper_sheets.dart';
 import 'sticker_painters.dart';
+import 'sticker_sheet.dart';
+
+/// Photos to start a fresh collage with, such as On this day.
+class CollageSeed {
+  const CollageSeed({
+    required this.photos,
+    this.caption,
+    this.packId,
+    this.slots = const [],
+    this.remoteKeys = const [],
+    this.templateId,
+    this.paper,
+    this.background,
+    this.householdCode,
+  });
+
+  final List<String> photos;
+  final String? caption;
+  final String? packId;
+
+  /// Frame index for each photo. Empty means the photos fill frames in order.
+  final List<int> slots;
+  final List<String> remoteKeys;
+  final String? templateId;
+  final String? paper;
+  final int? background;
+  final String? householdCode;
+}
+
+/// A layout that fits [count] photos well.
+String seedTemplateFor(int count) => switch (count) {
+      <= 1 => 'postcard',
+      2 => 'two_up',
+      3 => 'lib_d_triptych',
+      4 => 'grid_2x2',
+      5 => 'lib_d_bento_5',
+      6 => 'window_2x3',
+      _ => 'grid_3x3',
+    };
 
 class CollageStudioScreen extends ConsumerStatefulWidget {
-  const CollageStudioScreen({super.key});
+  const CollageStudioScreen({
+    super.key,
+    this.initialPhotos = const [],
+    this.caption,
+    this.packId,
+    this.slots = const [],
+    this.remoteKeys = const [],
+    this.templateId,
+    this.paper,
+    this.background,
+    this.householdCode,
+  });
+
+  final List<String> initialPhotos;
+  final String? caption;
+  final String? packId;
+  final List<int> slots;
+  final List<String> remoteKeys;
+  final String? templateId;
+  final String? paper;
+  final int? background;
+  final String? householdCode;
 
   @override
   ConsumerState<CollageStudioScreen> createState() => _CollageStudioScreenState();
@@ -33,15 +111,22 @@ class _CollageStudioScreenState extends ConsumerState<CollageStudioScreen> {
   String _templateId = 'grid_2x2';
   CollageShelf _shelf = CollageShelf.grids;
   Color _background = MbTokens.paper;
+  CollagePaper _paper = CollagePaper.plain;
+  String? _packId;
+  String? _householdCode;
   List<PlacedPhoto?> _photos = [];
   final _stickers = <PlacedSticker>[];
   final _texts = <PlacedText>[];
+  final _inks = <PlacedInk>[];
+  final _voices = <PlacedVoice>[];
   String _format = 'JPEG';
   String _resolution = 'High';
   bool _busy = false;
   int? _selectedPhoto;
   int? _selectedSticker;
   int? _selectedText;
+  int? _selectedInk;
+  int? _selectedVoice;
   Timer? _saveDebounce;
   double _gestureNx = 0.5;
   double _gestureNy = 0.5;
@@ -50,17 +135,85 @@ class _CollageStudioScreenState extends ConsumerState<CollageStudioScreen> {
 
   CollageTemplate get _template => CollageCatalog.byId(_templateId);
 
-  Size get _exportSize => switch (_resolution) {
-        'Low' => const Size(720, 720),
-        'Medium' => const Size(1080, 1080),
-        '4K' => const Size(3840, 3840),
-        _ => const Size(2160, 2160),
-      };
+  CollageSize get _size => CollageSizes.byId(_resolution);
+
+  Size get _exportSize => Size(_size.width.toDouble(), _size.height.toDouble());
 
   @override
   void initState() {
     super.initState();
-    _restore();
+    if (widget.initialPhotos.isNotEmpty ||
+        widget.templateId != null ||
+        widget.householdCode != null) {
+      _seed();
+    } else {
+      _restore();
+    }
+  }
+
+  void _seed() {
+    final photos = widget.initialPhotos.take(AppConfig.maxCollagePhotos).toList();
+    _templateId = widget.templateId ?? seedTemplateFor(photos.length);
+    _shelf = _template.shelf;
+    _householdCode = widget.householdCode;
+    if (widget.paper != null) _paper = CollagePaper.fromId(widget.paper);
+    if (widget.background != null) _background = Color(widget.background!);
+    final slots = widget.slots;
+    final keys = widget.remoteKeys;
+    if (slots.length == photos.length && slots.isNotEmpty && _template.frames.isNotEmpty) {
+      _photos = [];
+      _padFrames();
+      for (var i = 0; i < photos.length; i++) {
+        final slot = slots[i];
+        if (slot < 0 || slot >= _photos.length) continue;
+        _photos[slot] = PlacedPhoto(
+          path: photos[i],
+          slot: slot,
+          remoteKey: i < keys.length && keys[i].isNotEmpty ? keys[i] : null,
+        );
+      }
+    } else {
+      _photos = [
+        for (var i = 0; i < photos.length; i++) PlacedPhoto(path: photos[i], slot: i),
+      ];
+      _padFrames();
+    }
+    final caption = widget.caption;
+    final pack = ThemePacks.byId(widget.packId);
+    final keepLook = widget.paper != null || widget.background != null;
+    if (pack != null && !keepLook) {
+      _usePack(pack, caption: caption);
+    } else if (pack != null) {
+      _packId = pack.id;
+      _stickers.addAll(pack.placed(caption: caption));
+    } else if (caption != null && caption.isNotEmpty) {
+      _stickers.add(
+        PlacedSticker(kind: StickerKind.word, text: caption, nx: 0.5, ny: 0.92, scale: 1.6),
+      );
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) => _scheduleSave());
+  }
+
+  void _usePack(ThemePack pack, {String? caption}) {
+    _packId = pack.id;
+    _paper = pack.paper;
+    _background = pack.color;
+    _stickers
+      ..removeWhere((s) => s.pack)
+      ..addAll(pack.placed(caption: caption));
+    _selectedSticker = null;
+  }
+
+  Future<void> _pickPack() async {
+    final pack = await pickThemePack(context, current: _packId);
+    if (pack == null || !mounted) return;
+    if (pack.premium && !ref.read(premiumControllerProvider).isPremium) {
+      context.push('/paywall');
+      return;
+    }
+    setState(() => _usePack(pack));
+    MbHaptics.snap();
+    _scheduleSave();
   }
 
   @override
@@ -76,6 +229,9 @@ class _CollageStudioScreenState extends ConsumerState<CollageStudioScreen> {
       _templateId = draft.templateId;
       _shelf = CollageCatalog.byId(draft.templateId).shelf;
       _background = Color(draft.background);
+      _paper = CollagePaper.fromId(draft.paper);
+      _packId = draft.packId;
+      _householdCode = draft.householdCode;
       _photos = _slotsFrom(draft.photos);
       _padFrames();
       _stickers
@@ -84,6 +240,12 @@ class _CollageStudioScreenState extends ConsumerState<CollageStudioScreen> {
       _texts
         ..clear()
         ..addAll(draft.texts);
+      _inks
+        ..clear()
+        ..addAll(draft.inks);
+      _voices
+        ..clear()
+        ..addAll(draft.voices);
       _format = draft.format;
       _resolution = draft.resolution;
     });
@@ -248,9 +410,7 @@ class _CollageStudioScreenState extends ConsumerState<CollageStudioScreen> {
       prompt: prompt,
     );
     if (!mounted) return;
-    if (result.ok && result.videoUrl != null && result.videoUrl!.isNotEmpty) {
-      return;
-    }
+    if (result.ok) return;
     if (result.message?.startsWith('Sign in') == true) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(result.message!)),
@@ -313,8 +473,13 @@ class _CollageStudioScreenState extends ConsumerState<CollageStudioScreen> {
               ],
               stickers: _stickers,
               texts: _texts,
+              inks: _inks,
+              voices: _voices,
               format: _format,
               resolution: _resolution,
+              paper: _paper.name,
+              packId: _packId,
+              householdCode: _householdCode,
             ),
           );
     });
@@ -350,7 +515,9 @@ class _CollageStudioScreenState extends ConsumerState<CollageStudioScreen> {
           ],
           if (_selectedPhoto != null ||
               _selectedSticker != null ||
-              _selectedText != null)
+              _selectedText != null ||
+              _selectedInk != null ||
+              _selectedVoice != null)
             IconButton(
               tooltip: 'Remove selected',
               onPressed: _deleteSelected,
@@ -364,9 +531,9 @@ class _CollageStudioScreenState extends ConsumerState<CollageStudioScreen> {
             child: Padding(
               padding: const EdgeInsets.all(12),
               child: AspectRatio(
-                aspectRatio: 1,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(color: _background),
+                aspectRatio: _size.aspect,
+                child: CustomPaint(
+                  painter: PaperPainter(_paper, _background),
                   child: LayoutBuilder(
                     builder: (context, c) => Stack(
                       children: [
@@ -380,6 +547,11 @@ class _CollageStudioScreenState extends ConsumerState<CollageStudioScreen> {
                           _sticker(i, c.biggest),
                         for (var i = 0; i < _texts.length; i++)
                           _text(i, c.biggest),
+                        for (var i = 0; i < _inks.length; i++)
+                          _ink(i, c.biggest),
+                        for (var i = 0; i < _voices.length; i++)
+                          _voice(i, c.biggest),
+                        SafeZoneGuide(size: _size),
                       ],
                     ),
                   ),
@@ -393,6 +565,14 @@ class _CollageStudioScreenState extends ConsumerState<CollageStudioScreen> {
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 12),
               children: [
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: ActionChip(
+                    avatar: const Icon(Icons.auto_awesome, size: 16),
+                    label: Text(ThemePacks.byId(_packId)?.name ?? 'Themes'),
+                    onPressed: _pickPack,
+                  ),
+                ),
                 for (final shelf in CollageShelf.values)
                   Padding(
                     padding: const EdgeInsets.only(right: 8),
@@ -436,12 +616,19 @@ class _CollageStudioScreenState extends ConsumerState<CollageStudioScreen> {
                     width: 112,
                     padding: const EdgeInsets.fromLTRB(8, 8, 8, 6),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: MbTokens.glass,
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
-                        color: selected ? MbTokens.leather : MbTokens.linen,
+                        color: selected ? MbTokens.leather : MbTokens.glassEdge,
                         width: selected ? 2 : 1,
                       ),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x33301810),
+                          blurRadius: 12,
+                          offset: Offset(0, 6),
+                        ),
+                      ],
                     ),
                     child: Column(
                       children: [
@@ -501,6 +688,16 @@ class _CollageStudioScreenState extends ConsumerState<CollageStudioScreen> {
                   ),
                 ),
                 IconButton(
+                  tooltip: 'Make a reel',
+                  onPressed: !_hasPhoto ? null : _makeReel,
+                  icon: const Icon(Icons.movie_creation_outlined),
+                ),
+                IconButton(
+                  tooltip: 'Share with family',
+                  onPressed: _shareWithFamily,
+                  icon: const Icon(Icons.group_add_outlined),
+                ),
+                IconButton(
                   tooltip: 'Print',
                   onPressed: !_hasPhoto || _busy
                       ? null
@@ -539,21 +736,12 @@ class _CollageStudioScreenState extends ConsumerState<CollageStudioScreen> {
           color: const Color(0x14000000),
           child: InkWell(
             onTap: () => _placeInFrame(index),
-            child: const Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.add_photo_alternate_outlined, color: MbTokens.leather),
-                SizedBox(height: 4),
-                Text(
-                  'Add photo',
-                  style: TextStyle(
-                    fontFamily: MbTokens.sans,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: MbTokens.ink,
-                  ),
+            child: const DecoratedBox(
+              decoration: BoxDecoration(
+                border: Border.fromBorderSide(
+                  BorderSide(color: MbTokens.slotDash),
                 ),
-              ],
+              ),
             ),
           ),
         ),
@@ -567,10 +755,13 @@ class _CollageStudioScreenState extends ConsumerState<CollageStudioScreen> {
           children: [
             PhotoPinch(
               crop: SlotCrop(scale: photo.scale, offsetX: photo.ox, offsetY: photo.oy),
-              onTap: () => setState(() {
+              onTap: () => _placeInFrame(index),
+              onLongPress: () => setState(() {
                 _selectedPhoto = index;
                 _selectedSticker = null;
                 _selectedText = null;
+                _selectedInk = null;
+                _selectedVoice = null;
               }),
               onChanged: (next) {
                 setState(() {
@@ -596,20 +787,6 @@ class _CollageStudioScreenState extends ConsumerState<CollageStudioScreen> {
                   ),
                   colorFilter: _photoFilter(photo),
                 ),
-              ),
-            ),
-            Positioned(
-              top: 4,
-              left: 4,
-              child: IconButton(
-                tooltip: 'Replace photo',
-                onPressed: () => _placeInFrame(index),
-                style: IconButton.styleFrom(
-                  backgroundColor: MbTokens.cream,
-                  foregroundColor: MbTokens.leather,
-                  minimumSize: const Size(36, 36),
-                ),
-                icon: const Icon(Icons.add_photo_alternate_outlined, size: 18),
               ),
             ),
             if (_selectedPhoto == index)
@@ -644,6 +821,8 @@ class _CollageStudioScreenState extends ConsumerState<CollageStudioScreen> {
         _selectedPhoto = index;
         _selectedSticker = null;
         _selectedText = null;
+        _selectedInk = null;
+                _selectedVoice = null;
       }),
       onMoveScale: (nx, ny, scale) {
         setState(() {
@@ -688,6 +867,8 @@ class _CollageStudioScreenState extends ConsumerState<CollageStudioScreen> {
         _selectedSticker = index;
         _selectedPhoto = null;
         _selectedText = null;
+        _selectedInk = null;
+                _selectedVoice = null;
       }),
       onMoveScale: (nx, ny, scale) {
         setState(() {
@@ -698,7 +879,74 @@ class _CollageStudioScreenState extends ConsumerState<CollageStudioScreen> {
         _scheduleSave();
       },
       child: CustomPaint(
-        painter: StickerPainter(sticker.kind),
+        painter: StickerPainter(sticker.kind, text: sticker.text),
+        child: const SizedBox.expand(),
+      ),
+    );
+  }
+
+  Widget _ink(int index, Size canvas) {
+    final ink = _inks[index];
+    final width = canvas.width * 0.72 * ink.scale;
+    final height = width * PlacedInk.aspect;
+    return _draggable(
+      nx: ink.nx,
+      ny: ink.ny,
+      width: width,
+      height: height,
+      canvas: canvas,
+      startScale: ink.scale,
+      selected: _selectedInk == index,
+      onSelect: () => setState(() {
+        _selectedInk = index;
+        _selectedPhoto = null;
+        _selectedSticker = null;
+        _selectedText = null;
+        _selectedVoice = null;
+      }),
+      onMoveScale: (nx, ny, scale) {
+        setState(() {
+          ink.nx = nx;
+          ink.ny = ny;
+          ink.scale = scale.clamp(0.4, 2.4);
+        });
+        _scheduleSave();
+      },
+      child: CustomPaint(
+        painter: InkMark(ink),
+        child: const SizedBox.expand(),
+      ),
+    );
+  }
+
+  Widget _voice(int index, Size canvas) {
+    final voice = _voices[index];
+    final side = canvas.width * 0.22 * voice.scale;
+    return _draggable(
+      nx: voice.nx,
+      ny: voice.ny,
+      width: side,
+      height: side,
+      canvas: canvas,
+      startScale: voice.scale,
+      selected: _selectedVoice == index,
+      onSelect: () => setState(() {
+        _selectedVoice = index;
+        _selectedPhoto = null;
+        _selectedSticker = null;
+        _selectedText = null;
+        _selectedInk = null;
+      }),
+      onMoveScale: (nx, ny, scale) {
+        setState(() {
+          voice.nx = nx;
+          voice.ny = ny;
+          voice.scale = scale.clamp(0.5, 2.2);
+        });
+        _scheduleSave();
+      },
+      child: CustomPaint(
+        painter: VoiceMark(voice.url),
         child: const SizedBox.expand(),
       ),
     );
@@ -718,6 +966,8 @@ class _CollageStudioScreenState extends ConsumerState<CollageStudioScreen> {
         _selectedText = index;
         _selectedPhoto = null;
         _selectedSticker = null;
+        _selectedInk = null;
+                _selectedVoice = null;
       }),
       onMoveScale: (nx, ny, _) {
         setState(() {
@@ -818,6 +1068,23 @@ class _CollageStudioScreenState extends ConsumerState<CollageStudioScreen> {
                 },
               ),
               ListTile(
+                leading: const Icon(Icons.mic_none),
+                title: const Text('Voice note'),
+                subtitle: const Text('A QR mark. A scan of the print plays it.'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _addVoice();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.draw_outlined),
+                title: const Text('Handwritten caption'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _addHandwriting();
+                },
+              ),
+              ListTile(
                 leading: const Icon(Icons.text_fields),
                 title: const Text('Add text'),
                 onTap: () {
@@ -834,8 +1101,14 @@ class _CollageStudioScreenState extends ConsumerState<CollageStudioScreen> {
                 },
               ),
               ListTile(
-                title: Text('Export  $_resolution · $_format'),
-                subtitle: const Text('High and 4K are Premium'),
+                title: Text('Export  ${_size.label} · $_format'),
+                subtitle: Text(
+                  _size.hasSafeZone
+                      ? (_size.isPrint
+                          ? 'Shaded edge is the printer margin'
+                          : 'Shaded edge is what a phone covers')
+                      : 'Large files and print sizes are Premium',
+                ),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () async {
                   Navigator.pop(ctx);
@@ -853,40 +1126,66 @@ class _CollageStudioScreenState extends ConsumerState<CollageStudioScreen> {
     final choice = await showModalBottomSheet<String>(
       context: context,
       backgroundColor: MbTokens.cream,
+      isScrollControlled: true,
       builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            for (final size in ['Low', 'Medium', 'High', '4K'])
-              ListTile(
-                title: Text(size),
-                trailing: _resolution == size ? const Icon(Icons.check) : null,
-                onTap: () => Navigator.pop(ctx, 'size:$size'),
-              ),
-            const Divider(),
-            for (final format in ['JPEG', 'PNG', 'HEIC'])
-              ListTile(
-                title: Text(format),
-                trailing: _format == format ? const Icon(Icons.check) : null,
-                onTap: () => Navigator.pop(ctx, 'format:$format'),
-              ),
-          ],
+        child: SizedBox(
+          height: MediaQuery.sizeOf(ctx).height * 0.72,
+          child: ListView(
+            children: [
+              for (final group in CollageSizes.groups) ...[
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
+                  child: Text(
+                    group.toUpperCase(),
+                    style: const TextStyle(
+                      fontFamily: MbTokens.sans,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.8,
+                      color: MbTokens.leather,
+                    ),
+                  ),
+                ),
+                for (final size in CollageSizes.inGroup(group))
+                  ListTile(
+                    title: Text(size.label),
+                    subtitle: Text(_sizeDetail(size)),
+                    trailing: _resolution == size.id ? const Icon(Icons.check) : null,
+                    onTap: () => Navigator.pop(ctx, 'size:${size.id}'),
+                  ),
+              ],
+              const Divider(),
+              for (final format in ['JPEG', 'PNG', 'HEIC'])
+                ListTile(
+                  title: Text(format),
+                  trailing: _format == format ? const Icon(Icons.check) : null,
+                  onTap: () => Navigator.pop(ctx, 'format:$format'),
+                ),
+            ],
+          ),
         ),
       ),
     );
     if (choice == null) return;
     if (choice.startsWith('size:')) {
-      final next = choice.substring(5);
+      final next = CollageSizes.byId(choice.substring(5));
       final premium = ref.read(premiumControllerProvider).isPremium;
-      if ((next == 'High' || next == '4K') && !premium) {
+      if (next.premium && !premium) {
         if (mounted) context.push('/paywall');
         return;
       }
-      setState(() => _resolution = next);
+      setState(() => _resolution = next.id);
     } else if (choice.startsWith('format:')) {
       setState(() => _format = choice.substring(7));
     }
     _scheduleSave();
+  }
+
+  String _sizeDetail(CollageSize size) {
+    final shape = '${size.width}×${size.height}';
+    if (size.premium) return '$shape · Premium';
+    if (size.hasSafeZone) return '$shape · with a guide';
+    return shape;
   }
 
   Future<void> _placeInFrame(int index) async {
@@ -907,6 +1206,8 @@ class _CollageStudioScreenState extends ConsumerState<CollageStudioScreen> {
       _selectedPhoto = index;
       _selectedSticker = null;
       _selectedText = null;
+      _selectedInk = null;
+                _selectedVoice = null;
     });
     _scheduleSave();
   }
@@ -939,6 +1240,86 @@ class _CollageStudioScreenState extends ConsumerState<CollageStudioScreen> {
     _scheduleSave();
   }
 
+  Future<void> _addVoice() async {
+    if (ref.read(authSessionProvider).value == null) {
+      context.push('/account');
+      return;
+    }
+    final file = await recordVoiceNote(context);
+    if (file == null || !mounted) return;
+    final bytes = await file.readAsBytes();
+    if (!mounted) return;
+    final api = ref.read(voiceNoteApiProvider);
+    final repo = ref.read(draftRepositoryProvider);
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.showSnackBar(
+      const SnackBar(content: Text('Sending the voice note. You can keep editing.')),
+    );
+    unawaited(() async {
+      try {
+        final url = await api.publish(bytes);
+        final voice = PlacedVoice(url: url);
+        if (mounted) {
+          setState(() {
+            _voices.add(voice);
+            _selectedVoice = _voices.length - 1;
+            _selectedPhoto = null;
+            _selectedSticker = null;
+            _selectedText = null;
+            _selectedInk = null;
+          });
+          _scheduleSave();
+        } else {
+          final draft = await repo.loadCollage();
+          if (draft != null) {
+            await repo.saveCollage(
+              CollageDraft(
+                templateId: draft.templateId,
+                background: draft.background,
+                photos: draft.photos,
+                stickers: draft.stickers,
+                texts: draft.texts,
+                inks: draft.inks,
+                voices: [...draft.voices, voice],
+                format: draft.format,
+                resolution: draft.resolution,
+                paper: draft.paper,
+                packId: draft.packId,
+                householdCode: draft.householdCode,
+              ),
+            );
+          }
+        }
+        messenger.showSnackBar(
+          const SnackBar(content: Text('The QR is on the page. A scan plays the note.')),
+        );
+      } catch (e) {
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(
+              e is VoiceNoteException ? e.message : 'The voice note could not be sent.',
+            ),
+          ),
+        );
+      }
+    }());
+  }
+
+  Future<void> _addHandwriting() async {
+    final ink = await drawCaption(context, onDark: _paper == CollagePaper.chalk);
+    if (ink == null || !mounted) return;
+    setState(() {
+      _inks.add(ink);
+      _selectedInk = _inks.length - 1;
+      _selectedPhoto = null;
+      _selectedSticker = null;
+      _selectedText = null;
+      _selectedVoice = null;
+    });
+    MbHaptics.snap();
+    _scheduleSave();
+  }
+
   void _addText() {
     setState(() {
       _texts.add(PlacedText(text: 'Memory', nx: 0.5, ny: 0.88));
@@ -948,28 +1329,12 @@ class _CollageStudioScreenState extends ConsumerState<CollageStudioScreen> {
   }
 
   Future<void> _pickSticker() async {
-    final kind = await showModalBottomSheet<StickerKind>(
-      context: context,
-      backgroundColor: MbTokens.cream,
-      builder: (ctx) => Padding(
-        padding: const EdgeInsets.all(20),
-        child: Wrap(
-          spacing: 10,
-          runSpacing: 10,
-          children: StickerKind.values
-              .map(
-                (kind) => ActionChip(
-                  label: Text(kind.label),
-                  onPressed: () => Navigator.pop(ctx, kind),
-                ),
-              )
-              .toList(),
-        ),
-      ),
-    );
-    if (kind == null) return;
+    final choice = await pickSticker(context);
+    if (choice == null || !mounted) return;
     setState(() {
-      _stickers.add(PlacedSticker(kind: kind, nx: 0.72, ny: 0.22));
+      _stickers.add(
+        PlacedSticker(kind: choice.kind, text: choice.text, nx: 0.72, ny: 0.22),
+      );
       _selectedSticker = _stickers.length - 1;
     });
     MbHaptics.snap();
@@ -1061,38 +1426,267 @@ class _CollageStudioScreenState extends ConsumerState<CollageStudioScreen> {
         _stickers.removeAt(_selectedSticker!);
       } else if (_selectedText != null && _selectedText! < _texts.length) {
         _texts.removeAt(_selectedText!);
+      } else if (_selectedInk != null && _selectedInk! < _inks.length) {
+        _inks.removeAt(_selectedInk!);
+      } else if (_selectedVoice != null && _selectedVoice! < _voices.length) {
+        _voices.removeAt(_selectedVoice!);
       }
       _selectedPhoto = null;
       _selectedSticker = null;
       _selectedText = null;
+      _selectedInk = null;
+                _selectedVoice = null;
     });
     _scheduleSave();
   }
 
   Future<void> _pickBackground() async {
-    final colors = MbTokens.collagePapers;
-    final picked = await showModalBottomSheet<Color>(
+    final premium = ref.read(premiumControllerProvider).isPremium;
+    final picked = await pickBackground(
+      context,
+      paper: _paper,
+      color: _background,
+      premium: premium,
+    );
+    if (picked == null || !mounted) return;
+    if (picked.paper.premium && !premium) {
+      context.push('/paywall');
+      return;
+    }
+    setState(() {
+      _paper = picked.paper;
+      _background = picked.color;
+    });
+    _scheduleSave();
+  }
+
+  Future<void> _shareWithFamily() async {
+    if (ref.read(authSessionProvider).value == null) {
+      context.push('/account');
+      return;
+    }
+    if (_template.kind == CollageKind.freeform || _template.frames.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Pick a framed layout. Family fills those frames.')),
+      );
+      return;
+    }
+    var code = _householdCode;
+    String? title;
+    if (code == null) {
+      title = await _askFamilyTitle();
+      if (title == null || !mounted) return;
+    }
+    final layout = SharedCollageLayout(
+      templateId: _templateId,
+      background: _background.toARGB32(),
+      paper: _paper.name,
+      frames: _template.frames.length,
+      packId: _packId,
+    );
+    final pending = <({String path, int slot})>[];
+    for (var i = 0; i < _photos.length && i < layout.frames; i++) {
+      final photo = _photos[i];
+      if (photo == null || (photo.remoteKey != null && photo.remoteKey!.isNotEmpty)) continue;
+      pending.add((path: photo.path, slot: i));
+    }
+    final api = ref.read(householdApiProvider);
+    final repo = ref.read(draftRepositoryProvider);
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.showSnackBar(
+      const SnackBar(content: Text('Sending this collage to your family. You can keep editing.')),
+    );
+    unawaited(() async {
+      try {
+        final String familyCode;
+        if (code == null) {
+          final book = await api.create(title!, kind: 'collage', layout: layout);
+          familyCode = book.code;
+        } else {
+          familyCode = code;
+          await api.setLayout(familyCode, layout);
+        }
+        final sent = <String, String>{};
+        if (pending.isNotEmpty) {
+          final uploads = await api.reserve(familyCode, pending.length);
+          final keys = <String>[];
+          final slots = <int>[];
+          for (var i = 0; i < pending.length && i < uploads.length; i++) {
+            final bytes = await File(PhotoFiles.resolve(pending[i].path)).readAsBytes();
+            await api.putJpeg(uploads[i], bytes);
+            keys.add(uploads[i].key);
+            slots.add(pending[i].slot);
+            sent[pending[i].path] = uploads[i].key;
+          }
+          if (keys.isNotEmpty) await api.commit(familyCode, keys, slots: slots);
+        }
+        await _stampFamily(repo, familyCode, sent);
+        if (mounted) {
+          setState(() {
+            _householdCode = familyCode;
+            for (final photo in _photos) {
+              if (photo == null) continue;
+              final key = sent[photo.path];
+              if (key != null) photo.remoteKey = key;
+            }
+          });
+          _scheduleSave();
+        }
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text('The family code is $familyCode. Anyone with it can add a photo.'),
+            action: SnackBarAction(
+              label: 'Share',
+              onPressed: () {
+                SharePlus.instance.share(
+                  ShareParams(
+                    text:
+                        'Join our collage in Memory Book. The code is $familyCode. Only people with the code can add a photo to an empty frame.',
+                  ),
+                );
+              },
+            ),
+          ),
+        );
+      } catch (e) {
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(
+              e is HouseholdException ? e.message : 'The family collage could not be reached.',
+            ),
+          ),
+        );
+      }
+    }());
+  }
+
+  Future<String?> _askFamilyTitle() async {
+    final controller = TextEditingController(text: 'Family collage');
+    final title = await showDialog<String>(
       context: context,
-      backgroundColor: MbTokens.cream,
-      builder: (ctx) => Padding(
-        padding: const EdgeInsets.all(20),
-        child: Wrap(
-          spacing: 12,
-          children: colors
-              .map(
-                (c) => GestureDetector(
-                  onTap: () => Navigator.pop(ctx, c),
-                  child: CircleAvatar(backgroundColor: c, radius: 28),
-                ),
-              )
-              .toList(),
+      builder: (ctx) => AlertDialog(
+        backgroundColor: MbTokens.cream,
+        title: const Text('Share with family'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          textCapitalization: TextCapitalization.sentences,
+          maxLength: 40,
+          decoration: const InputDecoration(labelText: 'Name'),
+          onSubmitted: (value) => Navigator.pop(ctx, value.trim()),
         ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, controller.text.trim()),
+            child: const Text('Share'),
+          ),
+        ],
       ),
     );
-    if (picked != null) {
-      setState(() => _background = picked);
-      _scheduleSave();
-    }
+    controller.dispose();
+    final trimmed = title?.trim() ?? '';
+    return trimmed.isEmpty ? null : trimmed;
+  }
+
+  Future<void> _stampFamily(
+    DraftRepository repo,
+    String code,
+    Map<String, String> sent,
+  ) async {
+    final draft = await repo.loadCollage();
+    if (draft == null) return;
+    await repo.saveCollage(
+      CollageDraft(
+        templateId: draft.templateId,
+        background: draft.background,
+        photos: [
+          for (final photo in draft.photos) photo.copyWith(remoteKey: sent[photo.path]),
+        ],
+        stickers: draft.stickers,
+        texts: draft.texts,
+        inks: draft.inks,
+        voices: draft.voices,
+        format: draft.format,
+        resolution: draft.resolution,
+        paper: draft.paper,
+        packId: draft.packId,
+        householdCode: code,
+      ),
+    );
+  }
+
+  void _makeReel() {
+    final template = _template;
+    final photos = [
+      for (final photo in _photos)
+        photo == null
+            ? null
+            : PlacedPhoto(
+                path: photo.path,
+                nx: photo.nx,
+                ny: photo.ny,
+                scale: photo.scale,
+                ox: photo.ox,
+                oy: photo.oy,
+                filter: photo.filter,
+                slot: photo.slot,
+              ),
+    ];
+    final background = _background;
+    final paper = _paper;
+    final stickers = [
+      for (final s in _stickers)
+        PlacedSticker(kind: s.kind, text: s.text, nx: s.nx, ny: s.ny, scale: s.scale),
+    ];
+    final texts = [
+      for (final t in _texts)
+        CollageTextOverlay(text: t.text, nx: t.nx, ny: t.ny, color: t.color),
+    ];
+    final inks = [
+      for (final ink in _inks)
+        PlacedInk(
+          strokes: ink.strokes,
+          nx: ink.nx,
+          ny: ink.ny,
+          scale: ink.scale,
+          color: ink.color,
+        ),
+    ];
+    final voices = [
+      for (final voice in _voices)
+        PlacedVoice(url: voice.url, nx: voice.nx, ny: voice.ny, scale: voice.scale),
+    ];
+    final music = DateTime.now().day % SlideshowExporter.musicNames.length;
+    unawaited(
+      ref.read(reelJobsProvider.notifier).run(
+            label: 'Collage reel',
+            failure: 'The collage reel did not finish',
+            work: (ref) async {
+              final file = await ref.read(collageReelProvider).make(
+                    template: template,
+                    photos: photos,
+                    background: background,
+                    paper: paper,
+                    stickers: stickers,
+                    texts: texts,
+                    inks: inks,
+                    voices: voices,
+                    musicIndex: music,
+                  );
+              return ref.read(reelLibraryProvider).keep(
+                    source: file,
+                    title: 'Collage',
+                    kind: 'collage',
+                  );
+            },
+          ),
+    );
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Making a reel of this collage. It shows up on Reels. Keep going.'),
+      ),
+    );
   }
 
   Future<void> _export({bool share = false, bool toPrinter = false}) async {
@@ -1103,6 +1697,7 @@ class _CollageStudioScreenState extends ConsumerState<CollageStudioScreen> {
           template: _template,
           imagePaths: [for (final photo in _photos) photo?.path ?? ''],
           background: _background,
+          paper: _paper,
           texts: [
             for (final t in _texts)
               CollageTextOverlay(
@@ -1113,6 +1708,8 @@ class _CollageStudioScreenState extends ConsumerState<CollageStudioScreen> {
               ),
           ],
           stickers: _stickers,
+          inks: _inks,
+          voices: _voices,
           placedPhotos: [
             for (final photo in _photos) photo ?? PlacedPhoto(path: ''),
           ],
@@ -1137,6 +1734,8 @@ class _CollageStudioScreenState extends ConsumerState<CollageStudioScreen> {
         await ref.read(printServiceProvider).printImages(
               [bytes],
               name: 'Memory Book collage',
+              pageWidthInches: _size.pageInchesWide,
+              pageHeightInches: _size.pageInchesTall,
             );
       } else if (share) {
         await ref.read(exportServiceProvider).shareFile(file);

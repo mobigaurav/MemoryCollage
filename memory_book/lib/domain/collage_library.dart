@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:ui';
 
 import 'collage_templates.dart';
@@ -379,19 +380,149 @@ List<CollageTemplate> buildCollageLibrary() {
     );
   }
 
+  _addDesigned(add);
+
   return out;
 }
 
-double _cos(double a) {
-  var x = a;
-  while (x > 3.14159265) {
-    x -= 6.2831853;
+typedef _Add = void Function({
+  required String id,
+  required String name,
+  required CollageKind kind,
+  required CollageShelf group,
+  required List<Rect> frames,
+  bool premium,
+});
+
+/// Hand-drawn layouts with a reason to exist: bento boxes, booth strips, journals.
+void _addDesigned(_Add add) {
+  Rect r(double x, double y, double w, double h) => Rect.fromLTWH(x, y, w, h);
+
+  const stories = CollageShelf.stories;
+  const scrap = CollageShelf.scrap;
+  const social = CollageShelf.social;
+  const grids = CollageShelf.grids;
+  const shapes = CollageShelf.shapes;
+
+  final designed = <(String, String, CollageShelf, bool, List<Rect>)>[
+    ('bento_5', 'Bento 5', stories, false, [
+      r(0, 0, 0.6, 0.6), r(0.6, 0, 0.4, 0.3), r(0.6, 0.3, 0.4, 0.3),
+      r(0, 0.6, 0.35, 0.4), r(0.35, 0.6, 0.65, 0.4),
+    ]),
+    ('bento_6', 'Bento 6', stories, true, [
+      r(0, 0, 0.5, 0.4), r(0.5, 0, 0.5, 0.6), r(0, 0.4, 0.5, 0.3),
+      r(0, 0.7, 0.25, 0.3), r(0.25, 0.7, 0.25, 0.3), r(0.5, 0.6, 0.5, 0.4),
+    ]),
+    ('bento_7', 'Bento 7', stories, true, [
+      r(0, 0, 0.4, 0.4), r(0.4, 0, 0.6, 0.25), r(0.4, 0.25, 0.3, 0.35),
+      r(0.7, 0.25, 0.3, 0.35), r(0, 0.4, 0.4, 0.6), r(0.4, 0.6, 0.6, 0.2),
+      r(0.4, 0.8, 0.6, 0.2),
+    ]),
+    ('pinwheel', 'Pinwheel', stories, true, [
+      r(0, 0, 0.62, 0.38), r(0.62, 0, 0.38, 0.62), r(0.38, 0.62, 0.62, 0.38),
+      r(0, 0.38, 0.38, 0.62), r(0.38, 0.38, 0.24, 0.24),
+    ]),
+    ('golden', 'Golden ratio', stories, false, [
+      r(0, 0, 0.618, 1), r(0.618, 0, 0.382, 0.618),
+      r(0.764, 0.618, 0.236, 0.382), r(0.618, 0.618, 0.146, 0.382),
+    ]),
+    ('brick_7', 'Brick wall', grids, true, [
+      r(0, 0, 0.5, 0.33), r(0.5, 0, 0.5, 0.33),
+      r(0, 0.33, 0.25, 0.34), r(0.25, 0.33, 0.5, 0.34), r(0.75, 0.33, 0.25, 0.34),
+      r(0, 0.67, 0.5, 0.33), r(0.5, 0.67, 0.5, 0.33),
+    ]),
+    ('hero_6', 'Hero + 6', stories, true, [
+      r(0, 0, 1, 0.6),
+      for (var i = 0; i < 6; i++) r((i % 3) / 3, 0.6 + (i ~/ 3) * 0.2, 1 / 3, 0.2),
+    ]),
+    ('triptych', 'Triptych', stories, false, [
+      r(0, 0.15, 0.3, 0.7), r(0.3, 0, 0.4, 1), r(0.7, 0.15, 0.3, 0.7),
+    ]),
+    ('cover', 'Magazine cover', stories, false, [
+      r(0, 0, 1, 0.76), r(0.05, 0.79, 0.43, 0.18), r(0.52, 0.79, 0.43, 0.18),
+    ]),
+    ('timeline_5', 'Timeline', stories, true, [
+      for (var i = 0; i < 5; i++) r(i.isEven ? 0.04 : 0.46, 0.02 + i * 0.196, 0.5, 0.18),
+    ]),
+    ('center_stamp', 'Center stamp', stories, true, [
+      ...CollageCatalog.grid(2, 2),
+      r(0.3, 0.3, 0.4, 0.4),
+    ]),
+    ('year_12', 'Year in 12', grids, true, [
+      for (var i = 0; i < 12; i++)
+        r(0.02 + (i % 3) * 0.32667, 0.02 + (i ~/ 3) * 0.245, 0.30667, 0.225),
+    ]),
+    ('before_after', 'Before / after', social, false, [
+      r(0.03, 0.1, 0.455, 0.8), r(0.515, 0.1, 0.455, 0.8),
+    ]),
+    ('quote_card', 'Quote card', social, false, [r(0.06, 0.06, 0.88, 0.62)]),
+    ('story_frame', 'Story frame', social, false, [r(0.1, 0.14, 0.8, 0.72)]),
+    ('story_trio', 'Story trio', social, true, [
+      r(0.06, 0.04, 0.88, 0.3), r(0.06, 0.35, 0.88, 0.3), r(0.06, 0.66, 0.88, 0.3),
+    ]),
+    ('booth_4', 'Photo booth', scrap, false, [
+      for (var i = 0; i < 4; i++) r(0.3, 0.04 + i * 0.235, 0.4, 0.21),
+    ]),
+    ('contact_sheet', 'Contact sheet', scrap, true, [
+      for (var i = 0; i < 20; i++)
+        r(0.03 + (i % 4) * 0.2375, 0.03 + (i ~/ 4) * 0.19, 0.2175, 0.17),
+    ]),
+    ('fridge_6', 'Fridge door', scrap, true, [
+      r(0.04, 0.05, 0.4, 0.3), r(0.5, 0.03, 0.44, 0.34), r(0.08, 0.38, 0.36, 0.28),
+      r(0.5, 0.4, 0.42, 0.26), r(0.06, 0.69, 0.44, 0.27), r(0.54, 0.7, 0.38, 0.26),
+    ]),
+    ('ticket_stubs', 'Ticket stubs', scrap, false, [
+      r(0.08, 0.1, 0.84, 0.24), r(0.08, 0.38, 0.84, 0.24), r(0.08, 0.66, 0.84, 0.24),
+    ]),
+    ('frame_in_frame', 'Frame in frame', scrap, true, [
+      r(0, 0, 1, 1), r(0.54, 0.54, 0.4, 0.4),
+    ]),
+    ('staircase', 'Staircase', scrap, false, [
+      r(0.02, 0.02, 0.5, 0.32), r(0.25, 0.34, 0.5, 0.32), r(0.48, 0.66, 0.5, 0.32),
+    ]),
+    ('honeycomb_7', 'Honeycomb', shapes, true, [
+      r(0.37, 0.37, 0.26, 0.26),
+      for (var i = 0; i < 6; i++)
+        r(
+          0.37 + 0.28 * _cos(i * 1.0471976),
+          0.37 + 0.28 * _sin(i * 1.0471976),
+          0.26,
+          0.26,
+        ),
+    ]),
+    ('triangle_6', 'Triangle', shapes, true, [
+      r(0.39, 0.1, 0.22, 0.22),
+      r(0.26, 0.38, 0.22, 0.22), r(0.52, 0.38, 0.22, 0.22),
+      r(0.13, 0.66, 0.22, 0.22), r(0.39, 0.66, 0.22, 0.22), r(0.65, 0.66, 0.22, 0.22),
+    ]),
+    ('arch_5', 'Arch', shapes, true, [
+      for (var i = 0; i < 5; i++)
+        r(
+          0.4 + 0.36 * _cos(3.14159265 + i * 0.785398),
+          0.5 + 0.36 * _sin(3.14159265 + i * 0.785398),
+          0.2,
+          0.2,
+        ),
+    ]),
+    ('wave_5', 'Wave', shapes, true, [
+      for (var i = 0; i < 5; i++) r(0.02 + i * 0.196, 0.38 + 0.18 * _sin(i * 1.5707963), 0.18, 0.24),
+    ]),
+  ];
+
+  for (final (id, name, group, premium, frames) in designed) {
+    add(
+      id: 'lib_d_$id',
+      name: name,
+      kind: group == shapes
+          ? CollageKind.shape
+          : (group == grids ? CollageKind.grid : CollageKind.mosaic),
+      group: group,
+      frames: frames,
+      premium: premium,
+    );
   }
-  while (x < -3.14159265) {
-    x += 6.2831853;
-  }
-  final x2 = x * x;
-  return 1 - x2 / 2 + x2 * x2 / 24;
 }
 
-double _sin(double a) => _cos(a - 1.5707963);
+double _cos(double a) => math.cos(a);
+
+double _sin(double a) => math.sin(a);

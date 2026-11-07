@@ -11,7 +11,7 @@
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>Memory Book saves collages, album pages, and memory reels to your library when you tap Save.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Memory Book can attach a soundtrack you pick from Files. The microphone is unused unless a plugin requests it.</string>
+	<string>Memory Book uses the microphone for a short voice note. A QR mark on the page plays it when someone scans the print.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Optionally photograph a new page instead of choosing an existing picture.</string>
 	<key>CFBundleDevelopmentRegion</key>

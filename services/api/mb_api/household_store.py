@@ -1,7 +1,8 @@
-"""A private family book. Not the public World feed.
+"""A private family book or collage. Not the public World feed.
 
 One signed-in person starts it and gets a short code. People with the code
-can add photos. Strangers cannot read the book.
+can add photos. Strangers cannot read it. A collage has frames; each photo
+lands in an empty one.
 """
 
 from __future__ import annotations
@@ -11,6 +12,7 @@ import secrets
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
+from decimal import Decimal
 
 _ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 MAX_MEMBERS = 8
@@ -25,6 +27,17 @@ def _code() -> str:
     return "".join(secrets.choice(_ALPHABET) for _ in range(6))
 
 
+def _plain(value):
+    """Dynamo returns numbers as Decimal. JSON wants int."""
+    if isinstance(value, Decimal):
+        return int(value) if value % 1 == 0 else float(value)
+    if isinstance(value, dict):
+        return {str(key): _plain(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_plain(item) for item in value]
+    return value
+
+
 @dataclass
 class HouseholdPhoto:
     id: str
@@ -32,6 +45,7 @@ class HouseholdPhoto:
     author_sub: str
     author: str
     created_at: str
+    slot: int | None = None
 
 
 @dataclass
@@ -41,6 +55,8 @@ class Household:
     owner: str
     owner_name: str
     created_at: str
+    kind: str = "book"
+    layout: dict | None = None
     members: dict[str, str] = field(default_factory=dict)
     photos: list[HouseholdPhoto] = field(default_factory=list)
 
@@ -48,6 +64,8 @@ class Household:
         return {
             "code": self.code,
             "title": self.title,
+            "kind": self.kind,
+            "layout": self.layout,
             "owner": self.owner == viewer,
             "members": [
                 {"name": name, "you": sub == viewer}
@@ -60,10 +78,28 @@ class Household:
                     "author": photo.author,
                     "yours": photo.author_sub == viewer,
                     "createdAt": photo.created_at,
+                    **({} if photo.slot is None else {"slot": photo.slot}),
                 }
                 for photo in self.photos
             ],
         }
+
+    def open_slots(self) -> list[int] | None:
+        if self.kind != "collage" or not self.layout:
+            return None
+        frames = int(self.layout.get("frames") or 0)
+        used = {photo.slot for photo in self.photos if photo.slot is not None}
+        return [slot for slot in range(frames) if slot not in used]
+
+    def place_slot(self, wanted: int | None) -> int:
+        open_slots = self.open_slots()
+        if open_slots is None:
+            raise ValueError("This is a family book, not a collage.")
+        if not open_slots:
+            raise ValueError("Every frame of this collage is full.")
+        if wanted is not None and int(wanted) in open_slots:
+            return int(wanted)
+        return open_slots[0]
 
 
 class MemoryHouseholds:
@@ -73,7 +109,15 @@ class MemoryHouseholds:
     def reset(self) -> None:
         self.books.clear()
 
-    def create(self, *, sub: str, name: str, title: str) -> Household:
+    def create(
+        self,
+        *,
+        sub: str,
+        name: str,
+        title: str,
+        kind: str = "book",
+        layout: dict | None = None,
+    ) -> Household:
         code = _code()
         while code in self.books:
             code = _code()
@@ -83,6 +127,8 @@ class MemoryHouseholds:
             owner=sub,
             owner_name=name,
             created_at=_now(),
+            kind=kind,
+            layout=layout if kind == "collage" else None,
             members={sub: name},
         )
         self.books[code] = book
@@ -107,29 +153,41 @@ class MemoryHouseholds:
             return None
         return book
 
+    def set_layout(self, code: str, sub: str, layout: dict) -> Household | None:
+        book = self.get(code, sub)
+        if book is None:
+            return None
+        if book.kind != "collage":
+            raise ValueError("This is a family book, not a collage.")
+        frames = int(layout.get("frames") or 0)
+        if any(photo.slot is not None and photo.slot >= frames for photo in book.photos):
+            raise ValueError("A photo is sitting in a frame this layout does not have.")
+        book.layout = layout
+        return book
+
     def reserve(self, code: str, sub: str, count: int) -> list[str]:
         book = self.get(code, sub)
         if book is None:
             return []
-        if len(book.photos) + count > MAX_PHOTOS:
-            raise ValueError("This book already holds 80 photos.")
+        room_for(book, count)
         photo_ids = [str(uuid.uuid4()) for _ in range(count)]
         return [f"households/{book.code}/{photo_id}.jpg" for photo_id in photo_ids]
 
-    def commit(self, code: str, sub: str, name: str, keys: list[str]) -> Household | None:
+    def commit(
+        self,
+        code: str,
+        sub: str,
+        name: str,
+        keys: list[str],
+        slots: list[int] | None = None,
+    ) -> Household | None:
         book = self.get(code, sub)
         if book is None:
             return None
-        prefix = f"households/{book.code}/"
-        known = {photo.key for photo in book.photos}
-        fresh = []
-        for key in keys:
-            if not key.startswith(prefix) or key in known:
-                raise ValueError("Those files do not belong to this book.")
-            fresh.append(key)
-        if len(book.photos) + len(fresh) > MAX_PHOTOS:
-            raise ValueError("This book already holds 80 photos.")
-        for key in fresh:
+        fresh = fresh_keys(book, keys)
+        room_for(book, len(fresh))
+        for index, key in enumerate(fresh):
+            wanted = slots[index] if slots else None
             book.photos.append(
                 HouseholdPhoto(
                     id=key.rsplit("/", 1)[-1].split(".", 1)[0],
@@ -137,9 +195,33 @@ class MemoryHouseholds:
                     author_sub=sub,
                     author=name,
                     created_at=_now(),
+                    slot=book.place_slot(wanted) if book.kind == "collage" else None,
                 )
             )
         return book
+
+def room_for(book: Household, count: int) -> None:
+    if len(book.photos) + count > MAX_PHOTOS:
+        raise ValueError("This book already holds 80 photos.")
+    open_slots = book.open_slots()
+    if open_slots is not None and count > len(open_slots):
+        left = len(open_slots)
+        raise ValueError(
+            "Every frame of this collage is full."
+            if left == 0
+            else f"This collage has {left} empty frames."
+        )
+
+
+def fresh_keys(book: Household, keys: list[str]) -> list[str]:
+    prefix = f"households/{book.code}/"
+    known = {photo.key for photo in book.photos}
+    fresh = []
+    for key in keys:
+        if not str(key).startswith(prefix) or key in known:
+            raise ValueError("Those files do not belong to this book.")
+        fresh.append(key)
+    return fresh
 
 
 class DynamoHouseholds:
@@ -151,7 +233,15 @@ class DynamoHouseholds:
 
         return boto3.resource("dynamodb").Table(self._table)
 
-    def create(self, *, sub: str, name: str, title: str) -> Household:
+    def create(
+        self,
+        *,
+        sub: str,
+        name: str,
+        title: str,
+        kind: str = "book",
+        layout: dict | None = None,
+    ) -> Household:
         code = _code()
         created = _now()
         table = self._dynamo()
@@ -160,16 +250,18 @@ class DynamoHouseholds:
             if "Item" not in existing:
                 break
             code = _code()
-        table.put_item(
-            Item={
-                "pk": f"HOUSE#{code}",
-                "sk": "META",
-                "title": title,
-                "owner": sub,
-                "ownerName": name,
-                "createdAt": created,
-            }
-        )
+        item = {
+            "pk": f"HOUSE#{code}",
+            "sk": "META",
+            "title": title,
+            "kind": kind,
+            "owner": sub,
+            "ownerName": name,
+            "createdAt": created,
+        }
+        if kind == "collage" and layout:
+            item["layout"] = layout
+        table.put_item(Item=item)
         self._member(code, sub, name, title)
         return Household(
             code=code,
@@ -177,6 +269,8 @@ class DynamoHouseholds:
             owner=sub,
             owner_name=name,
             created_at=created,
+            kind=kind,
+            layout=layout if kind == "collage" else None,
             members={sub: name},
         )
 
@@ -216,17 +310,21 @@ class DynamoHouseholds:
                 author_sub=str(item.get("authorSub") or ""),
                 author=str(item.get("author") or "Member"),
                 created_at=str(item.get("createdAt") or ""),
+                slot=_slot(item.get("slot")),
             )
             for item in items
             if str(item.get("sk", "")).startswith("PHOTO#")
         ]
         photos.sort(key=lambda photo: photo.created_at)
+        layout = meta.get("layout")
         return Household(
             code=code,
             title=str(meta.get("title") or "Family book"),
             owner=str(meta.get("owner") or ""),
             owner_name=str(meta.get("ownerName") or "Member"),
             created_at=str(meta.get("createdAt") or ""),
+            kind=str(meta.get("kind") or "book"),
+            layout=_plain(layout) if isinstance(layout, dict) else None,
             members=members,
             photos=photos,
         )
@@ -262,45 +360,79 @@ class DynamoHouseholds:
             return None
         return book
 
+    def set_layout(self, code: str, sub: str, layout: dict) -> Household | None:
+        book = self.get(code, sub)
+        if book is None:
+            return None
+        if book.kind != "collage":
+            raise ValueError("This is a family book, not a collage.")
+        frames = int(layout.get("frames") or 0)
+        if any(photo.slot is not None and photo.slot >= frames for photo in book.photos):
+            raise ValueError("A photo is sitting in a frame this layout does not have.")
+        self._dynamo().update_item(
+            Key={"pk": f"HOUSE#{book.code}", "sk": "META"},
+            UpdateExpression="SET layout = :layout",
+            ExpressionAttributeValues={":layout": layout},
+        )
+        return self.get(code, sub)
+
     def reserve(self, code: str, sub: str, count: int) -> list[str]:
         book = self.get(code, sub)
         if book is None:
             return []
-        if len(book.photos) + count > MAX_PHOTOS:
-            raise ValueError("This book already holds 80 photos.")
+        room_for(book, count)
         return [
             f"households/{book.code}/{uuid.uuid4()}.jpg" for _ in range(count)
         ]
 
-    def commit(self, code: str, sub: str, name: str, keys: list[str]) -> Household | None:
+    def commit(
+        self,
+        code: str,
+        sub: str,
+        name: str,
+        keys: list[str],
+        slots: list[int] | None = None,
+    ) -> Household | None:
         book = self.get(code, sub)
         if book is None:
             return None
-        prefix = f"households/{book.code}/"
-        known = {photo.key for photo in book.photos}
-        fresh = []
-        for key in keys:
-            if not str(key).startswith(prefix) or key in known:
-                raise ValueError("Those files do not belong to this book.")
-            fresh.append(key)
-        if len(book.photos) + len(fresh) > MAX_PHOTOS:
-            raise ValueError("This book already holds 80 photos.")
+        fresh = fresh_keys(book, keys)
+        room_for(book, len(fresh))
         table = self._dynamo()
-        for key in fresh:
+        for index, key in enumerate(fresh):
             created = _now()
             photo_id = key.rsplit("/", 1)[-1].split(".", 1)[0]
-            table.put_item(
-                Item={
-                    "pk": f"HOUSE#{book.code}",
-                    "sk": f"PHOTO#{created}#{photo_id}",
-                    "id": photo_id,
-                    "key": key,
-                    "authorSub": sub,
-                    "author": name,
-                    "createdAt": created,
-                }
-            )
+            wanted = slots[index] if slots else None
+            item = {
+                "pk": f"HOUSE#{book.code}",
+                "sk": f"PHOTO#{created}#{photo_id}",
+                "id": photo_id,
+                "key": key,
+                "authorSub": sub,
+                "author": name,
+                "createdAt": created,
+            }
+            if book.kind == "collage":
+                slot = book.place_slot(wanted)
+                item["slot"] = slot
+                book.photos.append(
+                    HouseholdPhoto(
+                        id=photo_id,
+                        key=key,
+                        author_sub=sub,
+                        author=name,
+                        created_at=created,
+                        slot=slot,
+                    )
+                )
+            table.put_item(Item=item)
         return self.get(code, sub)
+
+
+def _slot(value) -> int | None:
+    if value is None:
+        return None
+    return int(_plain(value))
 
 
 _memory = MemoryHouseholds()

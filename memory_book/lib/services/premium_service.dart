@@ -41,6 +41,14 @@ class PremiumState {
 
   static const free = PremiumState(isPremium: false, source: 'none');
 
+  /// Debug and profile only. A release build tree-shakes this and stays locked.
+  static PremiumState grantTester(PremiumState state, String? email) {
+    if (kReleaseMode) return state;
+    const tester = 'mobigaurav@gmail.com';
+    if (email?.trim().toLowerCase() != tester) return state;
+    return state.copyWith(isPremium: true, source: 'tester', clearError: true);
+  }
+
   PremiumState copyWith({
     bool? isPremium,
     String? source,
@@ -77,7 +85,13 @@ class PremiumService {
     if (Platform.isAndroid && AppConfig.revenueCatGoogleKey.isNotEmpty) {
       return AppConfig.revenueCatGoogleKey;
     }
-    return AppConfig.revenueCatApiKey;
+    if (AppConfig.revenueCatApiKey.isNotEmpty) {
+      return AppConfig.revenueCatApiKey;
+    }
+    // Test Store only. A release build never reads the key below.
+    if (kReleaseMode) return '';
+    const testStore = 'test_OJvjKaIDxnpJPYCjJHkAYhraEZQ';
+    return testStore;
   }
 
   Future<void> _ensureConfigured() async {
@@ -153,15 +167,15 @@ class PremiumService {
       await _ensureConfigured();
       final offerings = await Purchases.getOfferings();
       final packages = offerings.current?.availablePackages ?? [];
+      final plans = packages.where((pkg) => !_isLifetime(pkg)).toList();
       Package? pkg;
-      for (final candidate in packages) {
+      for (final candidate in plans) {
         if (candidate.identifier == planId) pkg = candidate;
       }
-      pkg ??= offerings.current?.annual ??
-          (packages.isEmpty ? null : packages.first);
-      if (pkg == null) {
+      pkg ??= offerings.current?.annual ?? offerings.current?.monthly;
+      if (pkg == null || _isLifetime(pkg)) {
         throw StateError(
-          'No RevenueCat packages. Add annual and monthly to the current offering.',
+          'No monthly or yearly plan. Add those two to the current offering.',
         );
       }
       await Purchases.purchase(PurchaseParams.package(pkg));
@@ -222,12 +236,26 @@ class PremiumService {
           'No five-clip pack. Add ${AppConfig.creditPackProductId} to the current offering.',
         );
       }
-      final result = await Purchases.purchase(PurchaseParams.package(pkg));
-      final id = result.storeTransaction.transactionIdentifier;
-      return PackPurchase(
-        state: await refresh(),
-        transactionId: id.isEmpty ? null : id,
-      );
+      final product = pkg.storeProduct;
+      PurchaseResult result;
+      try {
+        result = await Purchases.purchase(PurchaseParams.package(pkg));
+      } on PlatformException catch (e) {
+        if (PurchasesErrorHelper.getErrorCode(e) ==
+            PurchasesErrorCode.purchaseCancelledError) {
+          rethrow;
+        }
+        result = await Purchases.purchase(PurchaseParams.storeProduct(product));
+      }
+      final id = _creditTransactionId(result, product.identifier);
+      if (id == null) {
+        return PackPurchase(
+          state: (await refresh()).copyWith(
+            error: 'The five-clip purchase finished without a receipt.',
+          ),
+        );
+      }
+      return PackPurchase(state: await refresh(), transactionId: id);
     } on PlatformException catch (e) {
       if (PurchasesErrorHelper.getErrorCode(e) ==
           PurchasesErrorCode.purchaseCancelledError) {
@@ -239,6 +267,21 @@ class PremiumService {
     } catch (e) {
       return PackPurchase(state: (await refresh()).copyWith(error: e.toString()));
     }
+  }
+
+  String? _creditTransactionId(PurchaseResult result, String productId) {
+    final direct = result.storeTransaction;
+    if (direct.transactionIdentifier.isNotEmpty &&
+        direct.productIdentifier == productId) {
+      return direct.transactionIdentifier;
+    }
+    for (final tx in result.customerInfo.nonSubscriptionTransactions.reversed) {
+      if (tx.productIdentifier == productId && tx.transactionIdentifier.isNotEmpty) {
+        return tx.transactionIdentifier;
+      }
+    }
+    if (direct.transactionIdentifier.isNotEmpty) return direct.transactionIdentifier;
+    return null;
   }
 
   Package? _creditPackage(Offerings offerings) {
@@ -259,7 +302,9 @@ class PremiumService {
   List<PremiumPlan> _plansFrom(Offerings offerings) {
     final packages = (offerings.current?.availablePackages ?? [])
         .where(
-          (pkg) => pkg.storeProduct.identifier != AppConfig.creditPackProductId,
+          (pkg) =>
+              pkg.storeProduct.identifier != AppConfig.creditPackProductId &&
+              !_isLifetime(pkg),
         )
         .toList();
     final plans = packages.map(_planFromPackage).toList();
@@ -270,17 +315,20 @@ class PremiumService {
     return plans;
   }
 
+  bool _isLifetime(Package pkg) {
+    final product = pkg.storeProduct.identifier.toLowerCase();
+    return pkg.packageType == PackageType.lifetime || product == 'lifetime';
+  }
+
   PremiumPlan _planFromPackage(Package pkg) {
-    final annual = pkg.packageType == PackageType.annual;
-    final monthly = pkg.packageType == PackageType.monthly;
-    final title = annual
-        ? 'Annual'
-        : monthly
-            ? 'Monthly'
-            : pkg.storeProduct.title;
+    final product = pkg.storeProduct.identifier.toLowerCase();
+    final annual = pkg.packageType == PackageType.annual ||
+        product == 'yearly' ||
+        product == 'annual';
+    final monthly = pkg.packageType == PackageType.monthly || product == 'monthly';
     return PremiumPlan(
       id: pkg.identifier,
-      title: title,
+      title: annual ? 'Annual' : monthly ? 'Monthly' : pkg.storeProduct.title,
       priceLabel: pkg.storeProduct.priceString,
       detail: annual ? 'Best for a family shelf' : 'Cancel anytime',
       annual: annual,

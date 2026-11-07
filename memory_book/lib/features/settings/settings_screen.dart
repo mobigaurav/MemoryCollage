@@ -38,7 +38,7 @@ class SettingsScreen extends ConsumerWidget {
     final session = ref.watch(authSessionProvider).value;
     final credits = ref.watch(creditBalanceProvider).value ?? 0;
     return Scaffold(
-      backgroundColor: MbTokens.cream,
+      backgroundColor: Colors.transparent,
       body: ListView(
         padding: EdgeInsets.zero,
         children: [
@@ -238,8 +238,10 @@ class _Panel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(MbTokens.radiusLg),
+      color: MbTokens.glass,
+      elevation: 6,
+      shadowColor: const Color(0x40301810),
+      shape: MbTokens.glassShape(MbTokens.radiusLg),
       clipBehavior: Clip.antiAlias,
       child: child,
     );

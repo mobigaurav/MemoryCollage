@@ -27,11 +27,11 @@ class ReelRecord {
     return p.join(root, 'reels', fileName);
   }
 
-  ReelRecord copyWith({String? title}) {
+  ReelRecord copyWith({String? title, String? fileName}) {
     return ReelRecord(
       id: id,
       title: title ?? this.title,
-      fileName: fileName,
+      fileName: fileName ?? this.fileName,
       createdAt: createdAt,
       kind: kind,
     );
@@ -91,29 +91,61 @@ class ReelLibrary {
     }
   }
 
-  Future<void> keep({
+  Future<Directory> _reelDir() async {
+    if (PhotoFiles.documentsRoot == null) await PhotoFiles.warm();
+    final dir = Directory(p.join(PhotoFiles.documentsRoot!, 'reels'));
+    if (!await dir.exists()) await dir.create(recursive: true);
+    return dir;
+  }
+
+  Future<ReelRecord> keep({
     required File source,
     required String title,
     required String kind,
   }) async {
-    if (PhotoFiles.documentsRoot == null) await PhotoFiles.warm();
-    final dir = Directory(p.join(PhotoFiles.documentsRoot!, 'reels'));
-    if (!await dir.exists()) await dir.create(recursive: true);
+    final dir = await _reelDir();
     final id = _uuid.v4();
     final name = '$id.mp4';
     await source.copy(p.join(dir.path, name));
     final rows = settleReelTitles(await _read());
-    final next = [
-      ReelRecord(
-        id: id,
-        title: nextReelTitle(rows, title),
-        fileName: name,
-        createdAt: DateTime.now(),
-        kind: kind,
-      ),
-      ...rows,
-    ];
-    await _write(next);
+    final record = ReelRecord(
+      id: id,
+      title: nextReelTitle(rows, title),
+      fileName: name,
+      createdAt: DateTime.now(),
+      kind: kind,
+    );
+    await _write([record, ...rows]);
+    return record;
+  }
+
+  /// Puts a new cut of the same reel in place. The id and the name stay.
+  Future<ReelRecord?> replaceVideo(String id, File source) async {
+    final rows = await load();
+    final index = rows.indexWhere((row) => row.id == id);
+    if (index < 0) return null;
+    final old = rows[index];
+    final dir = await _reelDir();
+    final name = '$id-${DateTime.now().millisecondsSinceEpoch}.mp4';
+    await source.copy(p.join(dir.path, name));
+    final next = old.copyWith(fileName: name);
+    rows[index] = next;
+    await _write(rows);
+    final previous = File(old.path);
+    if (await previous.exists()) await previous.delete();
+    return next;
+  }
+
+  Future<ReelRecord?> rename(String id, String title) async {
+    final clean = title.trim();
+    if (clean.isEmpty) return null;
+    final rows = await _read();
+    final index = rows.indexWhere((row) => row.id == id);
+    if (index < 0) return null;
+    final next = rows[index].copyWith(title: clean);
+    rows[index] = next;
+    await _write(rows);
+    return next;
   }
 
   Future<void> remove(String id) async {

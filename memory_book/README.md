@@ -19,20 +19,14 @@ Planning (source of truth for what we are building):
 
 ## Run
 
-Flutter is not required as a global install. This repo vendors the SDK at `.tools/flutter` (gitignored). From `memory_book`:
+Setup, simulator, Xcode, and store commands are in the [repo README](../README.md). From this directory the day-to-day Debug run is:
 
 ```bash
 ./flutterw pub get
 ./flutterw run
 ```
 
-Or put it on your PATH for this terminal session:
-
-```bash
-export PATH="/Users/gauravkumar/Desktop/project/MemoryCollage/.tools/flutter/bin:$PATH"
-flutter pub get
-flutter run
-```
+`r` hot reloads, `R` restarts, `q` quits. `./flutterw run --profile` does not hot reload.
 
 The first onboarding pass demos the page-turn. Create a book from the shelf. Tap empty photo corners to fill a page. Finished films and AI clips live on the Reels tab.
 
@@ -41,14 +35,14 @@ The first onboarding pass demos the page-turn. Create a book from the shelf. Tap
 Pass dart-defines when you have keys:
 
 ```bash
-flutter run --dart-define=REVENUECAT_APPLE_KEY=appl_xxx \
-            --dart-define=REVENUECAT_GOOGLE_KEY=goog_xxx \
-            --dart-define=GOOGLE_SERVER_CLIENT_ID=....apps.googleusercontent.com
+./flutterw run --dart-define=REVENUECAT_APPLE_KEY=appl_xxx \
+               --dart-define=REVENUECAT_GOOGLE_KEY=goog_xxx \
+               --dart-define=GOOGLE_SERVER_CLIENT_ID=....apps.googleusercontent.com
 ```
 
 The API URL, Cognito client id, and region already live in `lib/core/config.dart`. `bash flutterw run` signs up through that pool. Do not reuse another product’s pool.
 
-`REVENUECAT_API_KEY` still works as a single-key fallback. The current offering should include an **annual** package (primary) and a **monthly** package, both granting the `premium` entitlement.
+`REVENUECAT_API_KEY` still works as a single-key fallback. Debug and profile already use Memory Book’s RevenueCat Test Store key, so `./flutterw run` can load offerings without those defines. A release build ignores that test key and stays disconnected until the `appl_` and `goog_` keys are passed. The plans are monthly, yearly, and the five-clip pack. Both subscriptions grant `memorycollage_pro`. The pack does not. Lifetime is not a plan.
 
 Dev unlock stays available until a store build passes `--dart-define=DEV_UNLOCK=false`. Without a RevenueCat key, the paywall's **Dev unlock** stores a local entitlement so you can test watermark removal.
 
@@ -61,5 +55,5 @@ See [store/ASO.md](store/ASO.md) and [store/PRIVACY.md](store/PRIVACY.md).
 ## Tests
 
 ```bash
-flutter test
+./flutterw test
 ```

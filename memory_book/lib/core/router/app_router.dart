@@ -102,7 +102,20 @@ GoRouter createRouter() {
       GoRoute(
         parentNavigatorKey: _rootKey,
         path: '/collage',
-        builder: (context, state) => const CollageStudioScreen(),
+        builder: (context, state) {
+          final extra = state.extra;
+          return CollageStudioScreen(
+            initialPhotos: extra is CollageSeed ? extra.photos : const [],
+            caption: extra is CollageSeed ? extra.caption : null,
+            packId: extra is CollageSeed ? extra.packId : null,
+            slots: extra is CollageSeed ? extra.slots : const [],
+            remoteKeys: extra is CollageSeed ? extra.remoteKeys : const [],
+            templateId: extra is CollageSeed ? extra.templateId : null,
+            paper: extra is CollageSeed ? extra.paper : null,
+            background: extra is CollageSeed ? extra.background : null,
+            householdCode: extra is CollageSeed ? extra.householdCode : null,
+          );
+        },
       ),
       GoRoute(
         parentNavigatorKey: _rootKey,

@@ -7,9 +7,11 @@ import 'data/repositories/draft_repository.dart';
 import 'data/repositories/settings_repository.dart';
 import 'services/auth_ai.dart';
 import 'services/book_export.dart';
+import 'services/collage_reel.dart';
 import 'services/community_api.dart';
 import 'services/credit_ledger.dart';
 import 'services/household_api.dart';
+import 'services/voice_notes.dart';
 import 'services/export_history.dart';
 import 'services/export_service.dart';
 import 'services/local_notify.dart';
@@ -76,6 +78,20 @@ final slideshowExporterProvider = Provider<SlideshowExporter>(
   (ref) => SlideshowExporter(ref.watch(nativeEncoderProvider)),
 );
 
+final collageReelProvider = Provider<CollageReel>(
+  (ref) => CollageReel(
+    ref.watch(exportServiceProvider),
+    ref.watch(slideshowExporterProvider),
+  ),
+);
+
+/// Null until the person allows the photo library. The card asks on tap, never on open.
+final onThisDayProvider = FutureProvider<OnThisDay?>((ref) async {
+  final photos = ref.watch(photoServiceProvider);
+  if (!await photos.hasLibraryAccess()) return null;
+  return photos.onThisDay();
+});
+
 final creditLedgerProvider = Provider<CreditLedger>(
   (ref) => CreditLedger(ref.watch(appDatabaseProvider)),
 );
@@ -109,7 +125,8 @@ class PremiumController extends Notifier<PremiumState> {
   PremiumState build() {
     final service = ref.read(premiumServiceProvider);
     service.listen((info) async {
-      state = service.applyCustomer(info, state);
+      if (!ref.mounted) return;
+      await _publish(service.applyCustomer(info, state));
     });
     ref.listen(authSessionProvider, (previous, next) {
       if (next.isLoading) return;
@@ -122,7 +139,7 @@ class PremiumController extends Notifier<PremiumState> {
       Future<void>(() async {
         await _bindStore(session);
         if (!ref.mounted) return;
-        state = await ref.read(premiumServiceProvider).refresh();
+        await refresh();
       });
     });
     Future.microtask(() async {
@@ -144,19 +161,25 @@ class PremiumController extends Notifier<PremiumState> {
     } catch (_) {}
   }
 
+  Future<void> _publish(PremiumState next) async {
+    final session = await ref.read(authRepositoryProvider).current();
+    if (!ref.mounted) return;
+    state = PremiumState.grantTester(next, session?.email);
+  }
+
   Future<void> refresh() async {
-    state = await ref.read(premiumServiceProvider).refresh();
+    await _publish(await ref.read(premiumServiceProvider).refresh());
   }
 
   Future<void> purchase([String? planId]) async {
     final id = planId ??
         state.plans.where((p) => p.annual).firstOrNull?.id ??
         (state.plans.isEmpty ? 'dev_annual' : state.plans.first.id);
-    state = await ref.read(premiumServiceProvider).purchase(id);
+    await _publish(await ref.read(premiumServiceProvider).purchase(id));
   }
 
   Future<void> restore() async {
-    state = await ref.read(premiumServiceProvider).restore();
+    await _publish(await ref.read(premiumServiceProvider).restore());
   }
 
   Future<void> buyCreditPack() async {
@@ -169,7 +192,7 @@ class PremiumController extends Notifier<PremiumState> {
         await ledger.grant(AppConfig.creditPackSize, reason);
       }
     }
-    state = result.state;
+    await _publish(result.state);
   }
 }
 
@@ -199,4 +222,8 @@ final communityApiProvider = Provider<CommunityApi>(
 
 final householdApiProvider = Provider<HouseholdApi>(
   (ref) => HouseholdApi(ref.watch(settingsRepositoryProvider)),
+);
+
+final voiceNoteApiProvider = Provider<VoiceNoteApi>(
+  (ref) => VoiceNoteApi(ref.watch(settingsRepositoryProvider)),
 );

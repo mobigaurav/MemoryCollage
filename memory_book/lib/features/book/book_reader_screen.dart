@@ -947,8 +947,8 @@ class _SlotEditorSheetState extends ConsumerState<SlotEditorSheet> {
       prompt: prompt,
     );
     if (!mounted) return;
-    if (result.ok && result.videoUrl != null && result.videoUrl!.isNotEmpty) {
-      if (mounted) Navigator.pop(context);
+    if (result.ok) {
+      Navigator.pop(context);
       return;
     }
     if (result.message?.startsWith('Sign in') == true) {

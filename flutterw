@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# Run Flutter from the repo root. The app itself stays in memory_book.
+set -euo pipefail
+ROOT="$(cd "$(dirname "$0")" && pwd)"
+cd "$ROOT/memory_book"
+exec ./flutterw "$@"

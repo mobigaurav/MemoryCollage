@@ -14,6 +14,16 @@ import 'package:memory_book/services/photo_files.dart';
 import 'package:memory_book/services/cognito_auth.dart';
 import 'package:memory_book/domain/year_film.dart';
 import 'package:memory_book/services/reel_library.dart';
+import 'package:memory_book/services/photo_service.dart';
+import 'package:memory_book/domain/collage_paper.dart';
+import 'package:memory_book/domain/collage_sizes.dart';
+import 'package:memory_book/domain/event_pick.dart';
+import 'package:memory_book/domain/family_collage.dart';
+import 'package:memory_book/domain/theme_packs.dart';
+import 'package:memory_book/features/collage/collage_studio_screen.dart';
+import 'package:memory_book/features/memories/event_collage.dart';
+import 'package:flutter/material.dart' show DateTimeRange;
+import 'package:photo_manager/photo_manager.dart';
 
 void main() {
   test('catalog has a deep unique template library', () {
@@ -90,7 +100,14 @@ void main() {
     expect(copy!.photos.length, 2);
     expect(copy.stickers.single.kind, StickerKind.film);
     expect(copy.texts.single.text, 'June');
-    expect(StickerKind.values.map((s) => s.name).toSet().length, 6);
+    expect(StickerKind.values.map((s) => s.name).toSet().length, StickerKind.values.length);
+    for (final group in StickerGroup.values) {
+      expect(StickerKind.values.where((s) => s.group == group), isNotEmpty);
+    }
+    final word = PlacedSticker.fromJson(
+      PlacedSticker(kind: StickerKind.word, text: 'Best day').toJson(),
+    );
+    expect(word.text, 'Best day');
   });
 
   test('cognito errors stay readable', () {
@@ -210,5 +227,147 @@ void main() {
       2025,
     );
     expect(yearWorthFilming({2026: 1, 2025: 2}, now: 2026), isNull);
+  });
+
+  test('on this day picks across the years, oldest first', () {
+    AssetEntity a(String id) => AssetEntity(id: id, typeInt: 1, width: 1, height: 1);
+    final day = OnThisDay(
+      widened: false,
+      years: [
+        DayMemory(year: 2025, assets: [a('25a'), a('25b'), a('25c')]),
+        DayMemory(year: 2020, assets: [a('20a')]),
+      ],
+    );
+    expect(day.count, 4);
+    expect(day.pick(3).map((e) => e.id), ['20a', '25a', '25b']);
+    expect(day.pick(10).length, 4);
+  });
+
+  test('a seeded collage lands on a free layout that exists', () {
+    for (var count = 1; count <= 9; count++) {
+      final id = seedTemplateFor(count);
+      final template = CollageCatalog.byId(id);
+      expect(template.id, id);
+      expect(template.premium, isFalse);
+    }
+  });
+
+  test('an event keeps one frame per burst, drops screenshots, keeps favorites', () {
+    final start = DateTime(2026, 10, 10, 9);
+    EventPhoto<String> at(String id, int seconds,
+            {int pixels = 100, bool favorite = false, bool screenshot = false}) =>
+        EventPhoto(
+          ref: id,
+          taken: start.add(Duration(seconds: seconds)),
+          pixels: pixels,
+          favorite: favorite,
+          screenshot: screenshot,
+        );
+    expect(
+      pickEventPhotos([
+        at('burst-small', 0),
+        at('burst-big', 5, pixels: 400),
+        at('burst-late', 20),
+        at('screen', 600, screenshot: true),
+        at('lunch', 3600),
+      ]),
+      ['burst-big', 'lunch'],
+    );
+    expect(
+      pickEventPhotos([at('a', 0), at('b', 10, favorite: true)]),
+      ['b'],
+    );
+    final day = [for (var i = 0; i < 40; i++) at('p$i', i * 600, favorite: i == 17)];
+    final picked = pickEventPhotos(day);
+    expect(picked.length, 9);
+    expect(picked, contains('p17'));
+    expect(picked.first, 'p0');
+    expect(eventCollageSize(8), 6);
+    expect(eventCollageSize(4), 4);
+  });
+
+  test('theme packs use real stickers and papers, and switching swaps only pack stickers', () {
+    expect(ThemePacks.all.where((p) => !p.premium).length, greaterThanOrEqualTo(2));
+    expect(ThemePacks.all.map((p) => p.id).toSet().length, ThemePacks.all.length);
+    for (final pack in ThemePacks.all) {
+      final placed = pack.placed();
+      expect(placed.every((s) => s.pack), isTrue);
+      expect(placed.last.text, pack.caption);
+      for (final s in placed) {
+        expect(s.nx, inInclusiveRange(0, 1));
+        expect(s.ny, inInclusiveRange(0, 1));
+      }
+    }
+    final mine = PlacedSticker(kind: StickerKind.heart);
+    final round = PlacedSticker.fromJson(ThemePacks.byId('travel')!.placed().first.toJson());
+    expect(round.pack, isTrue);
+    expect(PlacedSticker.fromJson(mine.toJson()).pack, isFalse);
+    final draft = CollageDraft.fromJson(
+      CollageDraft(
+        templateId: 'grid_2x2',
+        background: 0,
+        photos: const [],
+        stickers: const [],
+        texts: const [],
+        paper: 'kraft',
+        packId: 'travel',
+      ).toJson(),
+    )!;
+    expect(CollagePaper.fromId(draft.paper), CollagePaper.kraft);
+    expect(draft.packId, 'travel');
+    expect(CollagePaper.fromId('nope'), CollagePaper.plain);
+    final ink = PlacedInk.fromJson(
+      PlacedInk(strokes: const [
+        [InkDot(0.1, 0.2), InkDot(0.4, 0.8)],
+      ]).toJson(),
+    );
+    expect(ink.strokes.single.last.x, 0.4);
+    final voice = PlacedVoice.fromJson(PlacedVoice(url: 'https://example.test/v1/notes/1').toJson());
+    expect(voice.url, endsWith('/1'));
+  });
+
+  test('print and instagram sizes keep their shape and their guides', () {
+    expect(CollageSizes.byId('High').width, 2160);
+    expect(CollageSizes.byId('High').premium, isTrue);
+    expect(CollageSizes.byId('missing').id, 'High');
+    final story = CollageSizes.instagramStory;
+    expect(story.aspect, closeTo(1080 / 1920, 0.001));
+    expect(story.safeTop, greaterThan(0));
+    expect(story.safeBottom, greaterThan(story.safeTop));
+    final photo = CollageSizes.print4x6;
+    expect(photo.width, 1200);
+    expect(photo.height, 1800);
+    expect(photo.pageInchesWide, 4);
+    expect(photo.hasSafeZone, isTrue);
+    expect(CollageSizes.instagramSquare.hasSafeZone, isFalse);
+    expect(CollageSizes.instagramPortrait.safeTop, closeTo(0.10, 0.001));
+  });
+
+  test('a family collage keeps empty frames open', () {
+    expect(openCollageSlots(frameCount: 4, taken: [0, null, 2, 9]), [1, 3]);
+    expect(openCollageSlots(frameCount: 2, taken: [0, 1]), isEmpty);
+    final layout = SharedCollageLayout.fromJson({
+      'templateId': 'grid_2x2',
+      'background': 1,
+      'paper': 'linen',
+      'frames': 4,
+      'packId': 'travel',
+    })!;
+    expect(SharedCollageLayout.fromJson(layout.toJson())!.packId, 'travel');
+    expect(SharedCollageLayout.fromJson(null), isNull);
+  });
+
+  test('event labels read like a calendar', () {
+    expect(
+      eventLabel(DateTimeRange(start: DateTime(2026, 10, 12), end: DateTime(2026, 10, 14))),
+      'Oct 12–14',
+    );
+    expect(
+      eventLabel(DateTimeRange(start: DateTime(2026, 10, 30), end: DateTime(2026, 11, 2))),
+      'Oct 30 – Nov 2',
+    );
+    final weekend = lastWeekend(DateTime(2026, 11, 6));
+    expect(weekend.start, DateTime(2026, 10, 31));
+    expect(weekend.end, DateTime(2026, 11, 1));
   });
 }

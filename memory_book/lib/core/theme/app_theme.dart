@@ -92,7 +92,14 @@ abstract final class MbTheme {
     return base.copyWith(
       scaffoldBackgroundColor: Colors.transparent,
       canvasColor: MbTokens.cream,
-      cardColor: Colors.white,
+      cardColor: MbTokens.glass,
+      cardTheme: CardThemeData(
+        color: MbTokens.glass,
+        elevation: 8,
+        shadowColor: const Color(0x40301810),
+        surfaceTintColor: Colors.transparent,
+        shape: MbTokens.glassShape(MbTokens.radiusLg),
+      ),
       textTheme: text,
       primaryTextTheme: text,
       iconTheme: IconThemeData(color: ink, size: 24),
@@ -185,7 +192,7 @@ abstract final class MbTheme {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: dark ? MbTokens.leather : Colors.white,
+        fillColor: dark ? MbTokens.leather : MbTokens.glass,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
         labelStyle: _sans.copyWith(color: muted, fontSize: 15),
         hintStyle: _sans.copyWith(color: MbTokens.caption),
@@ -195,7 +202,7 @@ abstract final class MbTheme {
         ),
       ),
       chipTheme: ChipThemeData(
-        backgroundColor: dark ? MbTokens.leather : Colors.white,
+        backgroundColor: dark ? MbTokens.leather : MbTokens.glass,
         selectedColor: dark ? MbTokens.foil : MbTokens.leather,
         labelStyle: _sans.copyWith(fontSize: 15, color: ink),
         secondaryLabelStyle: _sans.copyWith(
@@ -222,7 +229,9 @@ abstract final class MbTheme {
       ),
       navigationBarTheme: NavigationBarThemeData(
         height: 76,
-        backgroundColor: Color(0xFFFFFBF6),
+        backgroundColor: Color(0xD9FFFBF6),
+        elevation: 12,
+        shadowColor: Color(0x334A2C1A),
         indicatorColor: MbTokens.leather,
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           final selected = states.contains(WidgetState.selected);
