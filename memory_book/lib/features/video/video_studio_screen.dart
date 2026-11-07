@@ -15,6 +15,7 @@ import '../../domain/collage_craft.dart';
 import '../../domain/media_options.dart';
 import '../../providers.dart';
 import '../../services/slideshow_exporter.dart';
+import '../../widgets/film_player.dart';
 import '../../widgets/local_photo.dart';
 
 class VideoStudioScreen extends ConsumerStatefulWidget {
@@ -97,7 +98,7 @@ class _VideoStudioScreenState extends ConsumerState<VideoStudioScreen> {
         title: const Text('Memory film'),
       ),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
         children: [
           Text(
             'A film from stills you already chose.',
@@ -214,20 +215,33 @@ class _VideoStudioScreenState extends ConsumerState<VideoStudioScreen> {
           ),
           Text(
             _customMusic == null
-                ? 'Score  $_musicIndex.mp3'
+                ? SlideshowExporter.musicName(_musicIndex - 1)
                 : 'Your track  ${p.basename(_customMusic!)}',
+            style: const TextStyle(
+              fontFamily: MbTokens.sans,
+              fontWeight: FontWeight.w600,
+              color: MbTokens.ink,
+            ),
           ),
           if (_customMusic == null)
-            Slider(
-              value: _musicIndex.toDouble(),
-              min: 1,
-              max: 11,
-              divisions: 10,
-              onChanged: (v) {
-                setState(() => _musicIndex = v.round());
+            DropdownButton<int>(
+              value: _musicIndex,
+              isExpanded: true,
+              dropdownColor: Colors.white,
+              items: [
+                for (var i = 0; i < SlideshowExporter.musicNames.length; i++)
+                  DropdownMenuItem(
+                    value: i + 1,
+                    child: Text(SlideshowExporter.musicName(i)),
+                  ),
+              ],
+              onChanged: (value) {
+                if (value == null) return;
+                setState(() => _musicIndex = value);
                 _scheduleSave();
               },
             ),
+          const SizedBox(height: 12),
           OutlinedButton.icon(
             onPressed: _pickMusic,
             icon: const Icon(Icons.library_music_outlined),
@@ -239,20 +253,16 @@ class _VideoStudioScreenState extends ConsumerState<VideoStudioScreen> {
                 setState(() => _customMusic = null);
                 _scheduleSave();
               },
-              child: const Text('Back to bundled scores'),
+              child: const Text('Use the included music'),
             ),
+          const SizedBox(height: 16),
           FilledButton(
             onPressed: _photos.isEmpty || _busy ? null : _generate,
             child: Text(_busy ? 'Cutting the film…' : 'Generate video'),
           ),
           if (_output != null) ...[
             const SizedBox(height: 16),
-            AspectRatio(
-              aspectRatio: _aspect.ratio,
-              child: _player == null
-                  ? const ColoredBox(color: Colors.black)
-                  : VideoPlayer(_player!),
-            ),
+            if (_player != null) MbFilmPlayer(controller: _player!),
             const SizedBox(height: 8),
             Row(
               children: [
@@ -342,9 +352,9 @@ class _VideoStudioScreenState extends ConsumerState<VideoStudioScreen> {
       _player = VideoPlayerController.file(file);
       await _player!.initialize();
       await ref.read(nativeEncoderProvider).preparePlayback();
-      await _player!.setLooping(true);
+      await _player!.setLooping(false);
       await _player!.setVolume(1);
-      await _player!.play();
+      await _player!.pause();
       setState(() => _output = file.path);
       if (!file.path.contains('.mixed.') && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

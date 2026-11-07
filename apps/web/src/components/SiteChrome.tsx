@@ -24,7 +24,7 @@ export function SiteFooter() {
       <nav className="nav">
         <Link href="/privacy">Privacy</Link>
         <Link href="/terms">Terms</Link>
-        <a href={`mailto:${site.supportEmail}`}>Email</a>
+        <a href={`mailto:${site.supportEmail}`}>{site.supportEmail}</a>
       </nav>
     </footer>
   );

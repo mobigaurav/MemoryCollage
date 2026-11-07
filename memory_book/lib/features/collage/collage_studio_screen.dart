@@ -33,7 +33,7 @@ class _CollageStudioScreenState extends ConsumerState<CollageStudioScreen> {
   String _templateId = 'grid_2x2';
   CollageShelf _shelf = CollageShelf.grids;
   Color _background = MbTokens.paper;
-  List<PlacedPhoto> _photos = [];
+  List<PlacedPhoto?> _photos = [];
   final _stickers = <PlacedSticker>[];
   final _texts = <PlacedText>[];
   String _format = 'JPEG';
@@ -76,7 +76,8 @@ class _CollageStudioScreenState extends ConsumerState<CollageStudioScreen> {
       _templateId = draft.templateId;
       _shelf = CollageCatalog.byId(draft.templateId).shelf;
       _background = Color(draft.background);
-      _photos = draft.photos;
+      _photos = _slotsFrom(draft.photos);
+      _padFrames();
       _stickers
         ..clear()
         ..addAll(draft.stickers);
@@ -86,6 +87,42 @@ class _CollageStudioScreenState extends ConsumerState<CollageStudioScreen> {
       _format = draft.format;
       _resolution = draft.resolution;
     });
+  }
+
+  bool get _hasPhoto => _photos.any((photo) => photo != null);
+
+  List<PlacedPhoto?> _slotsFrom(List<PlacedPhoto> photos) {
+    if (_template.kind == CollageKind.freeform) return [...photos];
+    final slots = List<PlacedPhoto?>.filled(
+      _template.frames.length,
+      null,
+      growable: true,
+    );
+    var fallback = 0;
+    for (final photo in photos) {
+      final slot = photo.slot ?? fallback;
+      fallback++;
+      if (slot < 0) continue;
+      while (slots.length <= slot) {
+        slots.add(null);
+      }
+      slots[slot] = photo;
+    }
+    return slots;
+  }
+
+  void _padFrames() {
+    if (_template.kind == CollageKind.freeform) {
+      _photos = _photos.whereType<PlacedPhoto>().toList();
+      return;
+    }
+    final count = _template.frames.length;
+    if (_photos.length < count) {
+      _photos = [
+        ..._photos,
+        for (var i = _photos.length; i < count; i++) null,
+      ];
+    }
   }
 
   String _shelfLabel(CollageShelf shelf) => switch (shelf) {
@@ -116,6 +153,7 @@ class _CollageStudioScreenState extends ConsumerState<CollageStudioScreen> {
     final index = _selectedPhoto;
     if (index == null || index >= _photos.length) return;
     final photo = _photos[index];
+    if (photo == null) return;
     if (_template.kind == CollageKind.freeform ||
         index >= _template.frames.length) {
       setState(() => photo.scale = 1);
@@ -140,13 +178,13 @@ class _CollageStudioScreenState extends ConsumerState<CollageStudioScreen> {
 
   Future<void> _enhanceSelected() async {
     final index = _selectedPhoto;
-    if (index == null) return;
+    if (index == null || index >= _photos.length || _photos[index] == null) return;
+    final photo = _photos[index]!;
     if (!ref.read(premiumControllerProvider).isPremium) {
       context.push('/paywall');
       return;
     }
     setState(() {
-      final photo = _photos[index];
       photo.filter = photo.filter == PhotoFilterId.enhance.name
           ? PhotoFilterId.none.name
           : PhotoFilterId.enhance.name;
@@ -157,8 +195,8 @@ class _CollageStudioScreenState extends ConsumerState<CollageStudioScreen> {
 
   Future<void> _bringSelectedToLife() async {
     final index = _selectedPhoto;
-    if (index == null) return;
-    final path = _photos[index].path;
+    if (index == null || index >= _photos.length || _photos[index] == null) return;
+    final path = _photos[index]!.path;
     final choice = await showModalBottomSheet<String>(
       context: context,
       backgroundColor: MbTokens.cream,
@@ -269,7 +307,10 @@ class _CollageStudioScreenState extends ConsumerState<CollageStudioScreen> {
             CollageDraft(
               templateId: _templateId,
               background: _background.toARGB32(),
-              photos: _photos,
+              photos: [
+                for (var i = 0; i < _photos.length; i++)
+                  if (_photos[i] != null) (_photos[i]!..slot = i),
+              ],
               stickers: _stickers,
               texts: _texts,
               format: _format,
@@ -384,7 +425,10 @@ class _CollageStudioScreenState extends ConsumerState<CollageStudioScreen> {
                       context.push('/paywall');
                       return;
                     }
-                    setState(() => _templateId = t.id);
+                    setState(() {
+                      _templateId = t.id;
+                      _padFrames();
+                    });
                     _scheduleSave();
                   },
                   child: AnimatedContainer(
@@ -452,20 +496,20 @@ class _CollageStudioScreenState extends ConsumerState<CollageStudioScreen> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: FilledButton(
-                    onPressed: _photos.isEmpty || _busy ? null : _export,
+                    onPressed: !_hasPhoto || _busy ? null : _export,
                     child: Text(_busy ? 'Rendering…' : 'Save'),
                   ),
                 ),
                 IconButton(
                   tooltip: 'Print',
-                  onPressed: _photos.isEmpty || _busy
+                  onPressed: !_hasPhoto || _busy
                       ? null
                       : () => _export(toPrinter: true),
                   icon: const Icon(Icons.print_outlined),
                 ),
                 IconButton(
                   tooltip: 'Share',
-                  onPressed: _photos.isEmpty || _busy
+                  onPressed: !_hasPhoto || _busy
                       ? null
                       : () => _export(share: true),
                   icon: const Icon(Icons.ios_share),
@@ -487,13 +531,34 @@ class _CollageStudioScreenState extends ConsumerState<CollageStudioScreen> {
       norm.width * canvas.width,
       norm.height * canvas.height,
     );
-    if (index >= _photos.length) {
+    final photo = index < _photos.length ? _photos[index] : null;
+    if (photo == null) {
       return Positioned.fromRect(
         rect: rect,
-        child: const ColoredBox(color: Color(0x14000000)),
+        child: Material(
+          color: const Color(0x14000000),
+          child: InkWell(
+            onTap: () => _placeInFrame(index),
+            child: const Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.add_photo_alternate_outlined, color: MbTokens.leather),
+                SizedBox(height: 4),
+                Text(
+                  'Add photo',
+                  style: TextStyle(
+                    fontFamily: MbTokens.sans,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: MbTokens.ink,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       );
     }
-    final photo = _photos[index];
     return Positioned.fromRect(
       rect: rect,
         child: Stack(
@@ -533,6 +598,20 @@ class _CollageStudioScreenState extends ConsumerState<CollageStudioScreen> {
                 ),
               ),
             ),
+            Positioned(
+              top: 4,
+              left: 4,
+              child: IconButton(
+                tooltip: 'Replace photo',
+                onPressed: () => _placeInFrame(index),
+                style: IconButton.styleFrom(
+                  backgroundColor: MbTokens.cream,
+                  foregroundColor: MbTokens.leather,
+                  minimumSize: const Size(36, 36),
+                ),
+                icon: const Icon(Icons.add_photo_alternate_outlined, size: 18),
+              ),
+            ),
             if (_selectedPhoto == index)
               _ResizeHandle(
                 onTap: () => _editPhoto(index),
@@ -551,6 +630,7 @@ class _CollageStudioScreenState extends ConsumerState<CollageStudioScreen> {
 
   Widget _freeformPhoto(int index, Size canvas) {
     final photo = _photos[index];
+    if (photo == null) return const SizedBox.shrink();
     final side = canvas.width * 0.28 * photo.scale;
     return _draggable(
       nx: photo.nx,
@@ -716,7 +796,15 @@ class _CollageStudioScreenState extends ConsumerState<CollageStudioScreen> {
                 leading: const Icon(Icons.shuffle),
                 title: const Text('Shuffle photos'),
                 onTap: () {
-                  setState(() => _photos = [..._photos]..shuffle());
+                  setState(() {
+                    final filled = _photos.whereType<PlacedPhoto>().toList()..shuffle();
+                    var next = 0;
+                    for (var i = 0; i < _photos.length; i++) {
+                      if (_photos[i] != null && next < filled.length) {
+                        _photos[i] = filled[next++];
+                      }
+                    }
+                  });
                   _scheduleSave();
                   Navigator.pop(ctx);
                 },
@@ -801,12 +889,53 @@ class _CollageStudioScreenState extends ConsumerState<CollageStudioScreen> {
     _scheduleSave();
   }
 
+  Future<void> _placeInFrame(int index) async {
+    final path = await ref.read(photoServiceProvider).pickSingle();
+    if (path == null) return;
+    setState(() {
+      _padFrames();
+      while (_photos.length <= index) {
+        _photos.add(null);
+      }
+      final previous = _photos[index];
+      _photos[index] = PlacedPhoto(
+        path: path,
+        nx: previous?.nx ?? 0.5,
+        ny: previous?.ny ?? 0.5,
+        slot: index,
+      );
+      _selectedPhoto = index;
+      _selectedSticker = null;
+      _selectedText = null;
+    });
+    _scheduleSave();
+  }
+
   Future<void> _pickPhotos() async {
-    final paths = await ref
-        .read(photoServiceProvider)
-        .pickImages(limit: AppConfig.maxCollagePhotos);
+    _padFrames();
+    final empty = <int>[
+      for (var i = 0; i < _photos.length; i++)
+        if (_photos[i] == null) i,
+    ];
+    final limit = _template.kind == CollageKind.freeform
+        ? AppConfig.maxCollagePhotos
+        : (empty.isEmpty ? _template.frames.length : empty.length);
+    final paths = await ref.read(photoServiceProvider).pickImages(limit: limit);
     if (paths.isEmpty) return;
-    setState(() => _photos = CollageDraft.layoutPhotos(paths));
+    setState(() {
+      if (_template.kind == CollageKind.freeform) {
+        _photos = [..._photos.whereType<PlacedPhoto>(), ...CollageDraft.layoutPhotos(paths)];
+      } else if (empty.isEmpty) {
+        for (var i = 0; i < paths.length && i < _photos.length; i++) {
+          _photos[i] = PlacedPhoto(path: paths[i], slot: i);
+        }
+      } else {
+        for (var i = 0; i < paths.length && i < empty.length; i++) {
+          final slot = empty[i];
+          _photos[slot] = PlacedPhoto(path: paths[i], slot: slot);
+        }
+      }
+    });
     _scheduleSave();
   }
 
@@ -848,8 +977,8 @@ class _CollageStudioScreenState extends ConsumerState<CollageStudioScreen> {
   }
 
   Future<void> _editPhoto(int index) async {
-    if (index < 0 || index >= _photos.length) return;
-    final photo = _photos[index];
+    if (index < 0 || index >= _photos.length || _photos[index] == null) return;
+    final photo = _photos[index]!;
     var scale = photo.scale;
     await showModalBottomSheet<void>(
       context: context,
@@ -919,8 +1048,14 @@ class _CollageStudioScreenState extends ConsumerState<CollageStudioScreen> {
 
   void _deleteSelected() {
     setState(() {
-      if (_selectedPhoto != null && _selectedPhoto! < _photos.length) {
-        _photos.removeAt(_selectedPhoto!);
+      if (_selectedPhoto != null &&
+          _selectedPhoto! < _photos.length &&
+          _photos[_selectedPhoto!] != null) {
+        if (_template.kind == CollageKind.freeform) {
+          _photos.removeAt(_selectedPhoto!);
+        } else {
+          _photos[_selectedPhoto!] = null;
+        }
       } else if (_selectedSticker != null &&
           _selectedSticker! < _stickers.length) {
         _stickers.removeAt(_selectedSticker!);
@@ -966,7 +1101,7 @@ class _CollageStudioScreenState extends ConsumerState<CollageStudioScreen> {
       final image = await CollageRenderer().render(
         CollageRenderRequest(
           template: _template,
-          imagePaths: _photos.map((p) => p.path).toList(),
+          imagePaths: [for (final photo in _photos) photo?.path ?? ''],
           background: _background,
           texts: [
             for (final t in _texts)
@@ -978,7 +1113,9 @@ class _CollageStudioScreenState extends ConsumerState<CollageStudioScreen> {
               ),
           ],
           stickers: _stickers,
-          placedPhotos: _photos,
+          placedPhotos: [
+            for (final photo in _photos) photo ?? PlacedPhoto(path: ''),
+          ],
           size: _exportSize,
         ),
       );

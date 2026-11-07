@@ -2,7 +2,7 @@
 class AppConfig {
   static const appName = 'Memory Book';
   static const appStoreTitle = 'Memory Book';
-  static const supportEmail = 'mobigaurav@gmail.com';
+  static const supportEmail = 'support@mysticvedic.com';
   /// Memory Book's own site. Not memory-book.vercel.app, which is a different project.
   static const siteUrl = 'https://memory-book-pearl-zeta.vercel.app';
 

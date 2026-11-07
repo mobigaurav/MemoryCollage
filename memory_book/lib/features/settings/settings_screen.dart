@@ -403,6 +403,22 @@ class _AiLabScreenState extends ConsumerState<AiLabScreen> {
                   : _make,
               child: Text(_busy ? 'Making the clip…' : 'Spend 1 credit'),
             ),
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              onPressed: () => ref.read(premiumControllerProvider.notifier).buyCreditPack(),
+              icon: const Icon(Icons.shopping_bag_outlined),
+              label: Text('Buy ${AppConfig.creditPackSize} clips'),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'An AI clip is not free, and Premium does not include it.',
+              style: TextStyle(
+                fontFamily: MbTokens.sans,
+                fontSize: 14,
+                height: 1.35,
+                color: MbTokens.inkSoft,
+              ),
+            ),
             if (_result != null) ...[
               const SizedBox(height: 16),
               Text(_result!.message ?? ''),

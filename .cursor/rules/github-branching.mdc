@@ -1,0 +1,19 @@
+---
+description: Feature branches merge to dev; only main deploys
+alwaysApply: true
+---
+
+# GitHub branches
+
+Start feature and bugfix work on a new branch from `dev`. Open the pull request into `dev`.
+
+`main` takes a pull request from `dev` only, after one approval. Do not push to `main`, and do not open a feature pull request against `main`.
+
+A merge into `dev` runs checks. It does not deploy. A merge into `main` deploys the site (`.github/workflows/web.yml`). When the API or Fastlane is automated, those jobs run on `main` only.
+
+```bash
+git checkout dev && git pull
+git checkout -b fix/short-name
+# pull request base: dev
+# after that merges, pull request base: main, compare: dev
+```
