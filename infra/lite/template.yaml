@@ -1,7 +1,9 @@
 # Memory Book lite stack. Own Cognito pool. Do not point this at Arogya.
 #
-#   cd infra/lite && sam build && sam deploy --guided
+#   cd infra/lite && sam build && sam deploy
 #
+# A merge into main runs the same build and deploy from
+# .github/workflows/api.yml. A laptop deploy still confirms the changeset.
 # First deploy needs Docker (the API is a container image) and an AWS
 # account in us-east-1. Neon and the video vendor key can wait.
 

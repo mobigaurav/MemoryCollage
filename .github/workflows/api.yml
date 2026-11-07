@@ -1,0 +1,50 @@
+# Publishes the Memory Book API when `main` changes the API or this stack.
+# A merge into `dev` does not deploy.
+#
+# One-time setup: an IAM role that can update stack memorybook-lite-dev,
+# trusted only for repo:mobigaurav/MemoryCollage on refs/heads/main
+# through token.actions.githubusercontent.com. Store its ARN as AWS_ROLE_ARN.
+#
+# samconfig.toml overrides Env, AppName, and VideoVendor. Every other
+# parameter, including the Runway key and the Apple and Google secrets,
+# keeps the value already on the stack.
+
+name: api
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - services/api/**
+      - infra/lite/**
+      - .github/workflows/api.yml
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy API
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v4
+      - name: Require the deploy role
+        env:
+          AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
+        run: |
+          if [ -z "$AWS_ROLE_ARN" ]; then
+            echo "AWS_ROLE_ARN is not set. Add the deploy role before main can publish the API."
+            exit 1
+          fi
+      - uses: aws-actions/setup-sam@v2
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: us-east-1
+      - name: Build and deploy memorybook-lite-dev
+        working-directory: infra/lite
+        run: |
+          sam build
+          sam deploy --no-confirm-changeset --no-fail-on-empty-changeset
