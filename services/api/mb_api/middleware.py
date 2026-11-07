@@ -10,7 +10,8 @@ PUBLIC_PATHS = {"/", "/health", "/healthz", "/v1/billing/revenuecat"}
 
 class AuthMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next) -> Response:
-        if request.method == "OPTIONS" or request.url.path in PUBLIC_PATHS:
+        note_page = request.method == "GET" and request.url.path.startswith("/v1/notes/")
+        if request.method == "OPTIONS" or request.url.path in PUBLIC_PATHS or note_page:
             return await call_next(request)
 
         header = request.headers.get("authorization", "")

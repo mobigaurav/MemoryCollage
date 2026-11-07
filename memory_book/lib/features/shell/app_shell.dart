@@ -4,6 +4,11 @@ import 'package:go_router/go_router.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/tokens.dart';
 
+/// The bottom tab on screen. The branches stay alive, so Reels reads this to pause.
+final shellTab = ValueNotifier<int>(0);
+
+const reelsTabIndex = 2;
+
 class AppShell extends StatelessWidget {
   const AppShell({super.key, required this.navigationShell});
 
@@ -12,6 +17,9 @@ class AppShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final index = navigationShell.currentIndex;
+    if (shellTab.value != index) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => shellTab.value = index);
+    }
     return Theme(
       data: MbTheme.studio,
       child: Scaffold(
@@ -53,8 +61,15 @@ class _ShelfBar extends StatelessWidget {
             height: bar + bottom,
             child: const DecoratedBox(
               decoration: BoxDecoration(
-                color: Color(0xFFFFFBF6),
-                border: Border(top: BorderSide(color: MbTokens.linen)),
+                color: Color(0xD9FFFBF6),
+                border: Border(top: BorderSide(color: MbTokens.glassEdge)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Color(0x334A2C1A),
+                    blurRadius: 22,
+                    offset: Offset(0, -8),
+                  ),
+                ],
               ),
             ),
           ),
@@ -175,8 +190,9 @@ class _ReelsTab extends StatelessWidget {
               height: 64,
               padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
-                color: const Color(0xFFFFFBF6),
+                color: const Color(0xEEFFFBF6),
                 shape: BoxShape.circle,
+                border: Border.all(color: MbTokens.glassEdge),
                 boxShadow: [
                   BoxShadow(
                     color: MbTokens.leather.withValues(alpha: 0.28),

@@ -22,7 +22,7 @@ class LibraryScreen extends ConsumerWidget {
     final session = ref.watch(authSessionProvider).value;
     final text = Theme.of(context).textTheme;
     return Scaffold(
-      backgroundColor: MbTokens.cream,
+      backgroundColor: Colors.transparent,
       body: Column(
         children: [
           const _WeeklyNudge(),
@@ -234,8 +234,10 @@ class _StyleCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(18),
+      color: MbTokens.glass,
+      elevation: 6,
+      shadowColor: const Color(0x40301810),
+      shape: MbTokens.glassShape(18),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(18),
