@@ -91,10 +91,10 @@ abstract final class MbTheme {
     );
     return base.copyWith(
       scaffoldBackgroundColor: Colors.transparent,
-      canvasColor: MbTokens.cream,
-      cardColor: MbTokens.glass,
+      canvasColor: dark ? MbTokens.leatherDark : MbTokens.cream,
+      cardColor: dark ? const Color(0xEE2A1810) : MbTokens.glass,
       cardTheme: CardThemeData(
-        color: MbTokens.glass,
+        color: dark ? const Color(0xEE2A1810) : MbTokens.glass,
         elevation: 8,
         shadowColor: const Color(0x40301810),
         surfaceTintColor: Colors.transparent,
@@ -104,22 +104,22 @@ abstract final class MbTheme {
       primaryTextTheme: text,
       iconTheme: IconThemeData(color: ink, size: 24),
       dialogTheme: DialogThemeData(
-        backgroundColor: MbTokens.cream,
+        backgroundColor: dark ? MbTokens.leatherDark : MbTokens.cream,
         surfaceTintColor: Colors.transparent,
-        titleTextStyle: _serif.copyWith(fontSize: 26, color: MbTokens.ink),
+        titleTextStyle: _serif.copyWith(fontSize: 26, color: ink),
         contentTextStyle: _sans.copyWith(
           fontSize: 16,
           height: 1.4,
-          color: MbTokens.ink,
+          color: ink,
         ),
       ),
       popupMenuTheme: PopupMenuThemeData(
-        color: MbTokens.cream,
+        color: dark ? MbTokens.leatherDark : MbTokens.cream,
         surfaceTintColor: Colors.transparent,
         textStyle: _sans.copyWith(
           fontSize: 16,
           fontWeight: FontWeight.w600,
-          color: MbTokens.ink,
+          color: ink,
         ),
       ),
       appBarTheme: AppBarTheme(
@@ -195,7 +195,7 @@ abstract final class MbTheme {
         fillColor: dark ? MbTokens.leather : MbTokens.glass,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
         labelStyle: _sans.copyWith(color: muted, fontSize: 15),
-        hintStyle: _sans.copyWith(color: MbTokens.caption),
+        hintStyle: _sans.copyWith(color: muted),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(MbTokens.radiusMd),
           borderSide: BorderSide.none,
@@ -229,30 +229,34 @@ abstract final class MbTheme {
       ),
       navigationBarTheme: NavigationBarThemeData(
         height: 76,
-        backgroundColor: Color(0xD9FFFBF6),
+        backgroundColor: dark ? const Color(0xE61A120E) : const Color(0xD9FFFBF6),
         elevation: 12,
-        shadowColor: Color(0x334A2C1A),
-        indicatorColor: MbTokens.leather,
+        shadowColor: const Color(0x334A2C1A),
+        indicatorColor: dark ? MbTokens.foil : MbTokens.leather,
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           final selected = states.contains(WidgetState.selected);
           return TextStyle(
             fontFamily: MbTokens.sans,
             fontSize: 12,
             fontWeight: FontWeight.w600,
-            color: selected ? MbTokens.leather : MbTokens.ink,
+            color: selected
+                ? (dark ? MbTokens.foil : MbTokens.leather)
+                : (dark ? MbTokens.paper : MbTokens.ink),
           );
         }),
         iconTheme: WidgetStateProperty.resolveWith((states) {
           final selected = states.contains(WidgetState.selected);
           return IconThemeData(
             size: 26,
-            color: selected ? MbTokens.cream : MbTokens.inkSoft,
+            color: selected
+                ? (dark ? MbTokens.ink : MbTokens.cream)
+                : (dark ? MbTokens.paper : MbTokens.inkSoft),
           );
         }),
       ),
-      bottomSheetTheme: const BottomSheetThemeData(
-        backgroundColor: MbTokens.cream,
-        shape: RoundedRectangleBorder(
+      bottomSheetTheme: BottomSheetThemeData(
+        backgroundColor: dark ? MbTokens.leatherDark : MbTokens.cream,
+        shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         ),
       ),

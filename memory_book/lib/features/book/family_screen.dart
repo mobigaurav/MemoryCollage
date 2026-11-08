@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' as http;
 import 'package:share_plus/share_plus.dart';
 
+import '../../core/theme/chrome.dart';
 import '../../core/theme/tokens.dart';
 import '../../domain/book_models.dart';
 import '../../domain/book_ops.dart';
@@ -85,7 +86,7 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
     final title = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: MbTokens.cream,
+        backgroundColor: context.mbSheet,
         title: const Text('Name it'),
         content: TextField(
           controller: controller,
@@ -287,7 +288,7 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
     final go = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: MbTokens.cream,
+        backgroundColor: context.mbSheet,
         title: const Text('Open this collage here?'),
         content: const Text(
           'It replaces the collage you were editing on this phone. The family copy stays as it is.',
@@ -451,13 +452,13 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
         ),
         if (_books.isNotEmpty) ...[
           const SizedBox(height: 22),
-          const Text(
+          Text(
             'On this account',
             style: TextStyle(
               fontFamily: MbTokens.sans,
               fontSize: 13,
               fontWeight: FontWeight.w600,
-              color: MbTokens.inkSoft,
+              color: context.mbMuted,
             ),
           ),
           for (final book in _books)
@@ -510,11 +511,11 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
       padding: const EdgeInsets.only(bottom: 12),
       child: Text(
         text,
-        style: const TextStyle(
+        style: TextStyle(
           fontFamily: MbTokens.sans,
           fontSize: 16,
           height: 1.4,
-          color: MbTokens.ink,
+          color: context.mbInk,
         ),
       ),
     );

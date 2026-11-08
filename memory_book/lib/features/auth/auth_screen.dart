@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/nav.dart';
+import '../../core/theme/chrome.dart';
 import '../../core/theme/tokens.dart';
 import '../../providers.dart';
 import '../../widgets/brand_hero.dart';
@@ -210,7 +211,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                       onPressed: () => setState(() => _obscure = !_obscure),
                       icon: Icon(
                         _obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-                        color: MbTokens.inkSoft,
+                        color: context.mbMuted,
                       ),
                     ),
                   ),
@@ -220,12 +221,12 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                     value: _accepted,
                     activeColor: MbTokens.leather,
                     onChanged: (v) => setState(() => _accepted = v ?? false),
-                    title: const Text(
+                    title: Text(
                       'I understand my books stay on this phone unless I spend a credit.',
                       style: TextStyle(
                         fontFamily: MbTokens.sans,
                         fontSize: 15,
-                        color: MbTokens.ink,
+                        color: context.mbInk,
                       ),
                     ),
                     controlAffinity: ListTileControlAffinity.leading,
@@ -239,13 +240,13 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                 ..._links(),
                 if (_mode == _AuthMode.signIn) ...[
                   const SizedBox(height: 8),
-                  const Text(
+                  Text(
                     'Or continue with the same account',
                     style: TextStyle(
                       fontFamily: MbTokens.sans,
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
-                      color: MbTokens.inkSoft,
+                      color: context.mbMuted,
                     ),
                   ),
                   const SizedBox(height: 10),

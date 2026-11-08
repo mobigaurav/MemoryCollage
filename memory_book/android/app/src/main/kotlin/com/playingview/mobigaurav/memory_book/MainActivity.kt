@@ -1,8 +1,11 @@
 package com.playingview.mobigaurav.memory_book
 
 import android.Manifest
+import android.app.AlarmManager
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -22,6 +25,7 @@ import android.media.MediaMuxer
 import android.net.Uri
 import android.os.Build
 import android.view.Surface
+import java.util.Calendar
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -59,7 +63,13 @@ class MainActivity : FlutterActivity() {
                                 val args = call.arguments as? Map<*, *> ?: emptyMap<String, Any>()
                                 val video = args["videoPath"] as? String ?: error("videoPath")
                                 val audio = args["audioPath"] as? String ?: error("audioPath")
-                                result.success(muxAudio(video, audio))
+                                runOnUiThread {
+                                    try {
+                                        mixWithTransformer(video, audio, result)
+                                    } catch (e: Exception) {
+                                        result.error("encode", e.message, null)
+                                    }
+                                }
                             }
                             "encodeHeic" -> result.success(call.argument<ByteArray>("bytes"))
                             "posterFrame" -> result.success(posterFrame(call.arguments()))
@@ -93,6 +103,18 @@ class MainActivity : FlutterActivity() {
                             args["title"] as? String ?: "Memory Book",
                             args["body"] as? String ?: "Your reel is ready.",
                         )
+                        result.success(null)
+                    }
+                    "scheduleWeekly" -> {
+                        val args = call.arguments as? Map<*, *> ?: emptyMap<String, Any>()
+                        scheduleWeekly(
+                            args["title"] as? String ?: "Photos from this week",
+                            args["body"] as? String ?: "Open the shelf and start a book from the last few days.",
+                        )
+                        result.success(null)
+                    }
+                    "cancelWeekly" -> {
+                        weeklyAlarm().cancel(weeklyIntent("", ""))
                         result.success(null)
                     }
                     else -> result.notImplemented()
@@ -298,6 +320,61 @@ class MainActivity : FlutterActivity() {
         return rotated
     }
 
+    @OptIn(UnstableApi::class)
+    private fun mixWithTransformer(video: String, audio: String, result: MethodChannel.Result) {
+        val out = video.replace(".mp4", "_m.mp4")
+        if (File(out).exists()) File(out).delete()
+        val videoItem = EditedMediaItem.Builder(MediaItem.fromUri(Uri.fromFile(File(video))))
+            .setRemoveAudio(true)
+            .build()
+        val retriever = MediaMetadataRetriever()
+        val videoMs = try {
+            retriever.setDataSource(video)
+            retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull() ?: 0L
+        } finally {
+            retriever.release()
+        }
+        if (videoMs < 200) error("This reel is too short to add sound.")
+        val music = MediaItem.Builder()
+            .setUri(Uri.fromFile(File(audio)))
+            .setClippingConfiguration(
+                MediaItem.ClippingConfiguration.Builder()
+                    .setEndPositionMs(videoMs)
+                    .build(),
+            )
+            .build()
+        val audioItem = EditedMediaItem.Builder(music).build()
+        val composition = Composition.Builder(
+            EditedMediaItemSequence.withVideoFrom(listOf(videoItem)),
+            EditedMediaItemSequence.withAudioFrom(listOf(audioItem)),
+        ).build()
+        var finished = false
+        val transformer = Transformer.Builder(this)
+            .addListener(object : Transformer.Listener {
+                override fun onCompleted(composition: Composition, exportResult: ExportResult) {
+                    if (finished) return
+                    finished = true
+                    result.success(out)
+                }
+
+                override fun onError(
+                    composition: Composition,
+                    exportResult: ExportResult,
+                    exportException: ExportException,
+                ) {
+                    if (finished) return
+                    finished = true
+                    result.error(
+                        "encode",
+                        exportException.message ?: "The reel saved without its sound.",
+                        null,
+                    )
+                }
+            })
+            .build()
+        transformer.start(composition, out)
+    }
+
     private fun muxAudio(video: String, audio: String): String {
         return try {
             val out = video.replace(".mp4", "_m.mp4")
@@ -495,6 +572,42 @@ class MainActivity : FlutterActivity() {
             )
             getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
         }
+    }
+
+    private fun weeklyAlarm() = getSystemService(AlarmManager::class.java)
+
+    private fun weeklyIntent(title: String, body: String): PendingIntent {
+        val intent = Intent(this, WeeklyReminder::class.java)
+            .putExtra("title", title)
+            .putExtra("body", body)
+        return PendingIntent.getBroadcast(
+            this,
+            77,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+    }
+
+    private fun scheduleWeekly(title: String, body: String) {
+        ensureNotifyPermission()
+        val whenNext = Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, 10)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+        while (
+            whenNext.get(Calendar.DAY_OF_WEEK) != Calendar.SUNDAY ||
+            whenNext.timeInMillis <= System.currentTimeMillis()
+        ) {
+            whenNext.add(Calendar.DAY_OF_YEAR, 1)
+        }
+        weeklyAlarm().setRepeating(
+            AlarmManager.RTC_WAKEUP,
+            whenNext.timeInMillis,
+            AlarmManager.INTERVAL_DAY * 7,
+            weeklyIntent(title, body),
+        )
     }
 
     private fun showReady(title: String, body: String) {

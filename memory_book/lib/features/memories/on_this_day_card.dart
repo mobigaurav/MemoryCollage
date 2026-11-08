@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:photo_manager/photo_manager.dart';
 
+import '../../core/theme/chrome.dart';
 import '../../core/theme/tokens.dart';
 import '../../domain/media_options.dart';
 import '../../providers.dart';
@@ -97,7 +98,7 @@ class _OnThisDayCardState extends ConsumerState<OnThisDayCard> {
   Widget build(BuildContext context) {
     final memories = ref.watch(onThisDayProvider);
     return Material(
-      color: MbTokens.glass,
+      color: context.mbSurface,
       elevation: 8,
       shadowColor: const Color(0x40301810),
       shape: MbTokens.glassShape(MbTokens.radiusLg),
@@ -168,25 +169,25 @@ class _OnThisDayCardState extends ConsumerState<OnThisDayCard> {
       children: [
         Row(
           children: [
-            const Icon(Icons.history_rounded, color: MbTokens.leather),
+            Icon(Icons.history_rounded, color: context.mbAccent),
             const SizedBox(width: 8),
             Text(
               'ON THIS DAY',
-              style: const TextStyle(
+              style: TextStyle(
                 fontFamily: MbTokens.sans,
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 0.8,
-                color: MbTokens.leather,
+                color: context.mbAccent,
               ),
             ),
             const Spacer(),
             Text(
               _today,
-              style: const TextStyle(
+              style: TextStyle(
                 fontFamily: MbTokens.serif,
                 fontSize: 20,
-                color: MbTokens.ink,
+                color: context.mbInk,
               ),
             ),
           ],

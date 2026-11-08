@@ -4,14 +4,16 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/config.dart';
 import '../../core/nav.dart';
+import '../../core/theme/chrome.dart';
 import '../../core/theme/tokens.dart';
 import '../../domain/book_models.dart';
 import '../../data/repositories/settings_repository.dart';
 import '../../providers.dart';
+import '../../services/shelf_sync.dart';
 import '../../domain/book_ops.dart';
 import '../../widgets/brand_hero.dart';
-import '../book/page_canvas.dart';
 import 'album_edit_sheet.dart';
+import 'book_shelf.dart';
 
 class LibraryScreen extends ConsumerWidget {
   const LibraryScreen({super.key});
@@ -36,7 +38,9 @@ class LibraryScreen extends ConsumerWidget {
                     child: MbHero(
                       eyebrow: 'Books',
                       title: _greeting(),
-                      subtitle: 'Photo books on this phone. Share sends the whole book.',
+                      subtitle: session == null
+                          ? 'Photo books on this phone. Sign in and they come back with the account.'
+                          : 'Photo books on this phone, saved to the account.',
                       child: Align(
                         alignment: Alignment.centerLeft,
                         child: _AccountChip(
@@ -80,13 +84,13 @@ class LibraryScreen extends ConsumerWidget {
                             ),
                             const SizedBox(height: 28),
                             Text(
-                              items.isEmpty ? 'Nothing on the shelf yet' : 'On the shelf',
+                              items.isEmpty ? 'An empty shelf' : 'The shelf',
                               style: text.titleMedium,
                             ),
                             if (items.isEmpty) ...[
                               const SizedBox(height: 8),
                               Text(
-                                'Start with a cover. Empty pages are waiting for photos.',
+                                'Start with a cover. The book will stand here.',
                                 style: text.bodyMedium,
                               ),
                             ],
@@ -94,58 +98,19 @@ class LibraryScreen extends ConsumerWidget {
                         ),
                       ),
                     ),
-                    if (items.isNotEmpty)
-                      SliverPadding(
-                        padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
-                        sliver: SliverGrid(
-                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            childAspectRatio: 0.68,
-                            crossAxisSpacing: 16,
-                            mainAxisSpacing: 20,
-                          ),
-                          delegate: SliverChildBuilderDelegate(
-                            (context, i) {
-                              final album = items[i];
-                              return Stack(
-                                children: [
-                                  Positioned.fill(
-                                    child: BookCoverView(
-                                      album: album,
-                                      onOpen: () => context.push('/book/${album.id}'),
-                                      onLongPress: () => showAlbumEditSheet(
-                                        context: context,
-                                        album: album,
-                                      ),
-                                    ),
-                                  ),
-                                  Positioned(
-                                    top: 6,
-                                    right: 6,
-                                    child: IconButton.filled(
-                                      style: IconButton.styleFrom(
-                                        backgroundColor: MbTokens.leatherDark
-                                            .withValues(alpha: 0.82),
-                                        foregroundColor: MbTokens.cream,
-                                        minimumSize: const Size(48, 48),
-                                      ),
-                                      tooltip: 'Edit book',
-                                      onPressed: () => showAlbumEditSheet(
-                                        context: context,
-                                        album: album,
-                                      ),
-                                      icon: const Icon(Icons.edit_outlined, size: 20),
-                                    ),
-                                  ),
-                                ],
-                              );
-                            },
-                            childCount: items.length,
+                    SliverPadding(
+                      padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+                      sliver: SliverToBoxAdapter(
+                        child: BookShelf(
+                          albums: items,
+                          onOpen: (album) => context.push('/book/${album.id}'),
+                          onEdit: (album) => showAlbumEditSheet(
+                            context: context,
+                            album: album,
                           ),
                         ),
-                      )
-                    else
-                      const SliverToBoxAdapter(child: SizedBox(height: 24)),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -234,7 +199,7 @@ class _StyleCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: MbTokens.glass,
+      color: context.mbSurface,
       elevation: 6,
       shadowColor: const Color(0x40301810),
       shape: MbTokens.glassShape(18),
@@ -258,21 +223,21 @@ class _StyleCard extends StatelessWidget {
                 const Spacer(),
                 Text(
                   style.label,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontFamily: MbTokens.serif,
                     fontSize: 18,
-                    color: MbTokens.ink,
+                    color: context.mbInk,
                   ),
                 ),
                 Text(
                   style.blurb,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontFamily: MbTokens.sans,
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
-                    color: MbTokens.inkSoft,
+                    color: context.mbMuted,
                   ),
                 ),
               ],
@@ -301,17 +266,10 @@ class _WeeklyNudgeState extends ConsumerState<_WeeklyNudge> {
   Future<void> _maybe() async {
     final settings = ref.read(settingsRepositoryProvider);
     if (!await settings.getBool(SettingsRepository.weeklyNudgeKey)) return;
-    final last = await settings.get(SettingsRepository.weeklyNudgeAtKey);
-    final prev = DateTime.tryParse(last ?? '');
-    if (prev != null && DateTime.now().difference(prev).inDays < 6) return;
-    await ref.read(localNotifyProvider).show(
-          title: 'Photos from this week',
-          body: 'Open the shelf and start a book from the last few days.',
+    await ref.read(localNotifyProvider).scheduleWeekly(
+          title: ShelfSync.weeklyTitle,
+          body: ShelfSync.weeklyBody,
         );
-    await settings.set(
-      SettingsRepository.weeklyNudgeAtKey,
-      DateTime.now().toIso8601String(),
-    );
   }
 
   @override
@@ -363,8 +321,8 @@ class _NewBookScreenState extends ConsumerState<NewBookScreen> {
           TextField(
             controller: _title,
             decoration: const InputDecoration(labelText: 'Title'),
-            style: const TextStyle(
-              color: MbTokens.ink,
+            style: TextStyle(
+              color: context.mbInk,
               fontFamily: MbTokens.sans,
               fontSize: 22,
               fontWeight: FontWeight.w600,
@@ -387,10 +345,10 @@ class _NewBookScreenState extends ConsumerState<NewBookScreen> {
                 .toList(),
           ),
           const SizedBox(height: 12),
-          const Text(
+          Text(
             'Photos are added only when you pick them. Nothing is pulled from the library on its own.',
             style: TextStyle(
-              color: MbTokens.inkSoft,
+              color: context.mbMuted,
               fontFamily: MbTokens.sans,
               height: 1.4,
             ),

@@ -8,6 +8,7 @@ class SettingsRepository {
   static const onboardingKey = 'onboardingComplete';
   static const localPremiumKey = 'localPremium';
   static const exportHistoryKey = 'exportHistory';
+  static const appearanceKey = 'appearance';
   static const weeklyNudgeKey = 'weeklyPhotosNudge';
   static const weeklyNudgeAtKey = 'weeklyPhotosNudgeAt';
   static const localAccountEmailKey = 'localAccountEmail';

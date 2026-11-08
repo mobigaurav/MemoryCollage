@@ -30,6 +30,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
             request.state.sub = "dev-local-user"
             request.state.email = "dev@memorybook.local"
             request.state.name = "Dev"
+            request.state.username = ""
             return await call_next(request)
 
         try:
@@ -40,6 +41,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
         request.state.sub = str(claims.get("sub") or "")
         request.state.email = claims.get("email")
         request.state.name = claims.get("name") or ""
+        request.state.username = str(claims.get("cognito:username") or claims.get("email") or "")
         if not request.state.sub:
             return JSONResponse({"error": "Token has no subject"}, status_code=401)
         return await call_next(request)

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/haptics.dart';
+import '../../core/theme/chrome.dart';
 import '../../core/theme/tokens.dart';
 import '../../data/repositories/album_repository.dart';
 import '../../providers.dart';
@@ -13,7 +14,7 @@ Future<void> showPageManagerSheet({
 }) {
   return showModalBottomSheet<void>(
     context: context,
-    backgroundColor: MbTokens.cream,
+    backgroundColor: context.mbSheet,
     isScrollControlled: true,
     builder: (_) => PageManagerSheet(albumId: albumId),
   );
@@ -65,14 +66,14 @@ class PageManagerSheet extends ConsumerWidget {
                   ],
                 ),
               ),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 20),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
                     'Drag the handle to reorder. Duplicate or remove any page.',
                     style: TextStyle(
-                      color: MbTokens.inkSoft,
+                      color: context.mbMuted,
                       fontFamily: MbTokens.sans,
                       height: 1.35,
                     ),

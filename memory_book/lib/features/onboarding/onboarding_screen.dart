@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/haptics.dart';
+import '../../core/theme/chrome.dart';
 import '../../core/theme/tokens.dart';
 import '../book/page_curl.dart';
 
@@ -147,20 +148,21 @@ class SplashScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
+    return Scaffold(
+      backgroundColor: Colors.transparent,
       body: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.auto_stories, size: 88, color: MbTokens.leather),
-            SizedBox(height: 16),
+            Icon(Icons.auto_stories, size: 88, color: context.mbAccent),
+            const SizedBox(height: 16),
             Text(
               'Memory Book',
               style: TextStyle(
                 fontFamily: MbTokens.serif,
                 fontSize: 44,
                 height: 1.05,
-                color: MbTokens.ink,
+                color: context.mbInk,
               ),
             ),
           ],

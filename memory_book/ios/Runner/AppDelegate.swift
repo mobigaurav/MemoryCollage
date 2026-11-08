@@ -11,7 +11,17 @@ import UserNotifications
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
-    return super.application(application, didFinishLaunchingWithOptions: launchOptions)
+    let launched = super.application(application, didFinishLaunchingWithOptions: launchOptions)
+    UNUserNotificationCenter.current().delegate = self
+    return launched
+  }
+
+  override func userNotificationCenter(
+    _ center: UNUserNotificationCenter,
+    willPresent notification: UNNotification,
+    withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
+  ) {
+    completionHandler([.banner, .sound])
   }
 
   func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
@@ -74,18 +84,31 @@ import UserNotifications
         }
       case "show":
         let args = call.arguments as? [String: Any] ?? [:]
-        let content = UNMutableNotificationContent()
-        content.title = args["title"] as? String ?? "Memory Book"
-        content.body = args["body"] as? String ?? "Your reel is ready."
-        content.sound = .default
-        let req = UNNotificationRequest(
+        MemoryBookEncoder.scheduleNotice(
           identifier: UUID().uuidString,
-          content: content,
-          trigger: UNTimeIntervalNotificationTrigger(timeInterval: 0.4, repeats: false)
+          title: args["title"] as? String ?? "Memory Book",
+          body: args["body"] as? String ?? "Your reel is ready.",
+          trigger: UNTimeIntervalNotificationTrigger(timeInterval: 0.4, repeats: false),
+          result: result
         )
-        UNUserNotificationCenter.current().add(req) { _ in
-          DispatchQueue.main.async { result(nil) }
-        }
+      case "scheduleWeekly":
+        let args = call.arguments as? [String: Any] ?? [:]
+        var when = DateComponents()
+        when.weekday = 1
+        when.hour = 10
+        when.minute = 0
+        MemoryBookEncoder.scheduleNotice(
+          identifier: "memory-book-weekly",
+          title: args["title"] as? String ?? "Photos from this week",
+          body: args["body"] as? String ?? "Open the shelf and start a book from the last few days.",
+          trigger: UNCalendarNotificationTrigger(dateMatching: when, repeats: true),
+          result: result
+        )
+      case "cancelWeekly":
+        UNUserNotificationCenter.current().removePendingNotificationRequests(
+          withIdentifiers: ["memory-book-weekly"]
+        )
+        DispatchQueue.main.async { result(nil) }
       default:
         result(FlutterMethodNotImplemented)
       }
@@ -94,6 +117,23 @@ import UserNotifications
 }
 
 enum MemoryBookEncoder {
+  static func scheduleNotice(
+    identifier: String,
+    title: String,
+    body: String,
+    trigger: UNNotificationTrigger,
+    result: @escaping FlutterResult
+  ) {
+    let content = UNMutableNotificationContent()
+    content.title = title
+    content.body = body
+    content.sound = .default
+    let req = UNNotificationRequest(identifier: identifier, content: content, trigger: trigger)
+    UNUserNotificationCenter.current().add(req) { _ in
+      DispatchQueue.main.async { result(nil) }
+    }
+  }
+
   static func encodeHeic(_ data: Data) -> Data {
     guard let image = UIImage(data: data), let cg = image.cgImage else { return data }
     let destData = NSMutableData()
@@ -281,42 +321,132 @@ enum MemoryBookEncoder {
     activatePlayback()
     let mixUrl = URL(fileURLWithPath: video).deletingPathExtension().appendingPathExtension("mixed.mp4")
     try? FileManager.default.removeItem(at: mixUrl)
-    let composition = AVMutableComposition()
     let videoAsset = AVURLAsset(url: URL(fileURLWithPath: video))
     let audioAsset = AVURLAsset(url: URL(fileURLWithPath: audio))
-    guard let videoTrack = firstTrack(videoAsset, .video) else { return video }
-    let videoSpan = loadedDuration(videoAsset)
-    guard videoSpan.isValid, videoSpan.seconds > 0.2 else { return video }
-    let v = composition.addMutableTrack(withMediaType: .video, preferredTrackID: kCMPersistentTrackID_Invalid)
-    v?.preferredTransform = videoTrack.preferredTransform
-    try v?.insertTimeRange(CMTimeRange(start: .zero, duration: videoSpan), of: videoTrack, at: .zero)
-    if let aTrack = firstTrack(audioAsset, .audio) {
-      let a = composition.addMutableTrack(withMediaType: .audio, preferredTrackID: kCMPersistentTrackID_Invalid)
-      let audioSpan = loadedDuration(audioAsset)
-      let span = CMTimeMinimum(videoSpan, audioSpan)
-      if span.isValid && span.seconds > 0.05 {
-        try a?.insertTimeRange(CMTimeRange(start: .zero, duration: span), of: aTrack, at: .zero)
-      }
+    guard let videoTrack = try readyTrack(videoAsset, .video) else {
+      throw mixError("Could not read the picture for this reel.")
     }
-    guard let session = AVAssetExportSession(asset: composition, presetName: AVAssetExportPresetHighestQuality) else {
-      return video
+    let videoSpan = try readyDuration(videoAsset)
+    guard videoSpan.isValid, videoSpan.seconds > 0.2 else {
+      throw mixError("This reel is too short to add sound.")
     }
-    session.outputURL = mixUrl
+    guard let musicTrack = try readyTrack(audioAsset, .audio) else {
+      throw mixError("Could not read that sound.")
+    }
+    let musicSpan = try readyDuration(audioAsset)
+    guard musicSpan.isValid, musicSpan.seconds > 0.05 else {
+      throw mixError("That sound is too short to use.")
+    }
+    let composition = AVMutableComposition()
+    guard let picture = composition.addMutableTrack(
+      withMediaType: .video,
+      preferredTrackID: kCMPersistentTrackID_Invalid
+    ), let soundtrack = composition.addMutableTrack(
+      withMediaType: .audio,
+      preferredTrackID: kCMPersistentTrackID_Invalid
+    ) else {
+      throw mixError("Could not open a track for the sound.")
+    }
+    picture.preferredTransform = videoTrack.preferredTransform
+    try picture.insertTimeRange(CMTimeRange(start: .zero, duration: videoSpan), of: videoTrack, at: .zero)
+    var cursor = CMTime.zero
+    var loops = 0
+    while CMTimeCompare(cursor, videoSpan) < 0 && loops < 40 {
+      let remain = CMTimeSubtract(videoSpan, cursor)
+      let span = CMTimeMinimum(remain, musicSpan)
+      guard span.isValid, span.seconds > 0.02 else { break }
+      try soundtrack.insertTimeRange(CMTimeRange(start: .zero, duration: span), of: musicTrack, at: cursor)
+      cursor = CMTimeAdd(cursor, span)
+      loops += 1
+    }
+    guard CMTimeCompare(cursor, videoSpan) >= 0 else {
+      throw mixError("The sound did not cover the reel.")
+    }
+    do {
+      try exportMix(composition, to: mixUrl, preset: AVAssetExportPresetHighestQuality)
+    } catch {
+      try? FileManager.default.removeItem(at: mixUrl)
+    }
+    if !mixFileHasAudio(mixUrl) {
+      try? FileManager.default.removeItem(at: mixUrl)
+      try exportMix(composition, to: mixUrl, preset: AVAssetExportPresetMediumQuality)
+    }
+    guard mixFileHasAudio(mixUrl) else {
+      try? FileManager.default.removeItem(at: mixUrl)
+      throw mixError("The reel saved without its sound.")
+    }
+    return mixUrl.path
+  }
+
+  private static func exportMix(_ composition: AVMutableComposition, to url: URL, preset: String) throws {
+    guard let session = AVAssetExportSession(asset: composition, presetName: preset) else {
+      throw mixError("Could not start adding the sound.")
+    }
+    session.outputURL = url
     session.outputFileType = .mp4
     let sema = DispatchSemaphore(value: 0)
     session.exportAsynchronously { sema.signal() }
-    _ = sema.wait(timeout: .now() + 60)
-    if session.status == .completed { return mixUrl.path }
-    try? FileManager.default.removeItem(at: mixUrl)
-    guard let fallback = AVAssetExportSession(asset: composition, presetName: AVAssetExportPresetMediumQuality) else {
-      return video
+    if sema.wait(timeout: .now() + 90) == .timedOut {
+      session.cancelExport()
+      throw mixError("Adding the sound took too long.")
     }
-    fallback.outputURL = mixUrl
-    fallback.outputFileType = .mp4
-    let again = DispatchSemaphore(value: 0)
-    fallback.exportAsynchronously { again.signal() }
-    _ = again.wait(timeout: .now() + 60)
-    return fallback.status == .completed ? mixUrl.path : video
+    if session.status != .completed {
+      throw mixError(session.error?.localizedDescription ?? "Adding the sound did not finish.")
+    }
+  }
+
+  private static func mixFileHasAudio(_ url: URL) -> Bool {
+    (try? readyTrack(AVURLAsset(url: url), .audio)) != nil
+  }
+
+  private static func mixError(_ message: String) -> NSError {
+    NSError(domain: "MemoryBook", code: 11, userInfo: [NSLocalizedDescriptionKey: message])
+  }
+
+  /// Reads a track after it is actually loaded. The older synchronous lookup
+  /// often came back empty, and the reel was then saved with no sound.
+  private static func readyTrack(_ asset: AVURLAsset, _ type: AVMediaType) throws -> AVAssetTrack? {
+    if #available(iOS 16.0, *) {
+      let sema = DispatchSemaphore(value: 0)
+      var tracks: [AVAssetTrack] = []
+      var failure: Error?
+      Task {
+        do {
+          tracks = try await asset.loadTracks(withMediaType: type)
+        } catch {
+          failure = error
+        }
+        sema.signal()
+      }
+      if sema.wait(timeout: .now() + 20) == .timedOut {
+        throw mixError("The reel took too long to open.")
+      }
+      if let failure { throw failure }
+      return tracks.first
+    }
+    return firstTrack(asset, type)
+  }
+
+  private static func readyDuration(_ asset: AVURLAsset) throws -> CMTime {
+    if #available(iOS 16.0, *) {
+      let sema = DispatchSemaphore(value: 0)
+      var value = CMTime.invalid
+      var failure: Error?
+      Task {
+        do {
+          value = try await asset.load(.duration)
+        } catch {
+          failure = error
+        }
+        sema.signal()
+      }
+      if sema.wait(timeout: .now() + 20) == .timedOut {
+        throw mixError("The reel took too long to open.")
+      }
+      if let failure { throw failure }
+      return value
+    }
+    return loadedDuration(asset)
   }
 
   private static func firstTrack(_ asset: AVAsset, _ type: AVMediaType) -> AVAssetTrack? {
