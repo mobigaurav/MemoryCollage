@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/haptics.dart';
+import '../../core/theme/chrome.dart';
 import '../../core/theme/tokens.dart';
 import '../../data/db/app_database.dart';
 import '../../data/repositories/album_repository.dart';
@@ -326,8 +327,8 @@ class _BookReaderScreenState extends ConsumerState<BookReaderScreen> {
                             'Page ${pageIndex + 1} of ${detail.pages.length}\n'
                             'One photo gets the whole page. Tap the book icon for a two-page spread.',
                             textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              color: MbTokens.ink,
+                            style: TextStyle(
+                              color: context.mbInk,
                               fontFamily: MbTokens.sans,
                               fontSize: 14,
                               height: 1.35,
@@ -415,8 +416,8 @@ class _BookReaderScreenState extends ConsumerState<BookReaderScreen> {
                           'Spread ${spread + 1} of ${detail.spreadCount}\n'
                           'Swipe to turn. Spread fingers to zoom in. Pinch together to shrink a photo into the frame.',
                           textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            color: MbTokens.ink,
+                          style: TextStyle(
+                            color: context.mbInk,
                             fontFamily: MbTokens.sans,
                             fontSize: 14,
                             height: 1.35,
@@ -492,7 +493,7 @@ class _BookReaderScreenState extends ConsumerState<BookReaderScreen> {
   Future<void> _editSlot(PageDetail page, PhotoSlot slot) async {
     await showModalBottomSheet<void>(
       context: context,
-      backgroundColor: MbTokens.cream,
+      backgroundColor: context.mbSheet,
       isScrollControlled: true,
       builder: (ctx) => SlotEditorSheet(
         albumId: widget.albumId,
@@ -781,8 +782,8 @@ class _SlotEditorSheetState extends ConsumerState<SlotEditorSheet> {
               decoration: const InputDecoration(
                 labelText: 'Caption',
               ),
-              style: const TextStyle(
-                color: MbTokens.ink,
+              style: TextStyle(
+                color: context.mbInk,
                 fontFamily: MbTokens.sans,
                 fontSize: 16,
               ),
@@ -791,7 +792,7 @@ class _SlotEditorSheetState extends ConsumerState<SlotEditorSheet> {
             const SizedBox(height: 12),
             DropdownButton<String>(
               value: _filter,
-              dropdownColor: Colors.white,
+              dropdownColor: context.mbSheet,
               items: PhotoFilterId.values
                   .map(
                     (f) => DropdownMenuItem(
@@ -893,19 +894,19 @@ class _SlotEditorSheetState extends ConsumerState<SlotEditorSheet> {
     if (path == null) return;
     final choice = await showModalBottomSheet<String>(
       context: context,
-      backgroundColor: MbTokens.cream,
+      backgroundColor: context.mbSheet,
       builder: (ctx) => SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(8, 8, 8, 12),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const ListTile(
-                title: Text('Bring this photo to life'),
+              ListTile(
+                title: const Text('Bring this photo to life'),
                 subtitle: Text(
                   'A credit sends it to make a short clip. On this phone, we can pan across it without uploading.',
                   style: TextStyle(
-                    color: MbTokens.inkSoft,
+                    color: ctx.mbMuted,
                     fontFamily: MbTokens.sans,
                     height: 1.35,
                   ),

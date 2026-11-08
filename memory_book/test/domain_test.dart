@@ -30,6 +30,9 @@ void main() {
     final ids = CollageCatalog.all.map((t) => t.id).toSet();
     expect(CollageCatalog.all.length, greaterThanOrEqualTo(140));
     expect(CollageCatalog.inShelf(CollageShelf.grids).length, greaterThan(8));
+    expect(CollageCatalog.inShelf(CollageShelf.bento).length, greaterThanOrEqualTo(3));
+    expect(CollageCatalog.inShelf(CollageShelf.film).length, greaterThanOrEqualTo(3));
+    expect(CollageCatalog.inShelf(CollageShelf.journal).length, greaterThanOrEqualTo(3));
     expect(ids.length, CollageCatalog.all.length);
   });
 

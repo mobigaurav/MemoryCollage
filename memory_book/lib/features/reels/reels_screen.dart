@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:video_player/video_player.dart';
 
+import '../../core/theme/chrome.dart';
 import '../../core/theme/tokens.dart';
 import '../../providers.dart';
 import '../../services/reel_library.dart';
@@ -60,7 +61,7 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen>
   Future<void> _create() async {
     final choice = await showModalBottomSheet<String>(
       context: context,
-      backgroundColor: MbTokens.cream,
+      backgroundColor: context.mbSheet,
       builder: (ctx) => SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(8, 12, 8, 16),
@@ -128,7 +129,7 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen>
     final picked = await showModalBottomSheet<int>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: MbTokens.cream,
+      backgroundColor: context.mbSheet,
       builder: (ctx) => _ReelGrid(items: items),
     );
     if (picked != null && mounted) _jumpTo(picked);
@@ -343,7 +344,7 @@ class _FeedPageState extends ConsumerState<_FeedPage> {
     final name = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: MbTokens.cream,
+        backgroundColor: context.mbSheet,
         title: const Text('Rename reel'),
         content: TextField(
           controller: field,
@@ -376,7 +377,7 @@ class _FeedPageState extends ConsumerState<_FeedPage> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: MbTokens.cream,
+        backgroundColor: context.mbSheet,
         title: const Text('Delete this reel?'),
         content: const Text(
           'It leaves this phone. A copy you already shared stays where you sent it.',
@@ -497,7 +498,7 @@ class _EmptyFeed extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
             sliver: SliverToBoxAdapter(
               child: Material(
-                color: MbTokens.glass,
+                color: context.mbSurface,
                 elevation: 6,
                 shadowColor: const Color(0x40301810),
                 shape: MbTokens.glassShape(24),

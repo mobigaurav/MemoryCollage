@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/theme/chrome.dart';
 import '../../core/theme/tokens.dart';
 import '../../providers.dart';
 import '../../widgets/brand_hero.dart';
@@ -24,19 +25,19 @@ class StudioScreen extends ConsumerWidget {
     }
     final id = await showModalBottomSheet<String>(
       context: context,
-      backgroundColor: MbTokens.cream,
+      backgroundColor: context.mbSheet,
       builder: (ctx) => SafeArea(
         child: ListView(
           shrinkWrap: true,
           children: [
-            const Padding(
-              padding: EdgeInsets.fromLTRB(20, 16, 20, 8),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
               child: Text(
                 'Which reel?',
                 style: TextStyle(
                   fontFamily: MbTokens.serif,
                   fontSize: 22,
-                  color: MbTokens.ink,
+                  color: ctx.mbInk,
                 ),
               ),
             ),
@@ -130,7 +131,7 @@ class _StudioCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: MbTokens.glass,
+      color: context.mbSurface,
       elevation: 8,
       shadowColor: const Color(0x40301810),
       shape: MbTokens.glassShape(MbTokens.radiusLg),
@@ -157,12 +158,12 @@ class _StudioCard extends StatelessWidget {
                   children: [
                     Text(
                       kicker.toUpperCase(),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontFamily: MbTokens.sans,
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
                         letterSpacing: 0.8,
-                        color: MbTokens.leather,
+                        color: context.mbAccent,
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -172,7 +173,7 @@ class _StudioCard extends StatelessWidget {
                   ],
                 ),
               ),
-              const Icon(Icons.arrow_forward, color: MbTokens.leather),
+              Icon(Icons.arrow_forward, color: context.mbAccent),
             ],
           ),
         ),

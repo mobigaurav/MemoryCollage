@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:video_player/video_player.dart';
 
+import '../../core/theme/chrome.dart';
 import '../../core/theme/tokens.dart';
 import '../../domain/media_options.dart';
 import '../../domain/year_film.dart';
@@ -176,11 +177,11 @@ class _YearFilmScreenState extends ConsumerState<YearFilmScreen> {
                   const SizedBox(height: 16),
                   Text(
                     _note!,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontFamily: MbTokens.sans,
                       fontSize: 16,
                       height: 1.4,
-                      color: MbTokens.ink,
+                      color: context.mbInk,
                     ),
                   ),
                 ],

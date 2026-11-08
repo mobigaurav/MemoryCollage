@@ -234,6 +234,11 @@ Resources:
             TableName: !Ref CommunityTable
         - DynamoDBCrudPolicy:
             TableName: !Ref HouseholdTable
+        - Statement:
+            - Effect: Allow
+              Action:
+                - cognito-idp:AdminDeleteUser
+              Resource: !GetAtt UserPool.Arn
       Events:
         ProxyApi:
           Type: Api

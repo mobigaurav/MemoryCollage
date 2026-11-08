@@ -5,6 +5,7 @@ from fastapi.testclient import TestClient
 
 from mb_api.community_store import reset_memory
 from mb_api.household_store import MemoryHouseholds, reset_households
+from mb_api.library_store import reset_library
 from mb_api.notes_store import reset_notes
 from mb_api.config import get_settings
 from mb_api.main import app
@@ -28,6 +29,7 @@ def _clean(monkeypatch):
     reset_memory()
     reset_households()
     reset_notes()
+    reset_library()
     yield
     get_settings.cache_clear()
 
@@ -422,3 +424,98 @@ def test_a_voice_note_plays_for_anyone_with_the_page():
     assert audio.content == b"x" * 1000
     missing = client.get("/v1/notes/not-a-real-note")
     assert missing.status_code == 404
+
+
+def test_a_signed_in_shelf_returns_after_delete_clears_it():
+    headers = {"Authorization": "Bearer dev"}
+    denied = client.get("/v1/library")
+    assert denied.status_code == 401
+    reserved = client.post(
+        "/v1/library/uploads",
+        headers=headers,
+        json={"files": [{"contentType": "image/jpeg"}, {"contentType": "video/mp4"}]},
+    )
+    assert reserved.status_code == 200
+    uploads = reserved.json()["uploads"]
+    photo_key = uploads[0]["key"]
+    video_key = uploads[1]["key"]
+    assert photo_key.startswith("library/dev-local-user/photos/")
+    assert video_key.startswith("library/dev-local-user/reels/")
+    book = client.post(
+        "/v1/households",
+        headers=headers,
+        json={"title": "Family"},
+    )
+    assert book.status_code == 200
+    saved = client.put(
+        "/v1/library",
+        headers=headers,
+        json={
+            "books": [
+                {
+                    "id": "book-1",
+                    "title": "Sunday",
+                    "themeId": "leather",
+                    "createdAt": "2026-11-01T00:00:00",
+                    "updatedAt": "2026-11-01T00:00:00",
+                    "pages": [
+                        {
+                            "id": "page-1",
+                            "pageIndex": 0,
+                            "layoutId": "full",
+                            "slots": [
+                                {
+                                    "id": "slot-1",
+                                    "slotIndex": 0,
+                                    "photoKey": photo_key,
+                                    "caption": "",
+                                    "scale": 1,
+                                    "offsetX": 0,
+                                    "offsetY": 0,
+                                    "filterId": "none",
+                                    "showDate": False,
+                                }
+                            ],
+                        }
+                    ],
+                }
+            ],
+            "reels": [
+                {
+                    "id": "reel-1",
+                    "title": "Reel 1",
+                    "createdAt": "2026-11-01T00:00:00",
+                    "kind": "film",
+                    "videoKey": video_key,
+                }
+            ],
+        },
+    )
+    assert saved.status_code == 200
+    again = client.get("/v1/library", headers=headers)
+    body = again.json()
+    assert body["books"][0]["title"] == "Sunday"
+    assert body["books"][0]["pages"][0]["slots"][0]["photoUrl"]
+    assert body["reels"][0]["videoUrl"]
+    foreign = client.put(
+        "/v1/library",
+        headers=headers,
+        json={
+            "books": [
+                {
+                    "id": "book-2",
+                    "title": "Nope",
+                    "pages": [{"slots": [{"photoKey": "library/someone-else/photos/a.jpg"}]}],
+                }
+            ],
+            "reels": [],
+        },
+    )
+    assert foreign.status_code == 400
+    gone = client.delete("/v1/me", headers=headers)
+    assert gone.status_code == 200
+    cleared = client.get("/v1/library", headers=headers)
+    assert cleared.json()["books"] == []
+    assert cleared.json()["reels"] == []
+    listed = client.get("/v1/households", headers=headers)
+    assert listed.json()["books"] == []

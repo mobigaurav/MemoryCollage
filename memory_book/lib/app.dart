@@ -4,8 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'providers.dart';
+import 'data/repositories/settings_repository.dart';
 import 'services/analytics.dart';
 import 'services/reel_jobs.dart';
+import 'services/shelf_sync.dart';
 
 class MemoryBookApp extends ConsumerStatefulWidget {
   const MemoryBookApp({super.key});
@@ -28,6 +30,17 @@ class _MemoryBookAppState extends ConsumerState<MemoryBookApp> {
         if (mounted) _router.go(route);
       };
       await push.initialize();
+      final weekly = await ref
+          .read(settingsRepositoryProvider)
+          .getBool(SettingsRepository.weeklyNudgeKey);
+      if (weekly) {
+        await ref.read(localNotifyProvider).scheduleWeekly(
+              title: ShelfSync.weeklyTitle,
+              body: ShelfSync.weeklyBody,
+            );
+      }
+      await ref.read(shelfSyncProvider).merge();
+      if (mounted) ref.invalidate(reelsProvider);
     });
   }
 
@@ -38,35 +51,52 @@ class _MemoryBookAppState extends ConsumerState<MemoryBookApp> {
       final was = previous?.value != null;
       if (signedIn && !was) {
         ref.read(pushNotificationsProvider).registerCurrentToken();
+        ref.read(shelfSyncProvider).merge().then((_) {
+          if (mounted) ref.invalidate(reelsProvider);
+        });
       }
     });
+    ref.listen(albumsProvider, (previous, next) {
+      if (next.hasValue) ref.read(shelfSyncProvider).noteChanged();
+    });
+    ref.listen(reelsProvider, (previous, next) {
+      if (next.hasValue) ref.read(shelfSyncProvider).noteChanged();
+    });
+    final look = ref.watch(appearanceControllerProvider);
     return MaterialApp.router(
       title: 'Memory Book',
       debugShowCheckedModeBanner: false,
       scaffoldMessengerKey: appMessengerKey,
       theme: MbTheme.studio,
+      darkTheme: MbTheme.darkroom,
+      themeMode: switch (look) {
+        ShelfAppearance.paper => ThemeMode.light,
+        ShelfAppearance.darkroom => ThemeMode.dark,
+        ShelfAppearance.phone => ThemeMode.system,
+      },
       builder: (context, child) {
+        final dark = Theme.of(context).brightness == Brightness.dark;
         return DecoratedBox(
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [
-                Color(0xFFFFFBF6),
-                Color(0xFFF3E6D0),
-                Color(0xFFE4D0B8),
-              ],
+              colors: dark
+                  ? const [Color(0xFF1A120E), Color(0xFF2A1810), Color(0xFF120C09)]
+                  : const [Color(0xFFFFFBF6), Color(0xFFF3E6D0), Color(0xFFE4D0B8)],
             ),
           ),
           child: Stack(
             fit: StackFit.expand,
             children: [
-              const DecoratedBox(
+              DecoratedBox(
                 decoration: BoxDecoration(
                   gradient: RadialGradient(
-                    center: Alignment(-0.7, -0.9),
+                    center: const Alignment(-0.7, -0.9),
                     radius: 1.15,
-                    colors: [Color(0x88FFFFFF), Color(0x00FFFFFF)],
+                    colors: dark
+                        ? const [Color(0x33C4A35A), Color(0x00000000)]
+                        : const [Color(0x88FFFFFF), Color(0x00FFFFFF)],
                   ),
                 ),
               ),

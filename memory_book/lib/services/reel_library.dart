@@ -148,6 +148,13 @@ class ReelLibrary {
     return next;
   }
 
+  /// A file already copied into the reels folder, with the id it had in the cloud.
+  Future<void> adopt(ReelRecord record) async {
+    final rows = await _read();
+    if (rows.any((row) => row.id == record.id)) return;
+    await _write([record, ...rows]);
+  }
+
   Future<void> remove(String id) async {
     final rows = await load();
     ReelRecord? gone;

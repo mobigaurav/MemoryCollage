@@ -7,10 +7,12 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/config.dart';
 import '../../core/nav.dart';
+import '../../core/theme/chrome.dart';
 import '../../core/theme/tokens.dart';
 import '../../data/repositories/settings_repository.dart';
 import '../../providers.dart';
 import '../../services/auth_ai.dart';
+import '../../services/shelf_sync.dart';
 import '../../widgets/local_photo.dart';
 import '../../widgets/brand_hero.dart';
 import '../ai/cloud_clip.dart';
@@ -23,11 +25,37 @@ class SettingsScreen extends ConsumerWidget {
     await launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 
+  Future<void> _deleteAccount(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete this account?'),
+        content: const Text(
+          'This removes the account, the books, and the reels saved to it. Family books you own are removed too. This cannot be undone.',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Keep it')),
+          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Delete')),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+    try {
+      await ref.read(pushNotificationsProvider).unregister();
+      await ref.read(shelfSyncProvider).erase();
+      await ref.read(authServiceProvider).signOut();
+      ref.invalidate(reelsProvider);
+    } on ShelfException catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+    }
+  }
+
   Future<void> _invite() async {
     await SharePlus.instance.share(
       ShareParams(
         text:
-            'I keep family photos in Memory Book. The book stays on the phone. ${AppConfig.siteUrl}',
+            'Memory Book keeps photo books, collages, and short films. ${AppConfig.siteUrl}',
       ),
     );
   }
@@ -46,8 +74,8 @@ class SettingsScreen extends ConsumerWidget {
             eyebrow: 'Profile',
             title: 'You',
             subtitle: session == null
-                ? 'Guest on this phone. Sign in only when you want an AI credit.'
-                : 'This account holds your AI credits.',
+                ? 'Guest on this phone. Sign in to keep books and reels on the account.'
+                : 'Books and reels on this account come back after you sign in.',
             child: session == null
                 ? FilledButton(
                     style: mbInverseButton(),
@@ -97,6 +125,23 @@ class SettingsScreen extends ConsumerWidget {
                           ),
                         ),
                       ),
+                      TextButton(
+                        style: TextButton.styleFrom(
+                          foregroundColor: const Color(0xFFFFD0C8),
+                          padding: EdgeInsets.zero,
+                          minimumSize: const Size(48, 44),
+                          alignment: Alignment.centerLeft,
+                        ),
+                        onPressed: () => _deleteAccount(context, ref),
+                        child: const Text(
+                          'Delete account',
+                          style: TextStyle(
+                            fontFamily: MbTokens.sans,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
                     ],
                   ),
           ),
@@ -127,17 +172,48 @@ class SettingsScreen extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(height: 22),
+                const _SectionLabel('Look'),
+                _Panel(child: const _AppearancePicker()),
+                const SizedBox(height: 22),
                 const _SectionLabel('On this phone'),
                 _Panel(
-                  child: const ListTile(
-                    leading: Icon(Icons.photo_library_outlined, color: MbTokens.leather),
+                  child: ListTile(
+                    leading: Icon(Icons.photo_library_outlined, color: context.mbAccent),
                     title: Text('Photos from this week'),
-                    subtitle: Text('A quiet reminder. No marketing pushes.'),
+                    subtitle: Text('Sunday at 10:00 on this phone. No marketing pushes.'),
                     trailing: _WeeklySwitch(),
                   ),
                 ),
                 const SizedBox(height: 22),
-                const _SectionLabel('About'),
+                const _SectionLabel('Memory Book'),
+                _Panel(
+                  child: Column(
+                    children: [
+                      _Row(
+                        icon: Icons.menu_book_outlined,
+                        title: 'About us',
+                        subtitle: 'The shelf, the studio, and the film.',
+                        onTap: () => _open('${AppConfig.siteUrl}/about'),
+                      ),
+                      const Divider(height: 1),
+                      _Row(
+                        icon: Icons.mail_outline,
+                        title: 'Contact us',
+                        subtitle: 'Write to support@mysticvedic.com.',
+                        onTap: () => _open('${AppConfig.siteUrl}/contact'),
+                      ),
+                      const Divider(height: 1),
+                      _Row(
+                        icon: Icons.ios_share,
+                        title: 'Share the app',
+                        subtitle: 'Send Memory Book to someone who keeps photos.',
+                        onTap: _invite,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 22),
+                const _SectionLabel('Legal'),
                 _Panel(
                   child: Column(
                     children: [
@@ -153,13 +229,6 @@ class SettingsScreen extends ConsumerWidget {
                         title: 'Terms of service',
                         subtitle: 'The agreement for Memory Book.',
                         onTap: () => _open('${AppConfig.siteUrl}/terms'),
-                      ),
-                      const Divider(height: 1),
-                      _Row(
-                        icon: Icons.ios_share,
-                        title: 'Invite friends',
-                        subtitle: 'Send Memory Book to someone who keeps photos.',
-                        onTap: _invite,
                       ),
                     ],
                   ),
@@ -200,10 +269,10 @@ class _VersionLabelState extends State<_VersionLabel> {
     return Text(
       _label,
       textAlign: TextAlign.center,
-      style: const TextStyle(
+      style: TextStyle(
         fontFamily: MbTokens.sans,
         fontSize: 13,
-        color: MbTokens.inkSoft,
+        color: Theme.of(context).textTheme.bodySmall?.color,
       ),
     );
   }
@@ -219,12 +288,96 @@ class _SectionLabel extends StatelessWidget {
       padding: const EdgeInsets.only(left: 4, bottom: 10),
       child: Text(
         label,
-        style: const TextStyle(
-          fontFamily: MbTokens.sans,
-          fontSize: 13,
-          fontWeight: FontWeight.w600,
-          letterSpacing: 0.6,
-          color: MbTokens.inkSoft,
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.6,
+            ),
+      ),
+    );
+  }
+}
+
+class _AppearancePicker extends ConsumerWidget {
+  const _AppearancePicker();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final look = ref.watch(appearanceControllerProvider);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 14),
+      child: Row(
+        children: [
+          for (final choice in ShelfAppearance.values) ...[
+            if (choice != ShelfAppearance.paper) const SizedBox(width: 8),
+            Expanded(
+              child: _LookChoice(
+                selected: look == choice,
+                icon: switch (choice) {
+                  ShelfAppearance.paper => Icons.wb_sunny_outlined,
+                  ShelfAppearance.darkroom => Icons.dark_mode_outlined,
+                  ShelfAppearance.phone => Icons.phone_iphone,
+                },
+                label: switch (choice) {
+                  ShelfAppearance.paper => 'Paper',
+                  ShelfAppearance.darkroom => 'Darkroom',
+                  ShelfAppearance.phone => 'Phone',
+                },
+                onTap: () => ref.read(appearanceControllerProvider.notifier).choose(choice),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _LookChoice extends StatelessWidget {
+  const _LookChoice({
+    required this.selected,
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final bool selected;
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final fill = selected
+        ? (dark ? MbTokens.foil : MbTokens.leather)
+        : (dark ? const Color(0xFF3A2418) : MbTokens.paper);
+    final ink = selected
+        ? (dark ? MbTokens.ink : MbTokens.cream)
+        : (dark ? MbTokens.cream : MbTokens.ink);
+    return Material(
+      color: fill,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 72),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, color: ink, size: 22),
+              const SizedBox(height: 6),
+              Text(
+                label,
+                style: TextStyle(
+                  fontFamily: MbTokens.sans,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: ink,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -238,7 +391,7 @@ class _Panel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: MbTokens.glass,
+      color: context.mbSurface,
       elevation: 6,
       shadowColor: const Color(0x40301810),
       shape: MbTokens.glassShape(MbTokens.radiusLg),
@@ -275,10 +428,10 @@ class _Row extends StatelessWidget {
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: MbTokens.paper,
+                  color: context.mbChip,
                   borderRadius: BorderRadius.circular(14),
                 ),
-                child: Icon(icon, color: MbTokens.leather, size: 22),
+                child: Icon(icon, color: context.mbAccent, size: 22),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -291,7 +444,7 @@ class _Row extends StatelessWidget {
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_right, color: MbTokens.leather),
+              Icon(Icons.chevron_right, color: context.mbAccent),
             ],
           ),
         ),
@@ -412,13 +565,13 @@ class _AiLabScreenState extends ConsumerState<AiLabScreen> {
               label: Text('Buy ${AppConfig.creditPackSize} clips'),
             ),
             const SizedBox(height: 8),
-            const Text(
+            Text(
               'An AI clip is not free, and Premium does not include it.',
               style: TextStyle(
                 fontFamily: MbTokens.sans,
                 fontSize: 14,
                 height: 1.35,
-                color: MbTokens.inkSoft,
+                color: context.mbMuted,
               ),
             ),
             if (_result != null) ...[
@@ -467,7 +620,15 @@ class _WeeklySwitchState extends ConsumerState<_WeeklySwitch> {
         await ref
             .read(settingsRepositoryProvider)
             .setBool(SettingsRepository.weeklyNudgeKey, v);
-        if (v) await ref.read(localNotifyProvider).request();
+        final notify = ref.read(localNotifyProvider);
+        if (v) {
+          await notify.scheduleWeekly(
+            title: ShelfSync.weeklyTitle,
+            body: ShelfSync.weeklyBody,
+          );
+        } else {
+          await notify.cancelWeekly();
+        }
       },
     );
   }

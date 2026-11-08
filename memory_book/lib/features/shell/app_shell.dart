@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../core/theme/app_theme.dart';
 import '../../core/theme/tokens.dart';
 
 /// The bottom tab on screen. The branches stay alive, so Reels reads this to pause.
@@ -20,19 +19,16 @@ class AppShell extends StatelessWidget {
     if (shellTab.value != index) {
       WidgetsBinding.instance.addPostFrameCallback((_) => shellTab.value = index);
     }
-    return Theme(
-      data: MbTheme.studio,
-      child: Scaffold(
-        body: navigationShell,
-        bottomNavigationBar: _ShelfBar(
-          index: index,
-          onSelect: (next) {
-            navigationShell.goBranch(
-              next,
-              initialLocation: next == index,
-            );
-          },
-        ),
+    return Scaffold(
+      body: navigationShell,
+      bottomNavigationBar: _ShelfBar(
+        index: index,
+        onSelect: (next) {
+          navigationShell.goBranch(
+            next,
+            initialLocation: next == index,
+          );
+        },
       ),
     );
   }
@@ -47,6 +43,7 @@ class _ShelfBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bottom = MediaQuery.paddingOf(context).bottom;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     const bar = 62.0;
     const lift = 30.0;
     return SizedBox(
@@ -59,10 +56,10 @@ class _ShelfBar extends StatelessWidget {
             right: 0,
             bottom: 0,
             height: bar + bottom,
-            child: const DecoratedBox(
+            child: DecoratedBox(
               decoration: BoxDecoration(
-                color: Color(0xD9FFFBF6),
-                border: Border(top: BorderSide(color: MbTokens.glassEdge)),
+                color: dark ? const Color(0xE61A120E) : const Color(0xD9FFFBF6),
+                border: const Border(top: BorderSide(color: MbTokens.glassEdge)),
                 boxShadow: [
                   BoxShadow(
                     color: Color(0x334A2C1A),
@@ -82,6 +79,7 @@ class _ShelfBar extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 _Tab(
+                  dark: dark,
                   selected: index == 0,
                   icon: Icons.menu_book_outlined,
                   selectedIcon: Icons.menu_book,
@@ -89,6 +87,7 @@ class _ShelfBar extends StatelessWidget {
                   onTap: () => onSelect(0),
                 ),
                 _Tab(
+                  dark: dark,
                   selected: index == 1,
                   icon: Icons.palette_outlined,
                   selectedIcon: Icons.palette,
@@ -97,11 +96,13 @@ class _ShelfBar extends StatelessWidget {
                 ),
                 Expanded(
                   child: _ReelsTab(
+                    dark: dark,
                     selected: index == 2,
                     onTap: () => onSelect(2),
                   ),
                 ),
                 _Tab(
+                  dark: dark,
                   selected: index == 3,
                   icon: Icons.public_outlined,
                   selectedIcon: Icons.public,
@@ -109,6 +110,7 @@ class _ShelfBar extends StatelessWidget {
                   onTap: () => onSelect(3),
                 ),
                 _Tab(
+                  dark: dark,
                   selected: index == 4,
                   icon: Icons.person_outline,
                   selectedIcon: Icons.person,
@@ -126,6 +128,7 @@ class _ShelfBar extends StatelessWidget {
 
 class _Tab extends StatelessWidget {
   const _Tab({
+    required this.dark,
     required this.selected,
     required this.icon,
     required this.selectedIcon,
@@ -133,6 +136,7 @@ class _Tab extends StatelessWidget {
     required this.onTap,
   });
 
+  final bool dark;
   final bool selected;
   final IconData icon;
   final IconData selectedIcon;
@@ -141,7 +145,9 @@ class _Tab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = selected ? MbTokens.leather : MbTokens.inkSoft;
+    final color = selected
+        ? (dark ? MbTokens.foil : MbTokens.leather)
+        : (dark ? MbTokens.paper : MbTokens.inkSoft);
     return Expanded(
       child: InkWell(
         onTap: onTap,
@@ -170,8 +176,9 @@ class _Tab extends StatelessWidget {
 }
 
 class _ReelsTab extends StatelessWidget {
-  const _ReelsTab({required this.selected, required this.onTap});
+  const _ReelsTab({required this.dark, required this.selected, required this.onTap});
 
+  final bool dark;
   final bool selected;
   final VoidCallback onTap;
 
@@ -190,7 +197,7 @@ class _ReelsTab extends StatelessWidget {
               height: 64,
               padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
-                color: const Color(0xEEFFFBF6),
+                color: dark ? const Color(0xEE1A120E) : const Color(0xEEFFFBF6),
                 shape: BoxShape.circle,
                 border: Border.all(color: MbTokens.glassEdge),
                 boxShadow: [
@@ -220,7 +227,9 @@ class _ReelsTab extends StatelessWidget {
                 fontFamily: MbTokens.sans,
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
-                color: selected ? MbTokens.leather : MbTokens.inkSoft,
+                color: selected
+                    ? (dark ? MbTokens.foil : MbTokens.leather)
+                    : (dark ? MbTokens.paper : MbTokens.inkSoft),
               ),
             ),
           ],

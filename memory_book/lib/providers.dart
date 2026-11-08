@@ -20,6 +20,7 @@ import 'services/print_service.dart';
 import 'services/premium_service.dart';
 import 'services/push_notifications.dart';
 import 'services/reel_library.dart';
+import 'services/shelf_sync.dart';
 import 'services/slideshow_exporter.dart';
 
 final appDatabaseProvider = Provider<AppDatabase>((ref) {
@@ -31,6 +32,32 @@ final appDatabaseProvider = Provider<AppDatabase>((ref) {
 final settingsRepositoryProvider = Provider<SettingsRepository>(
   (ref) => SettingsRepository(ref.watch(appDatabaseProvider)),
 );
+
+/// Paper is the studio. Darkroom is the night version. Phone follows the device.
+enum ShelfAppearance { paper, darkroom, phone }
+
+class AppearanceController extends Notifier<ShelfAppearance> {
+  @override
+  ShelfAppearance build() {
+    Future.microtask(_load);
+    return ShelfAppearance.paper;
+  }
+
+  Future<void> _load() async {
+    final raw = await ref.read(settingsRepositoryProvider).get(SettingsRepository.appearanceKey);
+    final next = ShelfAppearance.values.where((look) => look.name == raw).firstOrNull;
+    if (!ref.mounted || next == null || next == state) return;
+    state = next;
+  }
+
+  Future<void> choose(ShelfAppearance look) async {
+    state = look;
+    await ref.read(settingsRepositoryProvider).set(SettingsRepository.appearanceKey, look.name);
+  }
+}
+
+final appearanceControllerProvider =
+    NotifierProvider<AppearanceController, ShelfAppearance>(AppearanceController.new);
 
 final albumRepositoryProvider = Provider<AlbumRepository>(
   (ref) => AlbumRepository(ref.watch(appDatabaseProvider)),
@@ -65,6 +92,16 @@ final exportHistoryProvider = Provider<ExportHistory>(
 );
 
 final reelLibraryProvider = Provider<ReelLibrary>((ref) => ReelLibrary());
+
+final shelfSyncProvider = Provider<ShelfSync>(
+  (ref) => ShelfSync(
+    ref.watch(settingsRepositoryProvider),
+    ref.watch(albumRepositoryProvider),
+    ref.watch(photoServiceProvider),
+    ref.watch(reelLibraryProvider),
+    ref.watch(authRepositoryProvider),
+  ),
+);
 
 final reelsProvider = FutureProvider<List<ReelRecord>>((ref) {
   return ref.watch(reelLibraryProvider).load();

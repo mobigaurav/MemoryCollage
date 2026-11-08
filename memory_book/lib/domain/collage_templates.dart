@@ -49,7 +49,7 @@ Rect insetFrame(Rect frame, {double gutter = 0.012}) {
 
 enum CollageKind { grid, mosaic, shape, freeform }
 
-enum CollageShelf { grids, stories, scrap, social, shapes, free }
+enum CollageShelf { grids, stories, scrap, bento, film, journal, social, shapes, free }
 
 abstract final class CollageCatalog {
   static List<CollageTemplate>? _cached;

@@ -204,14 +204,29 @@ class _CollageStudioScreenState extends ConsumerState<CollageStudioScreen> {
     _selectedSticker = null;
   }
 
+  void _clearPack() {
+    _packId = null;
+    _paper = CollagePaper.plain;
+    _background = MbTokens.paper;
+    _stickers.removeWhere((s) => s.pack);
+    _selectedSticker = null;
+  }
+
   Future<void> _pickPack() async {
-    final pack = await pickThemePack(context, current: _packId);
-    if (pack == null || !mounted) return;
-    if (pack.premium && !ref.read(premiumControllerProvider).isPremium) {
+    final choice = await pickThemePack(context, current: _packId);
+    if (choice == null || !mounted) return;
+    final pack = choice.pack;
+    if (pack != null && pack.premium && !ref.read(premiumControllerProvider).isPremium) {
       context.push('/paywall');
       return;
     }
-    setState(() => _usePack(pack));
+    setState(() {
+      if (pack == null) {
+        _clearPack();
+      } else {
+        _usePack(pack);
+      }
+    });
     MbHaptics.snap();
     _scheduleSave();
   }
@@ -291,6 +306,9 @@ class _CollageStudioScreenState extends ConsumerState<CollageStudioScreen> {
         CollageShelf.grids => 'Grids',
         CollageShelf.stories => 'Stories',
         CollageShelf.scrap => 'Scrapbook',
+        CollageShelf.bento => 'Bento',
+        CollageShelf.film => 'Film',
+        CollageShelf.journal => 'Journal',
         CollageShelf.social => 'Social',
         CollageShelf.shapes => 'Shapes',
         CollageShelf.free => 'Free',
@@ -488,11 +506,21 @@ class _CollageStudioScreenState extends ConsumerState<CollageStudioScreen> {
   @override
   Widget build(BuildContext context) {
     final premium = ref.watch(premiumControllerProvider).isPremium;
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final chrome = dark ? MbTokens.cream : MbTokens.ink;
     return Theme(
       data: MbTheme.studio,
       child: Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
+        backgroundColor: dark ? const Color(0xF21A120E) : Colors.transparent,
+        foregroundColor: chrome,
+        iconTheme: IconThemeData(color: chrome),
+        titleTextStyle: TextStyle(
+          fontFamily: MbTokens.serif,
+          fontSize: 22,
+          color: chrome,
+        ),
         leading: shelfBackButton(context),
         title: const Text('Collage studio'),
         actions: [
@@ -569,7 +597,7 @@ class _CollageStudioScreenState extends ConsumerState<CollageStudioScreen> {
                   padding: const EdgeInsets.only(right: 8),
                   child: ActionChip(
                     avatar: const Icon(Icons.auto_awesome, size: 16),
-                    label: Text(ThemePacks.byId(_packId)?.name ?? 'Themes'),
+                    label: Text(ThemePacks.byId(_packId)?.name ?? 'None'),
                     onPressed: _pickPack,
                   ),
                 ),
@@ -667,51 +695,55 @@ class _CollageStudioScreenState extends ConsumerState<CollageStudioScreen> {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(8, 8, 8, 20),
-            child: Row(
-              children: [
-                IconButton(
-                  tooltip: 'Photos',
-                  onPressed: _pickPhotos,
-                  icon: const Icon(Icons.add_photo_alternate_outlined),
-                ),
-                IconButton(
-                  tooltip: 'Adjust',
-                  onPressed: _openAdjust,
-                  icon: const Icon(Icons.tune),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: FilledButton(
-                    onPressed: !_hasPhoto || _busy ? null : _export,
-                    child: Text(_busy ? 'Rendering…' : 'Save'),
+            padding: const EdgeInsets.fromLTRB(4, 4, 4, 12),
+            child: IconTheme(
+              data: IconThemeData(color: chrome),
+              child: Row(
+                children: [
+                  _StudioTool(
+                    icon: Icons.add_photo_alternate_outlined,
+                    label: 'Photos',
+                    color: chrome,
+                    onPressed: _pickPhotos,
                   ),
-                ),
-                IconButton(
-                  tooltip: 'Make a reel',
-                  onPressed: !_hasPhoto ? null : _makeReel,
-                  icon: const Icon(Icons.movie_creation_outlined),
-                ),
-                IconButton(
-                  tooltip: 'Share with family',
-                  onPressed: _shareWithFamily,
-                  icon: const Icon(Icons.group_add_outlined),
-                ),
-                IconButton(
-                  tooltip: 'Print',
-                  onPressed: !_hasPhoto || _busy
-                      ? null
-                      : () => _export(toPrinter: true),
-                  icon: const Icon(Icons.print_outlined),
-                ),
-                IconButton(
-                  tooltip: 'Share',
-                  onPressed: !_hasPhoto || _busy
-                      ? null
-                      : () => _export(share: true),
-                  icon: const Icon(Icons.ios_share),
-                ),
-              ],
+                  _StudioTool(
+                    icon: Icons.tune,
+                    label: 'Adjust',
+                    color: chrome,
+                    onPressed: _openAdjust,
+                  ),
+                  _StudioTool(
+                    icon: Icons.photo_library_outlined,
+                    label: _busy ? 'Saving' : 'Save',
+                    color: chrome,
+                    onPressed: !_hasPhoto || _busy ? null : _export,
+                  ),
+                  _StudioTool(
+                    icon: Icons.movie_creation_outlined,
+                    label: 'Reel',
+                    color: chrome,
+                    onPressed: !_hasPhoto ? null : _makeReel,
+                  ),
+                  _StudioTool(
+                    icon: Icons.group_add_outlined,
+                    label: 'Family',
+                    color: chrome,
+                    onPressed: _shareWithFamily,
+                  ),
+                  _StudioTool(
+                    icon: Icons.print_outlined,
+                    label: 'Print',
+                    color: chrome,
+                    onPressed: !_hasPhoto || _busy ? null : () => _export(toPrinter: true),
+                  ),
+                  _StudioTool(
+                    icon: Icons.ios_share,
+                    label: 'Share',
+                    color: chrome,
+                    onPressed: !_hasPhoto || _busy ? null : () => _export(share: true),
+                  ),
+                ],
+              ),
             ),
           ),
         ],
@@ -1750,6 +1782,52 @@ class _CollageStudioScreenState extends ConsumerState<CollageStudioScreen> {
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+}
+
+class _StudioTool extends StatelessWidget {
+  const _StudioTool({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onPressed,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final ink = onPressed == null ? color.withValues(alpha: 0.35) : color;
+    return Expanded(
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(12),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 52),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 22, color: ink),
+              const SizedBox(height: 2),
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontFamily: MbTokens.sans,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: ink,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 
