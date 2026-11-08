@@ -34,7 +34,6 @@ jobs:
           cache: npm
           cache-dependency-path: apps/web/package-lock.json
       - name: Deploy apps/web to the Memory Book Vercel project
-        working-directory: apps/web
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
@@ -103,6 +102,8 @@ jobs:
             exit 0
           fi
           npm install --global vercel@latest
+          # Upload the repository root. The project root is apps/web, so a
+          # deploy started inside apps/web makes Vercel look for apps/web/apps/web.
           unset VERCEL_PROJECT_ID
           scope=()
           if [ -n "${VERCEL_ORG_ID:-}" ]; then
