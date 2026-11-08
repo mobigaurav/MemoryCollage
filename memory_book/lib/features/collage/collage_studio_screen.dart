@@ -380,7 +380,9 @@ class _CollageStudioScreenState extends ConsumerState<CollageStudioScreen> {
     final choice = await showModalBottomSheet<String>(
       context: context,
       backgroundColor: MbTokens.cream,
-      builder: (ctx) => SafeArea(
+      builder: (ctx) => Theme(
+        data: MbTheme.studio,
+        child: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(8, 8, 8, 12),
           child: Column(
@@ -407,6 +409,7 @@ class _CollageStudioScreenState extends ConsumerState<CollageStudioScreen> {
               ),
             ],
           ),
+        ),
         ),
       ),
     );
@@ -1068,7 +1071,9 @@ class _CollageStudioScreenState extends ConsumerState<CollageStudioScreen> {
     await showModalBottomSheet<void>(
       context: context,
       backgroundColor: MbTokens.cream,
-      builder: (ctx) => SafeArea(
+      builder: (ctx) => Theme(
+        data: MbTheme.studio,
+        child: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
           child: Column(
@@ -1150,6 +1155,7 @@ class _CollageStudioScreenState extends ConsumerState<CollageStudioScreen> {
             ],
           ),
         ),
+        ),
       ),
     );
   }
@@ -1159,7 +1165,9 @@ class _CollageStudioScreenState extends ConsumerState<CollageStudioScreen> {
       context: context,
       backgroundColor: MbTokens.cream,
       isScrollControlled: true,
-      builder: (ctx) => SafeArea(
+      builder: (ctx) => Theme(
+        data: MbTheme.studio,
+        child: SafeArea(
         child: SizedBox(
           height: MediaQuery.sizeOf(ctx).height * 0.72,
           child: ListView(
@@ -1195,6 +1203,7 @@ class _CollageStudioScreenState extends ConsumerState<CollageStudioScreen> {
                 ),
             ],
           ),
+        ),
         ),
       ),
     );
@@ -1384,7 +1393,9 @@ class _CollageStudioScreenState extends ConsumerState<CollageStudioScreen> {
       builder: (ctx) {
         return StatefulBuilder(
           builder: (ctx, setSheet) {
-            return Padding(
+        return Theme(
+          data: MbTheme.studio,
+          child: Padding(
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -1436,7 +1447,8 @@ class _CollageStudioScreenState extends ConsumerState<CollageStudioScreen> {
                   ),
                 ],
               ),
-            );
+            ),
+          );
           },
         );
       },
@@ -1596,7 +1608,9 @@ class _CollageStudioScreenState extends ConsumerState<CollageStudioScreen> {
     final controller = TextEditingController(text: 'Family collage');
     final title = await showDialog<String>(
       context: context,
-      builder: (ctx) => AlertDialog(
+      builder: (ctx) => Theme(
+        data: MbTheme.studio,
+        child: AlertDialog(
         backgroundColor: MbTokens.cream,
         title: const Text('Share with family'),
         content: TextField(
@@ -1614,6 +1628,7 @@ class _CollageStudioScreenState extends ConsumerState<CollageStudioScreen> {
             child: const Text('Share'),
           ),
         ],
+        ),
       ),
     );
     controller.dispose();

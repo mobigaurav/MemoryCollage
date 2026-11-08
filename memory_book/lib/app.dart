@@ -16,12 +16,13 @@ class MemoryBookApp extends ConsumerStatefulWidget {
   ConsumerState<MemoryBookApp> createState() => _MemoryBookAppState();
 }
 
-class _MemoryBookAppState extends ConsumerState<MemoryBookApp> {
+class _MemoryBookAppState extends ConsumerState<MemoryBookApp> with WidgetsBindingObserver {
   late final _router = createRouter();
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     appGo = (location) => _router.go(location);
     analytics.init();
     Future.microtask(() async {
@@ -42,6 +43,19 @@ class _MemoryBookAppState extends ConsumerState<MemoryBookApp> {
       await ref.read(shelfSyncProvider).merge();
       if (mounted) ref.invalidate(reelsProvider);
     });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.detached) {
+      ref.read(shelfSyncProvider).push();
+    }
   }
 
   @override

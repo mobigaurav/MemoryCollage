@@ -34,10 +34,10 @@ class ShelfSync {
   static const weeklyBody = 'Open the shelf and start a book from the last few days.';
 
   var _merging = false;
+  var _sawCloud = false;
   Timer? _pending;
 
   void noteChanged() {
-    if (_merging) return;
     _pending?.cancel();
     _pending = Timer(const Duration(seconds: 2), () {
       unawaited(push());
@@ -46,10 +46,11 @@ class ShelfSync {
 
   Future<void> merge() async {
     if (_merging) return;
-    if (!await _signedIn()) return;
+    if (!await _cloudAccount()) return;
     _merging = true;
     try {
       final cloud = await _send('GET', '/v1/library');
+      _sawCloud = true;
       await _pullBooks(cloud['books']);
       await _pullReels(cloud['reels']);
       _merging = false;
@@ -60,7 +61,11 @@ class ShelfSync {
   }
 
   Future<void> push() async {
-    if (_merging || !await _signedIn()) return;
+    if (_merging) {
+      noteChanged();
+      return;
+    }
+    if (!await _cloudAccount()) return;
     try {
       final books = <Map<String, Object?>>[];
       for (final album in await _albums.watchAll().first) {
@@ -79,14 +84,15 @@ class ShelfSync {
           'videoKey': ?key,
         });
       }
+      // An empty phone must not wipe the account before the shelf has been read.
+      if (books.isEmpty && reels.isEmpty && !_sawCloud) return;
       await _send('PUT', '/v1/library', body: {'books': books, 'reels': reels});
     } catch (_) {}
   }
 
   /// Cloud account first. The phone shelf is cleared only after that succeeds.
   Future<void> erase() async {
-    final session = await _auth.current();
-    if (session != null && session.provider == 'cognito') {
+    if (await _cloudAccount()) {
       final response = await _raw('DELETE', '/v1/me');
       if (response.statusCode >= 400) {
         final message = _message(response.body);
@@ -298,9 +304,10 @@ class ShelfSync {
     return ext.isEmpty ? fallback : ext;
   }
 
-  Future<bool> _signedIn() async {
+  /// Email, Apple, and Google all keep a Cognito token. A phone-only account does not.
+  Future<bool> _cloudAccount() async {
     final session = await _auth.current();
-    if (session == null || session.provider != 'cognito') return false;
+    if (session == null || session.provider == 'local') return false;
     final token = await _settings.get(SettingsRepository.cognitoIdTokenKey);
     return token != null && token.isNotEmpty && AppConfig.aiBaseUrl.isNotEmpty;
   }

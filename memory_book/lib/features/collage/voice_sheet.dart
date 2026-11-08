@@ -7,6 +7,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
 import 'package:video_player/video_player.dart';
 
+import '../../core/theme/app_theme.dart';
 import '../../core/theme/tokens.dart';
 
 /// Records up to twenty seconds. Returns the file, or null if they back out.
@@ -15,7 +16,10 @@ Future<File?> recordVoiceNote(BuildContext context) {
     context: context,
     isScrollControlled: true,
     backgroundColor: MbTokens.cream,
-    builder: (ctx) => const _VoiceSheet(),
+    builder: (ctx) => Theme(
+      data: MbTheme.studio,
+      child: const _VoiceSheet(),
+    ),
   );
 }
 
