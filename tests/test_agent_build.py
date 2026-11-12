@@ -53,10 +53,10 @@ def test_checks_state():
     assert b.checks_state(ok)[0] == "success"
     assert b.checks_state(ok[:3])[0] == "pending"
     assert b.checks_state(ok[:3] + [cr("plan-gate", status="in_progress")])[0] == "pending"
-    state, runs = b.checks_state(ok + [cr("test", conclusion="failure", id=9)])
-    assert state == "failure" and runs["test"]["id"] == 9
+    state, runs = b.checks_state(ok + [cr("API", conclusion="failure", id=9)])
+    assert state == "failure" and runs["API"]["id"] == 9
     # a newer successful re-run wins over an older failure
-    assert b.checks_state([cr("test", conclusion="failure", id=1)] + ok[1:] + [cr("test", id=5)])[0] == "success"
+    assert b.checks_state([cr("API", conclusion="failure", id=1)] + ok[1:] + [cr("API", id=5)])[0] == "success"
     assert b.checks_state(ok + [cr("other", conclusion="failure", id=99)])[0] == "success"
 
 
@@ -214,7 +214,7 @@ def test_settle_merges_on_success(monkeypatch):
 
 
 def test_settle_retries_then_stops():
-    runs = [cr(n) for n in b.REQUIRED_CHECKS] + [cr("test", conclusion="failure", id=9)]
+    runs = [cr(n) for n in b.REQUIRED_CHECKS] + [cr("API", conclusion="failure", id=9)]
     gh = MergeGH(("agent:approved", b.AWAITING), runs)
     assert "retry" in b.settle(gh, 7, _pr(gh), "r")
     assert gh.dispatched[0][0] == "agent-build.yml" and gh.dispatched[0][2]["attempt"] == "2"
@@ -227,7 +227,7 @@ def test_merge_workflow_triggers():
     import yaml
     wf = yaml.safe_load(open(os.path.join(os.path.dirname(__file__), "..", ".github", "workflows", "agent-merge.yml")))
     on = wf.get(True) or wf.get("on")
-    assert set(on["workflow_run"]["workflows"]) == {"CI", "Docs check"} and "schedule" in on
+    assert set(on["workflow_run"]["workflows"]) == {"ci", "Docs check"} and "schedule" in on
 
 
 def test_workflow_has_least_privilege():
