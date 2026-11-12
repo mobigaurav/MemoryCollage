@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/haptics.dart';
+import '../../core/theme/chrome.dart';
 import '../../core/theme/tokens.dart';
 import '../../data/db/app_database.dart';
 import '../../domain/book_models.dart';
@@ -14,7 +15,7 @@ Future<void> showAlbumEditSheet({
 }) {
   return showModalBottomSheet<void>(
     context: context,
-    backgroundColor: MbTokens.cream,
+    backgroundColor: context.mbSheet,
     isScrollControlled: true,
     builder: (_) => AlbumEditSheet(album: album),
   );
@@ -76,8 +77,8 @@ class _AlbumEditSheetState extends ConsumerState<AlbumEditSheet> {
             TextField(
               controller: _title,
               decoration: const InputDecoration(labelText: 'Title'),
-              style: const TextStyle(
-                color: MbTokens.ink,
+              style: TextStyle(
+                color: context.mbInk,
                 fontFamily: MbTokens.sans,
                 fontSize: 20,
                 fontWeight: FontWeight.w600,
@@ -159,7 +160,7 @@ class _AlbumEditSheetState extends ConsumerState<AlbumEditSheet> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: MbTokens.cream,
+        backgroundColor: context.mbSheet,
         title: const Text('Delete this book?'),
         content: const Text(
           'The book leaves this phone. The photos in your camera roll stay.',

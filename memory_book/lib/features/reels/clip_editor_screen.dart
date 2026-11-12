@@ -11,6 +11,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:video_player/video_player.dart';
 
 import '../../core/nav.dart';
+import '../../core/theme/chrome.dart';
 import '../../core/theme/tokens.dart';
 import '../../providers.dart';
 import '../../services/reel_jobs.dart';
@@ -31,6 +32,7 @@ class ClipEditorScreen extends ConsumerStatefulWidget {
 class _ClipEditorScreenState extends ConsumerState<ClipEditorScreen> {
   VideoPlayerController? _player;
   VideoPlayerController? _joinPlayer;
+  VideoPlayerController? _score;
   ReelRecord? _reel;
   ReelRecord? _join;
   String _aspect = 'original';
@@ -69,6 +71,7 @@ class _ClipEditorScreenState extends ConsumerState<ClipEditorScreen> {
     final player = VideoPlayerController.file(File(reel.path));
     await player.initialize();
     await player.setLooping(false);
+    await player.setVolume(1);
     final duration = player.value.duration.inMilliseconds.clamp(1, 3600000);
     player.addListener(_followTrim);
     if (!mounted) {
@@ -89,6 +92,7 @@ class _ClipEditorScreenState extends ConsumerState<ClipEditorScreen> {
     final player = _player;
     if (player == null || !player.value.isInitialized || _busy) return;
     _holdInside(player, _startMs, _endMs);
+    _syncScore();
   }
 
   void _followJoin() {
@@ -112,6 +116,7 @@ class _ClipEditorScreenState extends ConsumerState<ClipEditorScreen> {
     _joinPlayer?.removeListener(_followJoin);
     _player?.dispose();
     _joinPlayer?.dispose();
+    _score?.dispose();
     _name.dispose();
     super.dispose();
   }
@@ -128,19 +133,19 @@ class _ClipEditorScreenState extends ConsumerState<ClipEditorScreen> {
   Future<void> _pickMusic() async {
     final choice = await showModalBottomSheet<String>(
       context: context,
-      backgroundColor: MbTokens.cream,
+      backgroundColor: context.mbSheet,
       builder: (ctx) => SafeArea(
         child: ListView(
           shrinkWrap: true,
           children: [
-            const Padding(
-              padding: EdgeInsets.fromLTRB(20, 16, 20, 8),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
               child: Text(
                 'Music',
                 style: TextStyle(
                   fontFamily: MbTokens.serif,
                   fontSize: 22,
-                  color: MbTokens.ink,
+                  color: ctx.mbInk,
                 ),
               ),
             ),
@@ -170,6 +175,7 @@ class _ClipEditorScreenState extends ConsumerState<ClipEditorScreen> {
         _musicIndex = null;
         _musicFile = null;
       });
+      await _attachScore();
       return;
     }
     if (choice == 'file') {
@@ -180,12 +186,57 @@ class _ClipEditorScreenState extends ConsumerState<ClipEditorScreen> {
         _musicIndex = null;
         _musicFile = picked;
       });
+      await _attachScore();
       return;
     }
     setState(() {
       _musicFile = null;
       _musicIndex = int.parse(choice.split(':').last);
     });
+    await _attachScore();
+  }
+
+  void _syncScore() {
+    final video = _player;
+    final score = _score;
+    if (video == null || score == null || !score.value.isInitialized) return;
+    final level = _mute ? 0.0 : video.value.volume;
+    if ((score.value.volume - level).abs() > 0.02) {
+      score.setVolume(level);
+    }
+    if (level <= 0.01) {
+      if (score.value.isPlaying) score.pause();
+      return;
+    }
+    if (video.value.isPlaying && !score.value.isPlaying) {
+      score.play();
+    } else if (!video.value.isPlaying && score.value.isPlaying) {
+      score.pause();
+    }
+  }
+
+  Future<void> _attachScore() async {
+    final previous = _score;
+    _score = null;
+    await previous?.dispose();
+    final path = await _musicPath();
+    final video = _player;
+    if (!mounted || video == null) return;
+    if (path == null) {
+      await video.setVolume(_mute ? 0 : 1);
+      return;
+    }
+    final score = VideoPlayerController.file(File(path));
+    await score.initialize();
+    await score.setLooping(true);
+    await score.setVolume(_mute ? 0 : video.value.volume);
+    if (_mute) await video.setVolume(0);
+    if (!mounted) {
+      await score.dispose();
+      return;
+    }
+    setState(() => _score = score);
+    _syncScore();
   }
 
   String get _musicLabel {
@@ -219,19 +270,19 @@ class _ClipEditorScreenState extends ConsumerState<ClipEditorScreen> {
     }
     final picked = await showModalBottomSheet<ReelRecord>(
       context: context,
-      backgroundColor: MbTokens.cream,
+      backgroundColor: context.mbSheet,
       builder: (ctx) => SafeArea(
         child: ListView(
           shrinkWrap: true,
           children: [
-            const Padding(
-              padding: EdgeInsets.fromLTRB(20, 16, 20, 8),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
               child: Text(
                 'Play this after the cut',
                 style: TextStyle(
                   fontFamily: MbTokens.serif,
                   fontSize: 22,
-                  color: MbTokens.ink,
+                  color: ctx.mbInk,
                 ),
               ),
             ),
@@ -383,7 +434,7 @@ class _ClipEditorScreenState extends ConsumerState<ClipEditorScreen> {
   Widget build(BuildContext context) {
     final player = _player;
     return Scaffold(
-      backgroundColor: MbTokens.studio,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         leading: shelfBackButton(context),
         title: const Text('Edit'),
@@ -423,11 +474,11 @@ class _ClipEditorScreenState extends ConsumerState<ClipEditorScreen> {
                     const SizedBox(height: 12),
                     Text(
                       '${_clock(_startMs)} – ${_clock(_endMs)}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontFamily: MbTokens.sans,
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
-                        color: MbTokens.inkSoft,
+                        color: context.mbMuted,
                       ),
                     ),
                     RangeSlider(
@@ -446,12 +497,12 @@ class _ClipEditorScreenState extends ConsumerState<ClipEditorScreen> {
                         player.seekTo(Duration(milliseconds: start));
                       },
                     ),
-                    const Text(
+                    Text(
                       'Cut',
                       style: TextStyle(
                         fontFamily: MbTokens.sans,
                         fontWeight: FontWeight.w700,
-                        color: MbTokens.ink,
+                        color: context.mbInk,
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -465,7 +516,7 @@ class _ClipEditorScreenState extends ConsumerState<ClipEditorScreen> {
                             selected: _aspect == choice.$1,
                             selectedColor: MbTokens.leather,
                             labelStyle: TextStyle(
-                              color: _aspect == choice.$1 ? MbTokens.cream : MbTokens.ink,
+                              color: _aspect == choice.$1 ? MbTokens.cream : context.mbInk,
                               fontFamily: MbTokens.sans,
                               fontWeight: FontWeight.w600,
                             ),
@@ -479,7 +530,13 @@ class _ClipEditorScreenState extends ConsumerState<ClipEditorScreen> {
                       title: const Text('Keep the sound'),
                       value: !_mute,
                       activeThumbColor: MbTokens.leather,
-                      onChanged: (keep) => setState(() => _mute = !keep),
+                      onChanged: (keep) async {
+                        setState(() => _mute = !keep);
+                        final level = _mute ? 0.0 : 1.0;
+                        await _player?.setVolume(level);
+                        await _score?.setVolume(level);
+                        _syncScore();
+                      },
                     ),
                     ListTile(
                       contentPadding: EdgeInsets.zero,
@@ -572,13 +629,13 @@ class _PreviewRow extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 8),
-        const Text(
+        Text(
           'Join and save plays 1, then 2, in this reel.',
           style: TextStyle(
             fontFamily: MbTokens.sans,
             fontSize: 14,
             fontWeight: FontWeight.w600,
-            color: MbTokens.inkSoft,
+            color: context.mbMuted,
           ),
         ),
       ],
@@ -597,7 +654,6 @@ class _PreviewRow extends StatelessWidget {
             fontFamily: MbTokens.sans,
             fontSize: 13,
             fontWeight: FontWeight.w700,
-            color: MbTokens.ink,
           ),
         ),
         const SizedBox(height: 6),
@@ -677,7 +733,7 @@ class _JoinCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: MbTokens.glass,
+      color: context.mbSurface,
       elevation: 6,
       shadowColor: const Color(0x40301810),
       shape: MbTokens.glassShape(20),
@@ -686,12 +742,12 @@ class _JoinCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'Join',
               style: TextStyle(
                 fontFamily: MbTokens.sans,
                 fontWeight: FontWeight.w700,
-                color: MbTokens.ink,
+                color: context.mbInk,
               ),
             ),
             const SizedBox(height: 4),
@@ -699,11 +755,11 @@ class _JoinCard extends StatelessWidget {
               join == null
                   ? 'Choose a second reel to play after this one. This reel becomes the joined film. The second reel stays as it is.'
                   : 'This reel will play, then ${join!.title}. ${join!.title} stays as it is.',
-              style: const TextStyle(
+              style: TextStyle(
                 fontFamily: MbTokens.sans,
                 fontSize: 15,
                 height: 1.35,
-                color: MbTokens.inkSoft,
+                color: context.mbMuted,
               ),
             ),
             if (join != null) ...[

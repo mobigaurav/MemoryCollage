@@ -10,6 +10,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:video_player/video_player.dart';
 
 import '../../core/nav.dart';
+import '../../core/theme/chrome.dart';
 import '../../core/theme/tokens.dart';
 import '../../domain/collage_craft.dart';
 import '../../domain/media_options.dart';
@@ -196,11 +197,11 @@ class _VideoStudioScreenState extends ConsumerState<VideoStudioScreen> {
             decoration: const InputDecoration(labelText: 'End card'),
           ),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             '9:16 keeps a portrait photo tall. 16:9 is a wide film. Photos stay upright either way.',
             style: TextStyle(
               fontFamily: MbTokens.sans,
-              color: MbTokens.ink,
+              color: context.mbInk,
               height: 1.4,
             ),
           ),
@@ -218,10 +219,10 @@ class _VideoStudioScreenState extends ConsumerState<VideoStudioScreen> {
             _customMusic == null
                 ? SlideshowExporter.musicName(_musicIndex - 1)
                 : 'Your track  ${p.basename(_customMusic!)}',
-            style: const TextStyle(
+            style: TextStyle(
               fontFamily: MbTokens.sans,
               fontWeight: FontWeight.w600,
-              color: MbTokens.ink,
+              color: context.mbInk,
             ),
           ),
           if (_customMusic == null)

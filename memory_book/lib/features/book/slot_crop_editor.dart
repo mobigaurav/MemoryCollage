@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/haptics.dart';
+import '../../core/theme/chrome.dart';
 import '../../core/theme/tokens.dart';
 import '../../data/db/app_database.dart';
 import '../../domain/media_options.dart';
@@ -18,7 +19,7 @@ Future<void> showSlotCropEditor({
 }) {
   return showModalBottomSheet<void>(
     context: context,
-    backgroundColor: MbTokens.cream,
+    backgroundColor: context.mbSheet,
     isScrollControlled: true,
     enableDrag: false,
     builder: (_) => SlotCropEditor(slot: slot),
@@ -71,9 +72,9 @@ class _SlotCropEditorState extends ConsumerState<SlotCropEditor> {
                 ),
               ],
             ),
-            const Text(
+            Text(
               'Pinch to zoom, or use the slider. Fit shows the whole photo, and you can still zoom after that.',
-              style: TextStyle(color: MbTokens.inkSoft, height: 1.35),
+              style: TextStyle(color: context.mbMuted, height: 1.35),
             ),
             const SizedBox(height: 8),
             Row(

@@ -14,10 +14,11 @@ class MbMakingNote extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final count = ref.watch(reelJobsProvider).length;
     if (count == 0) return const SizedBox.shrink();
-    final ink = onDark ? MbTokens.cream : MbTokens.ink;
+    final dark = onDark || Theme.of(context).brightness == Brightness.dark;
+    final ink = dark ? MbTokens.cream : MbTokens.ink;
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: onDark ? const Color(0xF21C1410) : MbTokens.glass,
+        color: dark ? const Color(0xF21C1410) : MbTokens.glass,
         borderRadius: BorderRadius.circular(999),
         border: Border.all(color: MbTokens.glassEdge),
       ),

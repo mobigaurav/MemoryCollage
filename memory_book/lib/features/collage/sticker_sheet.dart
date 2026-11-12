@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/theme/app_theme.dart';
 import '../../core/theme/tokens.dart';
 import '../../domain/collage_craft.dart';
 import 'sticker_painters.dart';
@@ -11,7 +12,10 @@ Future<StickerChoice?> pickSticker(BuildContext context) {
     context: context,
     isScrollControlled: true,
     backgroundColor: MbTokens.cream,
-    builder: (ctx) => const _StickerSheet(),
+    builder: (ctx) => Theme(
+      data: MbTheme.studio,
+      child: const _StickerSheet(),
+    ),
   );
 }
 

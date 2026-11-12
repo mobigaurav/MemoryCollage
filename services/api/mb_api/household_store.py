@@ -147,6 +147,15 @@ class MemoryHouseholds:
     def list_for(self, sub: str) -> list[Household]:
         return [book for book in self.books.values() if sub in book.members]
 
+    def delete_owned(self, sub: str) -> list[str]:
+        keys: list[str] = []
+        for code, book in list(self.books.items()):
+            if book.owner != sub:
+                continue
+            keys.extend(photo.key for photo in book.photos if photo.key)
+            self.books.pop(code, None)
+        return keys
+
     def get(self, code: str, sub: str) -> Household | None:
         book = self.books.get(code.strip().upper())
         if book is None or sub not in book.members:
@@ -353,6 +362,22 @@ class DynamoHouseholds:
             if loaded is not None:
                 books.append(loaded)
         return books
+
+    def delete_owned(self, sub: str) -> list[str]:
+        from boto3.dynamodb.conditions import Key
+
+        keys: list[str] = []
+        table = self._dynamo()
+        for book in self.list_for(sub):
+            if book.owner != sub:
+                continue
+            keys.extend(photo.key for photo in book.photos if photo.key)
+            found = table.query(KeyConditionExpression=Key("pk").eq(f"HOUSE#{book.code}"))
+            for item in found.get("Items") or []:
+                table.delete_item(Key={"pk": item["pk"], "sk": item["sk"]})
+            for member in book.members:
+                table.delete_item(Key={"pk": f"USER#{member}", "sk": f"HOUSE#{book.code}"})
+        return keys
 
     def get(self, code: str, sub: str) -> Household | None:
         book = self._load(code.strip().upper())

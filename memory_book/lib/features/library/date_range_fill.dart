@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/theme/chrome.dart';
 import '../../core/theme/tokens.dart';
 
 class DateRangeFillFields extends StatelessWidget {
@@ -30,10 +31,10 @@ class DateRangeFillFields extends StatelessWidget {
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
           title: const Text('Fill from a date range'),
-          subtitle: const Text(
+          subtitle: Text(
             'Pull photos from this trip or week onto empty pages.',
             style: TextStyle(
-              color: MbTokens.inkSoft,
+              color: context.mbMuted,
               fontFamily: MbTokens.sans,
               height: 1.35,
             ),
@@ -104,7 +105,7 @@ Future<(DateTime start, DateTime end)?> pickFillRange(
   var enabled = true;
   return showModalBottomSheet<(DateTime, DateTime)>(
     context: context,
-    backgroundColor: MbTokens.cream,
+    backgroundColor: context.mbSheet,
     isScrollControlled: true,
     builder: (ctx) {
       return Padding(

@@ -293,6 +293,73 @@ class AlbumRepository {
     );
   }
 
+  Future<void> deleteAll() async {
+    final rows = await _db.select(_db.albums).get();
+    for (final row in rows) {
+      await deleteAlbum(row.id);
+    }
+  }
+
+  /// Puts a cloud book back on this phone. An id that is already here stays.
+  Future<void> restoreBook({
+    required String id,
+    required String title,
+    required String themeId,
+    String? coverPhotoPath,
+    required DateTime createdAt,
+    required DateTime updatedAt,
+    DateTime? dateStart,
+    DateTime? dateEnd,
+    required List<Map<String, Object?>> pages,
+  }) async {
+    final existing = await (_db.select(_db.albums)..where((t) => t.id.equals(id)))
+        .getSingleOrNull();
+    if (existing != null) return;
+    await _db.into(_db.albums).insert(
+          AlbumsCompanion.insert(
+            id: id,
+            title: title,
+            themeId: Value(themeId),
+            coverPhotoPath: Value(coverPhotoPath),
+            createdAt: createdAt,
+            updatedAt: updatedAt,
+            dateStart: Value(dateStart),
+            dateEnd: Value(dateEnd),
+          ),
+        );
+    for (final page in pages) {
+      final pageId = page['id'] as String? ?? _uuid.v4();
+      await _db.into(_db.bookPages).insert(
+            BookPagesCompanion.insert(
+              id: pageId,
+              albumId: id,
+              pageIndex: (page['pageIndex'] as num?)?.toInt() ?? 0,
+              layoutId: Value(page['layoutId'] as String? ?? 'full'),
+            ),
+          );
+      final slots = page['slots'];
+      if (slots is! List) continue;
+      for (final raw in slots) {
+        if (raw is! Map) continue;
+        final slot = Map<String, Object?>.from(raw);
+        await _db.into(_db.photoSlots).insert(
+              PhotoSlotsCompanion.insert(
+                id: slot['id'] as String? ?? _uuid.v4(),
+                pageId: pageId,
+                slotIndex: (slot['slotIndex'] as num?)?.toInt() ?? 0,
+                imagePath: Value(slot['imagePath'] as String?),
+                caption: Value(slot['caption'] as String? ?? ''),
+                scale: Value((slot['scale'] as num?)?.toDouble() ?? 1),
+                offsetX: Value((slot['offsetX'] as num?)?.toDouble() ?? 0),
+                offsetY: Value((slot['offsetY'] as num?)?.toDouble() ?? 0),
+                filterId: Value(slot['filterId'] as String? ?? 'none'),
+                showDate: Value(slot['showDate'] == true),
+              ),
+            );
+      }
+    }
+  }
+
   Future<void> deleteAlbum(String id) async {
     final pages = await (_db.select(_db.bookPages)
           ..where((t) => t.albumId.equals(id)))

@@ -9,6 +9,7 @@ import 'package:http/http.dart' as http;
 import 'package:share_plus/share_plus.dart';
 import 'package:video_player/video_player.dart';
 
+import '../../core/theme/chrome.dart';
 import '../../core/theme/tokens.dart';
 import '../../data/repositories/album_repository.dart';
 import '../../data/repositories/settings_repository.dart';
@@ -113,13 +114,13 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
               else if (_error != null)
                 Text(_error!, style: text.bodyLarge)
               else if (_posts.isEmpty)
-                const Text(
+                Text(
                   'Nothing here yet. Post a book or a reel from this phone.',
                   style: TextStyle(
                     fontFamily: MbTokens.sans,
                     fontSize: 17,
                     height: 1.4,
-                    color: MbTokens.ink,
+                    color: context.mbInk,
                   ),
                 )
               else
@@ -145,20 +146,20 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
     if (!await _ensureAccount() || !mounted) return;
     final kind = await showModalBottomSheet<String>(
       context: context,
-      backgroundColor: MbTokens.cream,
+      backgroundColor: context.mbSheet,
       builder: (ctx) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Padding(
-              padding: EdgeInsets.fromLTRB(20, 16, 20, 8),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
               child: Text(
                 'Share with the world',
                 style: TextStyle(
                   fontFamily: MbTokens.serif,
                   fontSize: 24,
-                  color: MbTokens.ink,
+                  color: ctx.mbInk,
                 ),
               ),
             ),
@@ -193,7 +194,7 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
     }
     final albumId = await showModalBottomSheet<String>(
       context: context,
-      backgroundColor: MbTokens.cream,
+      backgroundColor: context.mbSheet,
       builder: (ctx) => SafeArea(
         child: ListView(
           shrinkWrap: true,
@@ -242,7 +243,7 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
     }
     final reel = await showModalBottomSheet<ReelRecord>(
       context: context,
-      backgroundColor: MbTokens.cream,
+      backgroundColor: context.mbSheet,
       builder: (ctx) => SafeArea(
         child: ListView(
           shrinkWrap: true,
@@ -271,7 +272,7 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
       context: context,
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
-        backgroundColor: MbTokens.cream,
+        backgroundColor: context.mbSheet,
         content: Row(
           children: [
             const CircularProgressIndicator(),
@@ -332,7 +333,7 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: MbTokens.cream,
+        backgroundColor: context.mbSheet,
         title: const Text('Delete this from the world?'),
         content: const Text('It leaves for everyone. The copy on this phone stays.'),
         actions: [
@@ -428,7 +429,7 @@ class _PostCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: MbTokens.glass,
+      color: context.mbSurface,
       elevation: 8,
       shadowColor: const Color(0x40301810),
       shape: MbTokens.glassShape(24),
@@ -464,11 +465,11 @@ class _PostCard extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   post.author,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontFamily: MbTokens.sans,
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
-                    color: MbTokens.inkSoft,
+                    color: context.mbMuted,
                   ),
                 ),
                 Row(
@@ -478,15 +479,15 @@ class _PostCard extends StatelessWidget {
                       onPressed: onLove,
                       icon: Icon(
                         post.loved ? Icons.favorite : Icons.favorite_border,
-                        color: post.loved ? MbTokens.oxblood : MbTokens.ink,
+                        color: post.loved ? MbTokens.oxblood : context.mbInk,
                       ),
                     ),
                     Text(
                       '${post.loves}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontFamily: MbTokens.sans,
                         fontWeight: FontWeight.w700,
-                        color: MbTokens.ink,
+                        color: context.mbInk,
                       ),
                     ),
                     const Spacer(),

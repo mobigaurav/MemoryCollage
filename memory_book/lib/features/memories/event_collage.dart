@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/theme/chrome.dart';
 import '../../core/theme/tokens.dart';
 import '../../domain/theme_packs.dart';
 import '../../providers.dart';
@@ -33,7 +34,7 @@ DateTimeRange lastWeekend(DateTime today) {
 Future<void> startEventCollage(BuildContext context, WidgetRef ref) async {
   final choice = await showModalBottomSheet<_EventChoice>(
     context: context,
-    backgroundColor: MbTokens.cream,
+    backgroundColor: context.mbSheet,
     isScrollControlled: true,
     builder: (ctx) => const _EventSheet(),
   );
@@ -115,18 +116,18 @@ class _EventSheetState extends State<_EventSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 12),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
               child: Text(
                 'From an event',
-                style: TextStyle(fontFamily: MbTokens.serif, fontSize: 26, color: MbTokens.ink),
+                style: TextStyle(fontFamily: MbTokens.serif, fontSize: 26, color: context.mbInk),
               ),
             ),
-            const Padding(
-              padding: EdgeInsets.fromLTRB(12, 2, 12, 12),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 2, 12, 12),
               child: Text(
                 'The theme only changes the paper and stickers. Photos come from these days: screenshots and near-duplicates go, favorites stay, and the rest are spread across the days. It does not look at what is in the picture.',
-                style: TextStyle(color: MbTokens.inkSoft, height: 1.35),
+                style: TextStyle(color: context.mbMuted, height: 1.35),
               ),
             ),
             SizedBox(

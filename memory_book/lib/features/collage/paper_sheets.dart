@@ -7,13 +7,24 @@ import 'paper_painter.dart';
 
 typedef BackgroundChoice = ({CollagePaper paper, Color color});
 
-Future<ThemePack?> pickThemePack(BuildContext context, {String? current}) {
-  return showModalBottomSheet<ThemePack>(
+/// A theme the person picked. [pack] is null when they chose None.
+class ThemePackChoice {
+  const ThemePackChoice.none() : pack = null;
+
+  const ThemePackChoice.apply(this.pack);
+
+  final ThemePack? pack;
+
+  bool get clear => pack == null;
+}
+
+Future<ThemePackChoice?> pickThemePack(BuildContext context, {String? current}) {
+  return showModalBottomSheet<ThemePackChoice>(
     context: context,
     isScrollControlled: true,
     backgroundColor: MbTokens.cream,
     builder: (ctx) => SizedBox(
-      height: MediaQuery.sizeOf(ctx).height * 0.62,
+      height: MediaQuery.sizeOf(ctx).height * 0.72,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -27,7 +38,7 @@ Future<ThemePack?> pickThemePack(BuildContext context, {String? current}) {
           const Padding(
             padding: EdgeInsets.fromLTRB(20, 0, 20, 8),
             child: Text(
-              'Paper, a caption and a few stickers. Your photos stay put.',
+              'None puts the plain paper back and lifts the theme stickers. Your photos stay.',
               style: TextStyle(color: MbTokens.inkSoft),
             ),
           ),
@@ -40,13 +51,30 @@ Future<ThemePack?> pickThemePack(BuildContext context, {String? current}) {
                 crossAxisSpacing: 12,
                 childAspectRatio: 0.78,
               ),
-              itemCount: ThemePacks.all.length,
+              itemCount: ThemePacks.all.length + 1,
               itemBuilder: (context, i) {
-                final pack = ThemePacks.all[i];
+                if (i == 0) {
+                  return _PackTile(
+                    name: 'None',
+                    emoji: '—',
+                    caption: 'Plain',
+                    paper: CollagePaper.plain,
+                    color: MbTokens.paper,
+                    premium: false,
+                    selected: current == null,
+                    onTap: () => Navigator.pop(ctx, const ThemePackChoice.none()),
+                  );
+                }
+                final pack = ThemePacks.all[i - 1];
                 return _PackTile(
-                  pack: pack,
+                  name: pack.name,
+                  emoji: pack.emoji,
+                  caption: pack.caption,
+                  paper: pack.paper,
+                  color: pack.color,
+                  premium: pack.premium,
                   selected: pack.id == current,
-                  onTap: () => Navigator.pop(ctx, pack),
+                  onTap: () => Navigator.pop(ctx, ThemePackChoice.apply(pack)),
                 );
               },
             ),
@@ -58,15 +86,29 @@ Future<ThemePack?> pickThemePack(BuildContext context, {String? current}) {
 }
 
 class _PackTile extends StatelessWidget {
-  const _PackTile({required this.pack, required this.selected, required this.onTap});
+  const _PackTile({
+    required this.name,
+    required this.emoji,
+    required this.caption,
+    required this.paper,
+    required this.color,
+    required this.premium,
+    required this.selected,
+    required this.onTap,
+  });
 
-  final ThemePack pack;
+  final String name;
+  final String emoji;
+  final String caption;
+  final CollagePaper paper;
+  final Color color;
+  final bool premium;
   final bool selected;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final dark = pack.paper == CollagePaper.chalk;
+    final dark = paper == CollagePaper.chalk || color.computeLuminance() < 0.25;
     return GestureDetector(
       onTap: onTap,
       child: Column(
@@ -82,16 +124,16 @@ class _PackTile extends StatelessWidget {
                 ),
               ),
               child: CustomPaint(
-                painter: PaperPainter(pack.paper, pack.color),
+                painter: PaperPainter(paper, color),
                 child: Stack(
                   children: [
-                    Center(child: Text(pack.emoji, style: const TextStyle(fontSize: 34))),
+                    Center(child: Text(emoji, style: const TextStyle(fontSize: 34))),
                     Positioned(
                       left: 6,
                       right: 6,
                       bottom: 8,
                       child: Text(
-                        pack.caption,
+                        caption,
                         textAlign: TextAlign.center,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -102,7 +144,7 @@ class _PackTile extends StatelessWidget {
                         ),
                       ),
                     ),
-                    if (pack.premium)
+                    if (premium)
                       const Positioned(
                         top: 6,
                         right: 6,
@@ -115,7 +157,7 @@ class _PackTile extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            pack.name,
+            name,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(

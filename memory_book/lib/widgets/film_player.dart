@@ -65,9 +65,9 @@ class _MbFilmPlayerState extends State<MbFilmPlayer> {
   bool _scrubbing = false;
   double _scrubMs = 0;
   bool _chrome = true;
-  bool _soundOpen = false;
   bool _covered = false;
   bool _wasPlaying = false;
+  double _level = 1;
   Timer? _hideTimer;
 
   VideoPlayerController get _player => widget.controller;
@@ -107,16 +107,14 @@ class _MbFilmPlayerState extends State<MbFilmPlayer> {
   }
 
   Future<void> _toggleSound() async {
-    if (widget.shorts) {
-      final muted = _player.value.volume <= 0.01;
-      await _player.setVolume(muted ? 1 : 0);
-      if (mounted) _reveal();
-      return;
+    final muted = _player.value.volume <= 0.01;
+    if (muted) {
+      await _player.setVolume(_level <= 0.01 ? 1 : _level);
+    } else {
+      _level = _player.value.volume;
+      await _player.setVolume(0);
     }
-    setState(() {
-      _soundOpen = !_soundOpen;
-      if (_soundOpen) _hideTimer?.cancel();
-    });
+    if (mounted) _reveal();
   }
 
   void _reveal() {
@@ -127,13 +125,10 @@ class _MbFilmPlayerState extends State<MbFilmPlayer> {
 
   void _armHide() {
     _hideTimer?.cancel();
-    if (!_player.value.isPlaying || _scrubbing || _soundOpen) return;
+    if (!_player.value.isPlaying || _scrubbing) return;
     _hideTimer = Timer(const Duration(seconds: 3), () {
       if (!mounted || !_player.value.isPlaying || _scrubbing) return;
-      setState(() {
-        _chrome = false;
-        _soundOpen = false;
-      });
+      setState(() => _chrome = false);
     });
   }
 
@@ -269,10 +264,7 @@ class _MbFilmPlayerState extends State<MbFilmPlayer> {
               behavior: HitTestBehavior.translucent,
               onTap: () {
                 if (_chrome) {
-                  setState(() {
-                    _chrome = false;
-                    _soundOpen = false;
-                  });
+                  setState(() => _chrome = false);
                 } else {
                   _reveal();
                 }
@@ -292,7 +284,7 @@ class _MbFilmPlayerState extends State<MbFilmPlayer> {
               right: 8,
               bottom: 8 +
                   ((widget.shorts || widget.fullscreen)
-                      ? MediaQuery.paddingOf(context).bottom
+                      ? MediaQuery.viewPaddingOf(context).bottom
                       : 0),
               child: _seekBar(ready),
             )
@@ -499,7 +491,7 @@ class _MbFilmPlayerState extends State<MbFilmPlayer> {
 
   Widget _controls(bool ready) {
     final playing = ready && _player.value.isPlaying;
-    final volume = ready ? _player.value.volume.clamp(0, 1).toDouble() : 1.0;
+    final top = widget.fullscreen ? MediaQuery.viewPaddingOf(context).top : 0.0;
 
     return DecoratedBox(
       decoration: const BoxDecoration(
@@ -512,17 +504,20 @@ class _MbFilmPlayerState extends State<MbFilmPlayer> {
       ),
       child: Column(
         children: [
-          Row(
-            children: [
-              if (widget.fullscreen || widget.onClose != null)
-                _GlassIcon(
-                  tooltip: 'Close',
-                  icon: Icons.close,
-                  onPressed: widget.fullscreen
-                      ? () => Navigator.of(context).pop()
-                      : widget.onClose,
-                ),
-            ],
+          Padding(
+            padding: EdgeInsets.only(top: top),
+            child: Row(
+              children: [
+                if (widget.fullscreen || widget.onClose != null)
+                  _GlassIcon(
+                    tooltip: 'Close',
+                    icon: Icons.close,
+                    onPressed: widget.fullscreen
+                        ? () => Navigator.of(context).pop()
+                        : widget.onClose,
+                  ),
+              ],
+            ),
           ),
           const Spacer(),
           Row(
@@ -544,41 +539,7 @@ class _MbFilmPlayerState extends State<MbFilmPlayer> {
             ],
           ),
           const Spacer(),
-          if (_soundOpen)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 72),
-              child: DecoratedBox(
-                decoration: _glass,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: Row(
-                    children: [
-                      Icon(
-                        volume <= 0.01 ? Icons.volume_off : Icons.volume_up,
-                        color: MbTokens.cream,
-                        size: 20,
-                      ),
-                      Expanded(
-                        child: Slider(
-                          value: volume,
-                          activeColor: MbTokens.foil,
-                          inactiveColor: const Color(0x66FAF4E8),
-                          thumbColor: MbTokens.cream,
-                          onChanged: ready
-                              ? (value) async {
-                                  await _player.setVolume(value);
-                                  _reveal();
-                                }
-                              : null,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            )
-          else
-            const SizedBox(height: 72),
+          SizedBox(height: 64 + (widget.fullscreen ? MediaQuery.viewPaddingOf(context).bottom : 0)),
         ],
       ),
     );
@@ -710,7 +671,7 @@ class _FilmStagePageState extends State<_FilmStagePage> {
   @override
   void initState() {
     super.initState();
-    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     final wide = widget.controller.value.isInitialized &&
         widget.controller.value.aspectRatio > 1.05;
     SystemChrome.setPreferredOrientations(

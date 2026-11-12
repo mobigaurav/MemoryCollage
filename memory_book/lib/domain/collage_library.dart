@@ -403,6 +403,9 @@ void _addDesigned(_Add add) {
   const social = CollageShelf.social;
   const grids = CollageShelf.grids;
   const shapes = CollageShelf.shapes;
+  const bento = CollageShelf.bento;
+  const film = CollageShelf.film;
+  const journal = CollageShelf.journal;
 
   final designed = <(String, String, CollageShelf, bool, List<Rect>)>[
     ('bento_5', 'Bento 5', stories, false, [
@@ -489,6 +492,56 @@ void _addDesigned(_Add add) {
           0.26,
           0.26,
         ),
+    ]),
+    ('bento_box', 'Bento box', bento, false, [
+      r(0, 0, 0.64, 0.64),
+      r(0.64, 0, 0.36, 0.32),
+      r(0.64, 0.32, 0.36, 0.32),
+      r(0, 0.64, 1, 0.36),
+    ]),
+    ('bento_stack', 'Bento stack', bento, false, [
+      r(0, 0, 0.5, 0.55),
+      r(0.5, 0, 0.5, 0.35),
+      r(0.5, 0.35, 0.5, 0.2),
+      r(0, 0.55, 0.34, 0.45),
+      r(0.34, 0.55, 0.66, 0.45),
+    ]),
+    ('bento_dense', 'Bento dense', bento, true, [
+      r(0, 0, 0.4, 0.5),
+      r(0.4, 0, 0.6, 0.28),
+      r(0.4, 0.28, 0.3, 0.22),
+      r(0.7, 0.28, 0.3, 0.22),
+      r(0, 0.5, 0.55, 0.5),
+      r(0.55, 0.5, 0.45, 0.5),
+    ]),
+    ('film_three', 'Film three', film, false, [
+      r(0.06, 0.2, 0.28, 0.6),
+      r(0.36, 0.2, 0.28, 0.6),
+      r(0.66, 0.2, 0.28, 0.6),
+    ]),
+    ('film_pair', 'Film pair', film, false, [
+      r(0.08, 0.08, 0.84, 0.4),
+      r(0.08, 0.52, 0.84, 0.4),
+    ]),
+    ('film_six', 'Film six', film, true, [
+      for (var i = 0; i < 6; i++)
+        r(0.06 + (i % 3) * 0.31, 0.12 + (i ~/ 3) * 0.42, 0.28, 0.36),
+    ]),
+    ('diary_page', 'Diary page', journal, false, [
+      r(0.08, 0.08, 0.84, 0.58),
+    ]),
+    ('two_notes', 'Two notes', journal, false, [
+      r(0.1, 0.08, 0.8, 0.38),
+      r(0.1, 0.54, 0.8, 0.38),
+    ]),
+    ('margin_notes', 'Margin notes', journal, true, [
+      r(0.42, 0.08, 0.5, 0.38),
+      r(0.42, 0.54, 0.5, 0.38),
+    ]),
+    ('three_entries', 'Three entries', journal, true, [
+      r(0.08, 0.06, 0.84, 0.26),
+      r(0.08, 0.37, 0.84, 0.26),
+      r(0.08, 0.68, 0.84, 0.26),
     ]),
     ('triangle_6', 'Triangle', shapes, true, [
       r(0.39, 0.1, 0.22, 0.22),

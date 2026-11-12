@@ -10,8 +10,9 @@ export function SiteHeader() {
       </Link>
       <nav className="nav">
         <Link href="/features">Features</Link>
+        <Link href="/about">About</Link>
         <Link href="/blog">Blog</Link>
-        <Link href="/support">Support</Link>
+        <Link href="/contact">Contact</Link>
       </nav>
     </header>
   );
@@ -22,6 +23,8 @@ export function SiteFooter() {
     <footer className="wrap site-footer">
       <span>Photos stay on your phone until you choose otherwise.</span>
       <nav className="nav">
+        <Link href="/about">About</Link>
+        <Link href="/contact">Contact</Link>
         <Link href="/privacy">Privacy</Link>
         <Link href="/terms">Terms</Link>
         <a href={`mailto:${site.supportEmail}`}>{site.supportEmail}</a>

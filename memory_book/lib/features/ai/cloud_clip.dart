@@ -1,14 +1,17 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 
 import '../../core/config.dart';
+import '../../core/theme/chrome.dart';
 import '../../core/theme/tokens.dart';
 import '../../providers.dart';
 import '../../services/auth_ai.dart';
 import '../../services/reel_jobs.dart';
+import '../../services/slideshow_exporter.dart';
 
 /// Empty string means send the photo with no extra words. Null means cancel.
 Future<String?> askClipPrompt(BuildContext context) {
@@ -40,7 +43,7 @@ class _ClipPromptState extends ConsumerState<_ClipPrompt> {
     final credits = ref.watch(creditBalanceProvider).value ?? 0;
     final premium = ref.watch(premiumControllerProvider);
     return AlertDialog(
-      backgroundColor: MbTokens.cream,
+      backgroundColor: context.mbSheet,
       title: const Text('This photo leaves the device'),
       content: Column(
         mainAxisSize: MainAxisSize.min,
@@ -48,11 +51,11 @@ class _ClipPromptState extends ConsumerState<_ClipPrompt> {
         children: [
           Text(
             'Not free. This spends 1 credit. You have $credits. Premium does not include AI clips.',
-            style: const TextStyle(
+            style: TextStyle(
               fontFamily: MbTokens.sans,
               fontSize: 16,
               height: 1.4,
-              color: MbTokens.ink,
+              color: context.mbInk,
             ),
           ),
           const SizedBox(height: 8),
@@ -131,8 +134,9 @@ Future<AiJobResult> runCloudClip(
             final file = await ref
                 .read(exportServiceProvider)
                 .writeBytes(response.bodyBytes, 'mp4');
+            final withSound = await _withDefaultScore(ref, file);
             return ref.read(reelLibraryProvider).keep(
-                  source: file,
+                  source: withSound,
                   title: 'AI clip',
                   kind: 'ai',
                 );
@@ -150,4 +154,18 @@ Future<AiJobResult> runCloudClip(
     jobId: started.jobId,
     message: 'Making the clip. It will show up on Reels.',
   );
+}
+
+/// Runway clips arrive silent. A short bundled score keeps the reel from feeling muted.
+Future<File> _withDefaultScore(Ref ref, File video) async {
+  try {
+    final music = await SlideshowExporter.bundledMusicFile(3);
+    final mixed = await ref.read(nativeEncoderProvider).mixAudio(
+          videoPath: video.path,
+          audioPath: music,
+        );
+    return File(mixed);
+  } catch (_) {
+    return video;
+  }
 }

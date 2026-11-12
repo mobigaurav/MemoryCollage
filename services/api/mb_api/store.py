@@ -39,6 +39,14 @@ class MemoryStore:
         self.jobs.clear()
         self.device_tokens.clear()
 
+    def forget(self, sub: str) -> None:
+        self.users.pop(sub, None)
+        self.events = [row for row in self.events if row[0] != sub]
+        self.jobs = {key: job for key, job in self.jobs.items() if job.sub != sub}
+        self.device_tokens = {
+            token: row for token, row in self.device_tokens.items() if row[0] != sub
+        }
+
     def ensure_user(self, sub: str, email: str | None) -> int:
         if sub not in self.users:
             self.users[sub] = email
