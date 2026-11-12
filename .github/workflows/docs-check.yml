@@ -1,0 +1,73 @@
+name: Docs check
+
+# Issue #31: a PR into dev that changes the API, infra, app services, scripts or workflows must update the docs
+# (architect agent) and fill '## Architecture docs' in the PR body, or state 'Docs not needed: <reason>'.
+# Issue #35: plan-gate - every issue linked to a PR into dev must carry 'agent:approved'.
+# Both re-run when the PR body is edited. Required checks 'docs-check' and 'plan-gate' on the dev
+# and main rulesets. workflow_dispatch (input pr) is used by the automated build, because PRs
+# opened by the workflow token do not start pull_request workflows.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited, ready_for_review]
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: Pull request number (run on the PR head branch)
+        required: true
+
+permissions:
+  contents: read
+  pull-requests: read
+  issues: read
+
+concurrency:
+  group: docs-check-${{ github.event.pull_request.number || inputs.pr }}
+  cancel-in-progress: true
+
+jobs:
+  docs-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Changed files and PR body
+        id: pr
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number || inputs.pr }}
+        run: |
+          gh api --paginate "repos/${{ github.repository }}/pulls/$PR/files" --jq '.[].filename' > "$RUNNER_TEMP/files.txt"
+          gh api "repos/${{ github.repository }}/pulls/$PR" --jq '.body // ""' > "$RUNNER_TEMP/body.md"
+          echo "base=$(gh api "repos/${{ github.repository }}/pulls/$PR" --jq .base.ref)" >> "$GITHUB_OUTPUT"
+          echo "head=$(gh api "repos/${{ github.repository }}/pulls/$PR" --jq .head.ref)" >> "$GITHUB_OUTPUT"
+          wc -l < "$RUNNER_TEMP/files.txt"
+      - name: Check architecture docs
+        env:
+          BASE: ${{ steps.pr.outputs.base }}
+          HEAD: ${{ steps.pr.outputs.head }}
+        run: python scripts/check_docs.py --base "$BASE" --head "$HEAD" --files "$RUNNER_TEMP/files.txt" --body "$RUNNER_TEMP/body.md"
+
+  plan-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: PR body and branches
+        id: pr
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number || inputs.pr }}
+        run: |
+          gh api "repos/${{ github.repository }}/pulls/$PR" --jq '.body // ""' > "$RUNNER_TEMP/body.md"
+          echo "base=$(gh api "repos/${{ github.repository }}/pulls/$PR" --jq .base.ref)" >> "$GITHUB_OUTPUT"
+          echo "head=$(gh api "repos/${{ github.repository }}/pulls/$PR" --jq .head.ref)" >> "$GITHUB_OUTPUT"
+      - name: Linked issue has an approved plan
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BASE: ${{ steps.pr.outputs.base }}
+          HEAD: ${{ steps.pr.outputs.head }}
+        run: python scripts/plan_gate.py --repo "${{ github.repository }}" --base "$BASE" --head "$HEAD" --body "$RUNNER_TEMP/body.md"

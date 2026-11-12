@@ -1,0 +1,35 @@
+name: Release closeout
+
+# After the site deploy (web.yml) finishes on main, close the issues whose PRs are now on main:
+# "Released" comment, label `released`, closed as completed (scripts/release.py closeout).
+# web.yml runs on a push to main or is dispatched by ship-on-comment.yml.
+on:
+  workflow_run:
+    workflows: ["web"]
+    types: [completed]
+
+permissions:
+  contents: read
+
+jobs:
+  closeout:
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install requests
+      - name: Close released issues
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_SHA: ${{ github.event.workflow_run.head_sha }}
+          RUN_URL: ${{ github.event.workflow_run.html_url }}
+        run: python -m scripts.release closeout

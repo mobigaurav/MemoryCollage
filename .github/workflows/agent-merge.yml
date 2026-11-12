@@ -1,0 +1,47 @@
+name: Agent merge
+# Issue #35 Phase 3, ADR 0002. GitHub holds CI on PRs opened by agent-build.yml (job token) until the owner
+# clicks "Approve workflows to run". When those runs finish, this merges the PR into dev if the required
+# checks (API, Web, Flutter, agents-check, branch-policy, docs-check, plan-gate) pass, or re-dispatches
+# agent-build.yml with the failure.
+# Only automated PRs (DEV_<N> -> dev, opened by github-actions[bot], issue labeled
+# agent:awaiting-ci-approval) are touched. Never merges into main.
+
+on:
+  workflow_run:
+    workflows: ["ci", "Docs check"]
+    types: [completed]
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: agent-merge
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  merge:
+    if: vars.AGENT_BUILD_ENABLED != 'false' && (github.event_name != 'workflow_run' || startsWith(github.event.workflow_run.head_branch, 'DEV_'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      actions: write
+      checks: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install requests
+      - name: Merge, retry or wait
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: python -m scripts.agent_build merge

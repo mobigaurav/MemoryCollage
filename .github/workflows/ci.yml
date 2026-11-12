@@ -53,3 +53,34 @@ jobs:
       - run: flutter pub get
       - run: flutter analyze
       - run: flutter test
+
+  agents-check:
+    name: agents-check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+      - run: pip install -r requirements-dev.txt
+      - run: ruff check scripts tests
+      - run: pytest -q tests
+      - run: python scripts/validate_agents.py
+
+  branch-policy:
+    name: branch-policy
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Enforce the branch flow
+        env:
+          BASE: ${{ github.base_ref }}
+          HEAD: ${{ github.head_ref }}
+        run: |
+          case "$BASE" in
+            main) [[ "$HEAD" == "dev" || "$HEAD" == hotfix/* ]] || { echo "main accepts only dev or hotfix/* (got $HEAD)"; exit 1; } ;;
+            dev) [[ "$HEAD" =~ ^DEV_[0-9]+$ || "$HEAD" == "main" || "$HEAD" == dependabot/* ]] || { echo "dev accepts DEV_<N>, main or dependabot/* (got $HEAD)"; exit 1; } ;;
+            *) echo "no policy for base $BASE" ;;
+          esac

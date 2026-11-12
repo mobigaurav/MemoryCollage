@@ -1,0 +1,44 @@
+name: Ship release on comment
+
+# Issue #35 Phase 4. An owner or maintainer commenting `ship` (first line) on the open release PR
+# (dev -> main, label `release`) merges it with a merge commit once the required checks (API, Web, Flutter,
+# agents-check, branch-policy, docs-check, plan-gate) pass, then dispatches web.yml (the site deploy). A merge
+# made with the job token starts no push workflows. Clicking Merge on the PR does the same by hand.
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ship
+  cancel-in-progress: false
+
+jobs:
+  ship:
+    if: >-
+      github.event.issue.pull_request != null && github.event.comment.user.type != 'Bot' &&
+      contains(join(github.event.issue.labels.*.name, ','), 'release')
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      actions: write   # dispatch web.yml after the merge
+      checks: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install requests
+      - name: Ship
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.issue.number }}
+          LOGIN: ${{ github.event.comment.user.login }}
+          BODY: ${{ github.event.comment.body }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: python -m scripts.release ship

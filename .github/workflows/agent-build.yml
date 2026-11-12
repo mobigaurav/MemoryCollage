@@ -1,0 +1,197 @@
+name: Agent build
+
+# Issue #35 Phase 3: build an approved plan without anyone starting an agent session.
+#   start     checks the approval, labels agent:in-progress, writes the prompt      (issues: write)
+#   generate  Copilot CLI as delivery-orchestrator edits a checkout and runs tests   (contents: read only)
+#   publish   protected-path check, push DEV_<N>, PR, dispatch required checks, wait,
+#             squash-merge + release PR, or retry with the failure log (max 3 attempts)
+# Started by approve-on-comment.yml (dispatch) or by a person adding agent:approved.
+# Scripts: scripts/agent_build.py, scripts/protected_paths.py.
+on:
+  issues:
+    types: [labeled]
+  workflow_dispatch:
+    inputs:
+      issue:
+        description: Issue number with an approved plan
+        required: true
+      attempt:
+        description: Attempt number (retries set this)
+        required: false
+        default: "1"
+      feedback:
+        description: Failure summary from the previous attempt
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: agent-build-${{ github.event.issue.number || inputs.issue }}
+  cancel-in-progress: false
+
+env:
+  ISSUE: ${{ github.event.issue.number || inputs.issue }}
+  ATTEMPT: ${{ inputs.attempt || '1' }}
+  RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+jobs:
+  start:
+    # Kill switch: repo variable AGENT_BUILD_ENABLED=false stops all automated builds.
+    if: >-
+      vars.AGENT_BUILD_ENABLED != 'false' &&
+      (github.event_name == 'workflow_dispatch' || github.event.label.name == 'agent:approved')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: write
+    outputs:
+      skip: ${{ steps.start.outputs.skip }}
+      branch: ${{ steps.start.outputs.branch }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install requests
+      - name: Check approval and write the prompt
+        id: start
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          ACTOR: ${{ github.actor }}
+          FEEDBACK: ${{ inputs.feedback }}
+          PROMPT_PATH: ${{ runner.temp }}/prompt.md
+        run: python -m scripts.agent_build start
+      - if: steps.start.outputs.skip == 'false'
+        uses: actions/upload-artifact@v4
+        with:
+          name: prompt
+          path: ${{ runner.temp }}/prompt.md
+          retention-days: 7
+
+  generate:
+    needs: start
+    if: needs.start.outputs.skip == 'false'
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    # The only token here is read-only plus copilot-requests; it is stripped from Copilot's shell.
+    permissions:
+      contents: read
+      copilot-requests: write
+    steps:
+      - name: Pick the base (existing DEV_<N> on retries, else dev)
+        id: base
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH: ${{ needs.start.outputs.branch }}
+        run: |
+          if gh api "repos/${{ github.repository }}/branches/$BRANCH" >/dev/null 2>&1; then echo "ref=$BRANCH" >> "$GITHUB_OUTPUT"
+          else echo "ref=dev" >> "$GITHUB_OUTPUT"; fi
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.base.outputs.ref }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: prompt
+          path: ${{ runner.temp }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements-dev.txt requests -r services/api/requirements.txt
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - run: cd apps/web && npm ci
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.5"
+          channel: stable
+          cache: true
+      - name: Link the Flutter SDK where ./flutterw expects it
+        run: mkdir -p .tools && ln -s "$FLUTTER_ROOT" .tools/flutter && ./flutterw pub get
+      - name: Install Copilot CLI
+        run: npm install -g @github/copilot && copilot --version
+      - name: Build with Copilot (delivery-orchestrator)
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          BUILD_MODEL: ${{ vars.BUILD_MODEL }}
+        run: |
+          git rev-parse HEAD > "$RUNNER_TEMP/base.txt"
+          mkdir -p .agent-out
+          args=(-p "$(cat "$RUNNER_TEMP/prompt.md")" -s --no-ask-user --agent delivery-orchestrator --trust-folder
+                --allow-all-tools --disable-builtin-mcps --no-auto-update
+                --secret-env-vars GITHUB_TOKEN,GH_TOKEN,ACTIONS_RUNTIME_TOKEN,ACTIONS_ID_TOKEN_REQUEST_TOKEN
+                --deny-tool 'shell(git push)' --deny-tool 'shell(git commit)' --deny-tool 'shell(git remote)'
+                --deny-tool 'shell(gh:*)' --deny-tool 'shell(curl:*)' --deny-tool 'shell(wget:*)'
+                --allow-url https://docs.github.com --allow-url https://pypi.org --allow-url https://files.pythonhosted.org
+                --allow-url https://developer.apple.com --allow-url https://developers.google.com
+                --allow-url https://docs.flutter.dev --allow-url https://pub.dev --allow-url https://dart.dev
+                --allow-url https://docs.revenuecat.com --allow-url https://fastapi.tiangolo.com
+                --allow-url https://nextjs.org --allow-url https://registry.npmjs.org)
+          [ -n "$BUILD_MODEL" ] && args+=(--model "$BUILD_MODEL")
+          copilot "${args[@]}" | tee "$RUNNER_TEMP/copilot.txt" | tail -40
+      - name: Package the change
+        run: |
+          out="$RUNNER_TEMP/build-out"; mkdir -p "$out"
+          cp "$RUNNER_TEMP/base.txt" "$out/"
+          cp .agent-out/pr-body.md "$out/" 2>/dev/null || true
+          cp .agent-out/architect-review.md "$out/" 2>/dev/null || true
+          rm -rf .agent-out .tools apps/web/.next apps/web/node_modules memory_book/build
+          git add -A
+          git diff --cached --binary "$(cat "$out/base.txt")" > "$out/changes.patch"
+          git diff --cached --name-only "$(cat "$out/base.txt")" > "$out/files.txt"
+          echo "Changed files:"; cat "$out/files.txt"
+          { ruff check scripts tests && pytest -q tests && (cd services/api && python -m pytest -q); } \
+            || echo "::warning::local checks failed; CI decides"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: build-out
+          path: ${{ runner.temp }}/build-out
+          retention-days: 14
+
+  publish:
+    needs: [start, generate]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/download-artifact@v4
+        with:
+          name: build-out
+          path: ${{ runner.temp }}/build-out
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install requests
+      - name: Publish the PR (CI waits for the owner's approval)
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          OUT_DIR: ${{ runner.temp }}/build-out
+        run: python -m scripts.agent_build publish
+
+  failed:
+    # Any job failing (Copilot error, timeout, merge conflict) leaves a clear state on the issue.
+    needs: [start, generate, publish]
+    if: failure() && needs.start.outputs.skip == 'false'
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue edit "$ISSUE" -R "${{ github.repository }}" --add-label agent:needs-human --remove-label agent:in-progress
+          gh issue comment "$ISSUE" -R "${{ github.repository }}" --body "The automated build failed ([run]($RUN_URL)). An owner can fix the cause and re-run it, or dispatch agent-build.yml for this issue."
