@@ -108,6 +108,12 @@ make api-test
 make web-dev
 ```
 
+## Agentic development
+Changes start as a GitHub Issue, get an agent-written plan, and are built only after the owner approves it
+(`DEV_<N>` branch -> PR into `dev` -> release PR `dev` -> `main`). Rules: [AGENTS.md](AGENTS.md); flow:
+[docs/AGENTIC_DEVELOPMENT.md](docs/AGENTIC_DEVELOPMENT.md); owner setup: [docs/SETUP.md](docs/SETUP.md).
+Validate with `make agents-check` and `make test-scripts`.
+
 ## License
 
 MIT. See [LICENSE](LICENSE).

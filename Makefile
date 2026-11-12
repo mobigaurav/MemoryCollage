@@ -8,3 +8,14 @@ api-test:
 
 web-dev:
 	cd apps/web && npm run dev
+
+.PHONY: install test-scripts agents-check
+
+install:
+	pip install -r requirements-dev.txt
+
+test-scripts:
+	pytest -q tests
+
+agents-check:
+	python scripts/validate_agents.py

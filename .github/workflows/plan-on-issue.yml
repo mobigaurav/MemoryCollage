@@ -1,0 +1,78 @@
+name: Plan on issue
+
+# Issue #35 Phase 2: write the implementation plan for new feature and bug issues automatically.
+# Copilot CLI runs as the read-only `planner` agent on a checkout of dev (no shell, no file writes,
+# no GitHub MCP server, documentation sites only); scripts/plan_issue.py posts the plan comment and
+# sets agent:plan-ready. The owner approves with an "approve" comment (approve-on-comment.yml).
+# Authentication is the workflow token with `copilot-requests: write`; no Copilot secret is stored.
+on:
+  issues:
+    types: [opened, labeled]
+  issue_comment:
+    types: [created]
+  workflow_dispatch:
+    inputs:
+      issue:
+        description: Issue number
+        required: true
+      mode:
+        description: new (first plan) or replan (new version; resets agent:approved)
+        required: false
+        default: new
+        type: choice
+        options: [new, replan]
+      feedback:
+        description: Optional feedback for a replan
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+  issues: write
+  copilot-requests: write
+
+jobs:
+  plan:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'issues' && !contains(github.event.issue.labels.*.name, 'question') &&
+       (github.event.action == 'opened' || github.event.label.name == 'agent:proposed' ||
+        github.event.label.name == 'type:feature' || github.event.label.name == 'type:bug')) ||
+      (github.event_name == 'issue_comment' && github.event.issue.pull_request == null &&
+       github.event.comment.user.type != 'Bot' &&
+       (startsWith(github.event.comment.body, 'replan') || startsWith(github.event.comment.body, '/replan')))
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # Job-level so skipped runs never cancel the real one; runs per issue are serialized and the
+    # script re-reads the labels, so an issue opened with two labels gets one plan.
+    concurrency:
+      group: plan-${{ github.event.issue.number || inputs.issue }}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+      - name: Checkout dev for the planner to read
+        uses: actions/checkout@v4
+        with:
+          ref: dev
+          path: dev
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install requests
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install Copilot CLI
+        run: npm install -g @github/copilot && copilot --version
+      - name: Plan
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PLANNER_MODEL: ${{ vars.PLANNER_MODEL }}
+          PLANNER_DAILY_CAP: ${{ vars.PLANNER_DAILY_CAP || '10' }}
+          PLANNER_CWD: dev
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          ISSUE: ${{ inputs.issue }}
+          MODE: ${{ inputs.mode }}
+          FEEDBACK: ${{ inputs.feedback }}
+        run: python scripts/plan_issue.py

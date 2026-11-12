@@ -107,3 +107,9 @@ apps/web/.next/
 apps/web/.vercel/
 apps/web/.env.local
 
+
+.venv/
+.agent-out/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
