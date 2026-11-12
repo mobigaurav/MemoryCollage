@@ -16,7 +16,7 @@ The old Swift app is no longer in this tree. Its history is still in git if a la
 
 iOS release builds keep the live bundle id `com.playingview.mobigaurav.MemoryCollage`, so this update replaces the app already on the App Store. Debug and Profile use `com.playingview.mobigaurav.memoryBook` and install beside it. Android is a new Play listing, `com.playingview.mobigaurav.memorybook`.
 
-The store version lives in `memory_book/pubspec.yaml` as `version: 2.0.0+7` (name `2.0.0`, build `7`). iOS and Android stay on that same pair. In Xcode, leave Manage Version off so an archive keeps those numbers.
+The store version lives in `memory_book/pubspec.yaml` as `version: 2.0.0+10` (name `2.0.0`, build `10`). iOS and Android stay on that same pair. In Xcode, leave Manage Version off so an archive keeps those numbers.
 
 ## Setup
 
