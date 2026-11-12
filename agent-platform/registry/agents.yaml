@@ -1,0 +1,101 @@
+# Agent catalog. Validated by scripts/validate_agents.py (make agents-check, CI).
+# status: active | draft | deprecated
+agents:
+  - name: architect
+    runtime_file: .github/agents/architect.agent.md
+    version: 1.0.0
+    status: active
+    skills: [architecture-docs]
+    owner: mobigaurav
+  - name: cicd-ops
+    runtime_file: .github/agents/cicd-ops.agent.md
+    version: 1.0.0
+    status: active
+    skills: [incident-triage, release-and-deploy]
+    owner: mobigaurav
+  - name: delivery-orchestrator
+    runtime_file: .github/agents/delivery-orchestrator.agent.md
+    version: 1.0.0
+    status: active
+    skills: [intake-to-issue, pull-request-workflow]
+    owner: mobigaurav
+  - name: developer
+    runtime_file: .github/agents/developer.agent.md
+    version: 1.0.0
+    status: active
+    skills: [api-endpoint, bug-fix-workflow, feature-implementation, flutter-feature, store-release]
+    owner: mobigaurav
+  - name: integration-test-author
+    runtime_file: .github/agents/integration-test-author.agent.md
+    version: 1.0.0
+    status: active
+    skills: [integration-test]
+    owner: mobigaurav
+  - name: planner
+    runtime_file: .github/agents/planner.agent.md
+    version: 1.0.0
+    status: active
+    skills: [implementation-plan]
+    owner: mobigaurav
+  - name: pr-release-manager
+    runtime_file: .github/agents/pr-release-manager.agent.md
+    version: 1.0.0
+    status: active
+    skills: [pull-request-workflow, release-and-deploy, store-release]
+    owner: mobigaurav
+  - name: reviewer
+    runtime_file: .github/agents/reviewer.agent.md
+    version: 1.0.0
+    status: active
+    skills: [code-review]
+    owner: mobigaurav
+  - name: unit-test-author
+    runtime_file: .github/agents/unit-test-author.agent.md
+    version: 1.0.0
+    status: active
+    skills: [unit-test]
+    owner: mobigaurav
+
+skills:
+  - name: api-endpoint
+    path: .github/skills/api-endpoint/SKILL.md
+    status: active
+  - name: architecture-docs
+    path: .github/skills/architecture-docs/SKILL.md
+    status: active
+  - name: bug-fix-workflow
+    path: .github/skills/bug-fix-workflow/SKILL.md
+    status: active
+  - name: code-review
+    path: .github/skills/code-review/SKILL.md
+    status: active
+  - name: feature-implementation
+    path: .github/skills/feature-implementation/SKILL.md
+    status: active
+  - name: flutter-feature
+    path: .github/skills/flutter-feature/SKILL.md
+    status: active
+  - name: implementation-plan
+    path: .github/skills/implementation-plan/SKILL.md
+    status: active
+  - name: incident-triage
+    path: .github/skills/incident-triage/SKILL.md
+    status: active
+  - name: intake-to-issue
+    path: .github/skills/intake-to-issue/SKILL.md
+    status: active
+  - name: integration-test
+    path: .github/skills/integration-test/SKILL.md
+    status: active
+  - name: pull-request-workflow
+    path: .github/skills/pull-request-workflow/SKILL.md
+    status: active
+  - name: release-and-deploy
+    path: .github/skills/release-and-deploy/SKILL.md
+    status: active
+  - name: store-release
+    path: .github/skills/store-release/SKILL.md
+    status: active
+  - name: unit-test
+    path: .github/skills/unit-test/SKILL.md
+    status: active

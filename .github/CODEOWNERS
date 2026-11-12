@@ -1,0 +1,7 @@
+# Owners are requested for review on every PR. Changes to automation, agents, infra and policies always
+# need an owner's review.
+*                       @mobigaurav
+/.github/               @mobigaurav
+/agent-platform/        @mobigaurav
+/infra/                 @mobigaurav
+/AGENTS.md              @mobigaurav

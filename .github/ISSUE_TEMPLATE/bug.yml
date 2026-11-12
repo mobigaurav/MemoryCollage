@@ -1,0 +1,20 @@
+name: Bug report
+description: Wrong value, crash, broken screen, failing endpoint or failed run
+labels: ["type:bug", "agent:proposed"]
+body:
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options: [Flutter app (iOS), Flutter app (Android), API, Web site, CI / deploy, Other]
+    validations: {required: true}
+  - type: textarea
+    id: what
+    attributes: {label: What is wrong, description: "Screen or endpoint; steps, expected vs actual. Do not paste secrets or personal photos."}
+    validations: {required: true}
+  - type: input
+    id: version
+    attributes: {label: App version / build (if the app), description: "For example 2.0.0 (10)"}
+  - type: input
+    id: run
+    attributes: {label: Workflow run link (if a run failed)}
