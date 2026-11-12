@@ -1,0 +1,12 @@
+# Tooling for scripts/ and tests/ only. services/api has its own pyproject.toml and pytest config.
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.ruff]
+line-length = 130
+target-version = "py311"
+extend-exclude = [".src", ".tools", "services", "apps", "memory_book", "infra"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B"]

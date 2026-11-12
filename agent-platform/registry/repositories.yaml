@@ -1,0 +1,8 @@
+# Repositories agents in this repo may read. Writes are limited to this repo (see policies/guardrails.md).
+repositories:
+  - name: MemoryCollage
+    url: https://github.com/mobigaurav/MemoryCollage.git
+    default_branch: dev
+    release_branch: main
+    domain: mobile-app
+    access: read-write

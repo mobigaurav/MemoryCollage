@@ -1,0 +1,58 @@
+name: Approve plan on comment
+
+# Issue #31: an owner or maintainer commenting "approve", "approved" or "lgtm" (first line) on an issue
+# that is waiting for plan approval adds agent:approved, removes agent:plan-ready and records who
+# approved. Pull request comments are ignored. Labels added with the job token do not start other
+# workflows, so this workflow dispatches agent-build.yml itself (issue #35 Phase 3).
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  issues: write
+  actions: write   # dispatch agent-build.yml
+
+concurrency:
+  group: approve-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  approve:
+    if: github.event.issue.pull_request == null && github.event.comment.user.type != 'Bot'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Decide
+        id: decide
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BODY: ${{ github.event.comment.body }}
+          LOGIN: ${{ github.event.comment.user.login }}
+          LABELS: ${{ join(github.event.issue.labels.*.name, ',') }}
+        run: |
+          printf '%s' "$BODY" > "$RUNNER_TEMP/comment.md"
+          perm=$(gh api "repos/${{ github.repository }}/collaborators/$LOGIN/permission" --jq .permission 2>/dev/null || echo none)
+          d=$(python scripts/approve_on_comment.py --body "$RUNNER_TEMP/comment.md" --permission "$perm" --labels "$LABELS")
+          echo "$d"
+          echo "decision=$d" >> "$GITHUB_OUTPUT"
+      - name: Apply approval
+        if: steps.decide.outputs.decision == 'approve'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          N: ${{ github.event.issue.number }}
+          LOGIN: ${{ github.event.comment.user.login }}
+          URL: ${{ github.event.comment.html_url }}
+          AT: ${{ github.event.comment.created_at }}
+        run: |
+          gh issue edit "$N" -R "${{ github.repository }}" --add-label agent:approved --remove-label agent:plan-ready
+          gh issue comment "$N" -R "${{ github.repository }}" --body "Plan approved by @$LOGIN at $AT ([comment]($URL)). Label \`agent:approved\` added; the automated build starts on \`DEV_$N\`."
+      - name: Start the build (issue #35)
+        if: steps.decide.outputs.decision == 'approve' && vars.AGENT_BUILD_ENABLED != 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          N: ${{ github.event.issue.number }}
+        run: gh workflow run agent-build.yml -R "${{ github.repository }}" -f issue="$N"
