@@ -39,7 +39,7 @@ How agents build and ship changes is in [AGENTIC_DEVELOPMENT.md](AGENTIC_DEVELOP
 - **Infra (`infra/lite/template.yaml`)**: stack `memorybook-lite-dev` in `us-east-1`: Cognito user pool, client,
   domain and Google/Apple identity providers; private S3 MediaBucket; DynamoDB HouseholdTable and CommunityTable;
   the Lambda ApiFunction and RestApi.
-- **Web (`apps/web`)**: Next.js pages (about, blog, contact, features, privacy, support, terms) built with npm.
+- **Web (`apps/web`)**: Next.js pages (about, blog, contact, features, privacy, support, terms, delete-account) built with npm. `/delete-account` is the public page for the store account-deletion link.
 
 ## 3. Delivery and CI/CD
 ```
