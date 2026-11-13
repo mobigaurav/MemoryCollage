@@ -26,6 +26,7 @@ export function SiteFooter() {
         <Link href="/about">About</Link>
         <Link href="/contact">Contact</Link>
         <Link href="/privacy">Privacy</Link>
+        <Link href="/delete-account">Delete account</Link>
         <Link href="/terms">Terms</Link>
         <a href={`mailto:${site.supportEmail}`}>{site.supportEmail}</a>
       </nav>
