@@ -22,7 +22,8 @@ export default function PrivacyPage() {
         </p>
         <p>
           Sign-in uses Memory Book’s own account system. We store the email you register and the
-          credit ledger. We do not sell either.
+          credit ledger. We do not sell either. The steps to delete the account, and what is
+          removed or kept, are on the <a href="/delete-account">delete account</a> page.
         </p>
       </main>
       <SiteFooter />
