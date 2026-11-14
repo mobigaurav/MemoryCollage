@@ -79,5 +79,12 @@ img { max-width: 100%; }
 .card p, .post span, .meta { color: var(--ink-soft); margin: 0; }
 .post { display: grid; gap: 6px; }
 .page { padding-bottom: 64px; }
-.page p { max-width: 40rem; }
+.page p, .page ol, .page ul { max-width: 40rem; }
+.page h2 {
+  font-family: var(--serif);
+  font-weight: 400;
+  font-size: 1.4rem;
+  margin: 28px 0 8px;
+}
+.page li { margin: 6px 0; }
 .site-footer { color: var(--ink-soft); font-size: 0.9rem; border-top: 1px solid var(--paper-deep); margin-top: 36px; }

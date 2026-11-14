@@ -7,7 +7,7 @@
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Memory Book needs your photo library so you can place pictures on album pages, collages, and films. Photos stay on this device unless you export them.</string>
+	<string>Memory Book needs your photo library so you can place pictures on album pages, collages, and films, and choose a video to share. Photos stay on this device unless you export them.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>Memory Book saves collages, album pages, and memory reels to your library when you tap Save.</string>
 	<key>NSMicrophoneUsageDescription</key>

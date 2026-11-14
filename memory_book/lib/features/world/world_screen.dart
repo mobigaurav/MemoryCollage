@@ -170,8 +170,13 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
             ),
             ListTile(
               title: const Text('A reel'),
-              subtitle: const Text('A film or clip already on this phone.'),
+              subtitle: const Text('A film already made in the app.'),
               onTap: () => Navigator.pop(ctx, 'reel'),
+            ),
+            ListTile(
+              title: const Text('A video'),
+              subtitle: const Text('From the library on this phone. Photos stay hidden.'),
+              onTap: () => Navigator.pop(ctx, 'video'),
             ),
           ],
         ),
@@ -180,9 +185,63 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
     if (!mounted || kind == null) return;
     if (kind == 'album') {
       await _postBook();
+    } else if (kind == 'video') {
+      await _postDeviceVideo();
     } else {
       await _postReel();
     }
+  }
+
+  Future<void> _postDeviceVideo() async {
+    final picked = await ref.read(photoServiceProvider).pickGalleryVideo();
+    if (!mounted || picked == null) return;
+    final message = picked.message;
+    if (message != null) {
+      _toast(message);
+      return;
+    }
+    final bytes = picked.bytes;
+    if (bytes == null || bytes.isEmpty) {
+      _toast('Choose a video. A photo is not a reel.');
+      return;
+    }
+    final title = await _askVideoTitle();
+    if (title == null || !mounted) return;
+    await _sending('Sending this video', () async {
+      final api = ref.read(communityApiProvider);
+      final uploads = await api.begin(title: title, kind: 'reel', count: 1);
+      await api.putFile(uploads.first, bytes);
+      await api.publish(uploads.first.key.split('/')[1], [uploads.first.key]);
+    });
+  }
+
+  Future<String?> _askVideoTitle() async {
+    final controller = TextEditingController(text: 'Reel');
+    final title = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: context.mbSheet,
+        title: const Text('Name this video'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          textCapitalization: TextCapitalization.sentences,
+          maxLength: 80,
+          decoration: const InputDecoration(labelText: 'Title'),
+          onSubmitted: (value) => Navigator.pop(ctx, value.trim()),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, controller.text.trim()),
+            child: const Text('Share'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    final trimmed = title?.trim() ?? '';
+    return trimmed.isEmpty ? null : trimmed;
   }
 
   Future<void> _postBook() async {

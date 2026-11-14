@@ -214,6 +214,24 @@ class PhotoService {
     return out;
   }
 
+  /// A video from the system library. Null when the person cancels.
+  /// [message] is set when the file is a photo or too long to post.
+  Future<({Uint8List? bytes, String? message})?> pickGalleryVideo() async {
+    final file = await _picker.pickVideo(source: ImageSource.gallery);
+    if (file == null) return null;
+    final ext = p.extension(file.path).toLowerCase();
+    final mime = (file.mimeType ?? '').toLowerCase();
+    const stills = {'.jpg', '.jpeg', '.png', '.heic', '.heif', '.gif', '.webp'};
+    if (mime.startsWith('image/') || stills.contains(ext)) {
+      return (bytes: null, message: 'Choose a video. A photo is not a reel.');
+    }
+    final length = await file.length();
+    if (length > 80 * 1024 * 1024) {
+      return (bytes: null, message: 'Choose a shorter video.');
+    }
+    return (bytes: await file.readAsBytes(), message: null);
+  }
+
   Future<List<String>> pickImages({int limit = 15}) async {
     final files = await _picker.pickMultiImage(
       limit: limit,
