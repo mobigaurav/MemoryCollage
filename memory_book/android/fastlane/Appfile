@@ -1,0 +1,3 @@
+# Memory Book — Google Play package (permanent Play application id).
+json_key_file(ENV["PLAY_JSON_KEY_PATH"]) if ENV["PLAY_JSON_KEY_PATH"].to_s.strip != ""
+package_name("com.playingview.mobigaurav.memorybook")

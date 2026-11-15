@@ -1,0 +1,84 @@
+# frozen_string_literal: true
+
+# Memory Book (Flutter) — Android Fastlane.
+# Build with flutterw, then upload the AAB with supply (Flutter CD pattern).
+# Do not rebuild with Gradle alone; signing still reads android/keystore.properties.
+
+opt_out_usage
+default_platform(:android)
+
+PLATFORM_ROOT = File.expand_path("..", __dir__)
+APP_ROOT = File.expand_path("..", PLATFORM_ROOT)
+DEFAULT_PLAY_JSON = File.join(APP_ROOT, "store/credentials/play.json")
+AAB_PATH = File.join(APP_ROOT, "build/app/outputs/bundle/release/app-release.aab")
+
+def flutterw
+  candidate = File.join(APP_ROOT, "flutterw")
+  UI.user_error!("Missing #{candidate}") unless File.executable?(candidate)
+  candidate
+end
+
+def ensure_keystore!
+  props = File.join(PLATFORM_ROOT, "keystore.properties")
+  UI.user_error!(
+    "Missing #{props}. Copy keystore.properties.template and fill passwords."
+  ) unless File.file?(props)
+
+  store_file = File.read(props)[/^storeFile=(.+)$/, 1]&.strip
+  keystore = File.join(PLATFORM_ROOT, "app", store_file.to_s)
+  UI.user_error!("Missing keystore at #{keystore}") unless File.file?(keystore)
+  UI.message("Keystore: #{keystore}")
+end
+
+def play_json_key
+  path = ENV["PLAY_JSON_KEY_PATH"].to_s.strip
+  path = DEFAULT_PLAY_JSON if path.empty?
+  UI.user_error!(
+    "Play service-account JSON not found at #{path}. " \
+    "Set PLAY_JSON_KEY_PATH or place the file at memory_book/store/credentials/play.json " \
+    "(gitignored)."
+  ) unless File.file?(path)
+  path
+end
+
+def upload_aab!(track:)
+  upload_to_play_store(
+    package_name: "com.playingview.mobigaurav.memorybook",
+    track: track,
+    aab: AAB_PATH,
+    json_key: play_json_key,
+    skip_upload_metadata: true,
+    skip_upload_images: true,
+    skip_upload_screenshots: true,
+    skip_upload_changelogs: ENV["PLAY_UPLOAD_CHANGELOGS"] != "1",
+    release_status: ENV.fetch("PLAY_RELEASE_STATUS", "completed")
+  )
+end
+
+platform :android do
+  desc "Build a signed Play App Bundle via flutterw (no upload)"
+  lane :build do
+    ensure_keystore!
+    Dir.chdir(APP_ROOT) do
+      sh("'#{flutterw}' build appbundle --release")
+    end
+    UI.user_error!("AAB missing at #{AAB_PATH}") unless File.file?(AAB_PATH)
+    UI.success("AAB ready: #{AAB_PATH} (#{File.size(AAB_PATH)} bytes)")
+  end
+
+  desc "Build and upload to Play internal testing (end-to-end)"
+  lane :beta do
+    build
+    track = ENV.fetch("PLAY_TRACK", "internal")
+    UI.message("Uploading to Play track=#{track}")
+    upload_aab!(track: track)
+    UI.success("Uploaded to Play Console (#{track})")
+  end
+
+  desc "Build and upload to Play production track"
+  lane :release do
+    build
+    upload_aab!(track: "production")
+    UI.success("Uploaded to Play Console (production)")
+  end
+end

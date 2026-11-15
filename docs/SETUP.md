@@ -56,6 +56,12 @@ exits without deploying, so `release-closeout.yml` still closes issues; set the 
 AWS and store credentials are not used by any workflow. Do not add Apple, Google Play or signing secrets
 for agents.
 
+### Store uploads (owner machine only)
+Fastlane lives under `memory_book/android` and `memory_book/ios`. The owner installs gems with
+`bundle install` in each directory and keeps credentials on the machine (Play JSON,
+App Store Connect API key, optional match password). See [memory_book/docs/FASTLANE.md](../memory_book/docs/FASTLANE.md).
+Do not put those secrets in GitHub Actions until a separate, approved change updates this policy.
+
 ## 7. Local tooling
 ```bash
 make install          # needs Python 3.12 or newer
@@ -65,6 +71,7 @@ ruff check scripts tests
 ```
 Flutter: `./flutterw` expects the SDK in `.tools/flutter`
 (`git clone --depth 1 -b stable https://github.com/flutter/flutter.git .tools/flutter`).
+Fastlane (owner Mac): Ruby 3.2+, then `bundle install` in `memory_book/android` and `memory_book/ios`.
 
 ## 8. First run checklist
 1. Merge the setup branch into `dev`, then `dev` into `main` with a release PR (so workflows exist on the default branch;

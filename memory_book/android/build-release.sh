@@ -1,10 +1,10 @@
 #!/bin/bash
-# Memory Book — signed Play Store AAB.
-# Adapted from Arogya's apps/mobile/android/build-release.sh.
-# Run from memory_book/android: ./build-release.sh
+# Memory Book — signed Play Store AAB (build only).
+# Preferred path: Fastlane under memory_book/android (see docs/FASTLANE.md).
+# This script wraps `bundle exec fastlane build` when Bundler is available,
+# otherwise falls back to flutterw directly (same Arogya/Vedic keystore layout).
 #
-# This app is Flutter, so the bundle is built with flutterw (the Android
-# signing block still reads keystore.properties, same as Arogya).
+# Run from memory_book/android: ./build-release.sh
 
 set -euo pipefail
 
@@ -54,16 +54,21 @@ fi
 echo "Keystore: app/$KEYSTORE_FILE"
 echo ""
 
-if [ ! -x "$APP_DIR/flutterw" ]; then
-  echo "Error: $APP_DIR/flutterw is missing"
-  exit 1
+AAB="$APP_DIR/build/app/outputs/bundle/release/app-release.aab"
+
+if command -v bundle >/dev/null 2>&1 && [ -f "Gemfile" ]; then
+  echo "Building via Fastlane (bundle exec fastlane build)…"
+  bundle exec fastlane build
+else
+  if [ ! -x "$APP_DIR/flutterw" ]; then
+    echo "Error: $APP_DIR/flutterw is missing"
+    exit 1
+  fi
+  echo "Bundler/Fastlane not found — building with flutterw…"
+  cd "$APP_DIR"
+  ./flutterw build appbundle --release
 fi
 
-echo "Building signed release AAB…"
-cd "$APP_DIR"
-./flutterw build appbundle --release
-
-AAB="$APP_DIR/build/app/outputs/bundle/release/app-release.aab"
 if [ ! -f "$AAB" ]; then
   echo "Build failed — AAB not found"
   exit 1
@@ -82,8 +87,8 @@ else
 fi
 
 echo ""
-echo "Next:"
-echo "  1. Play Console → Memory Book (com.playingview.mobigaurav.memorybook)"
-echo "  2. Release → Testing or Production → Create release"
-echo "  3. Upload the AAB above"
+echo "Next (upload):"
+echo "  cd $SCRIPT_DIR && bundle exec fastlane beta    # Play internal"
+echo "  cd $SCRIPT_DIR && bundle exec fastlane release # Play production"
+echo "  Docs: memory_book/docs/FASTLANE.md"
 echo ""

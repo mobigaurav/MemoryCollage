@@ -14,6 +14,7 @@ This document is the map. The publishable architecture notes live next to it. Ea
 - [A film from stills, encoded on the phone](features/memory-film.md)
 - [A website that is only the front door](features/web.md)
 - [One photo, one clip](features/ai-video.md)
+- [Fastlane store builds](FASTLANE.md) — owner-run iOS/Android upload lanes
 
 Operators still use [the backend notes](../../docs/BACKEND.md) for deploy commands. Those notes are not the essays. Pair the map with [PRODUCT_ROADMAP.md](PRODUCT_ROADMAP.md).
 

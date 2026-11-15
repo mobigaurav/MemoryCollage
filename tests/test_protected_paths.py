@@ -7,6 +7,7 @@ def test_protected_files_detected():
              "infra/lite/template.yaml", "memory_book/android/keystore.properties",
              "memory_book/android/app/build.gradle.kts", "memory_book/ios/Runner/Runner.entitlements",
              "memory_book/store/credentials/play.json", "AuthKey_ABC.p8", "services/api/.env",
+             "memory_book/android/fastlane/play.json", "memory_book/ios/fastlane/AuthKey_XYZ.p8",
              "./AGENTS.md", "./.github/workflows/x.yml"]
     assert protected(files) == sorted(set(f.removeprefix("./") for f in files))
 

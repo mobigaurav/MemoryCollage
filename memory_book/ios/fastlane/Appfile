@@ -1,0 +1,11 @@
+# Memory Book — iOS App Store Connect (release bundle id).
+# Profile / Debug may still use com.playingview.mobigaurav.memoryBook locally.
+
+app_identifier("com.playingview.mobigaurav.MemoryCollage")
+apple_id(ENV.fetch("FASTLANE_APPLE_ID", "mobigaurav@gmail.com"))
+team_id("C6E94YDVFW")
+
+# Prefer App Store Connect API key env vars (same shape as PulseMind):
+#   APP_STORE_CONNECT_API_KEY_ID
+#   APP_STORE_CONNECT_API_ISSUER_ID
+#   APP_STORE_CONNECT_API_KEY          (PEM contents, or base64 if *_IS_BASE64=true)

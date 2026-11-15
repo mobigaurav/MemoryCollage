@@ -1,0 +1,18 @@
+# Optional. Used when MATCH_PASSWORD is set (PulseMind-style match + certs repo).
+# Default certs repo is the same Apple-team store PulseMind uses; override with MATCH_GIT_URL.
+
+git_url(
+  ENV.fetch(
+    "MATCH_GIT_URL",
+    "https://github.com/mobigaurav/pulse-certificates.git"
+  )
+)
+
+storage_mode("git")
+type("appstore")
+
+app_identifier(["com.playingview.mobigaurav.MemoryCollage"])
+username(ENV.fetch("FASTLANE_APPLE_ID", "mobigaurav@gmail.com"))
+
+# Authenticate private certs repos with CERTS_REPO_PAT (HTTPS) or SSH agent.
+# Prefer: MATCH_GIT_BASIC_AUTHORIZATION=$(echo -n "x-access-token:$CERTS_REPO_PAT" | base64)

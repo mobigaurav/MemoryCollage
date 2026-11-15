@@ -54,8 +54,10 @@ How agents build and ship changes is in [AGENTIC_DEVELOPMENT.md](AGENTIC_DEVELOP
   agent validation), branch-policy (which branch may target which).
 - `web.yml` deploys the site only when `main` changes (or is dispatched); it needs `VERCEL_TOKEN`.
 - The API and AWS stack are deployed by hand from `infra/lite` (no workflow deploys them).
-- Store builds (App Store, Play) are made and submitted by the owner. The agent workflows are described in
-  [AGENTIC_SYSTEM_DESIGN.md](AGENTIC_SYSTEM_DESIGN.md).
+- Store builds (App Store, Play) are made and uploaded by the owner with Fastlane under
+  `memory_book/android/fastlane` and `memory_book/ios/fastlane` (Flutter `flutterw` build, then
+  upload). See [memory_book/docs/FASTLANE.md](../memory_book/docs/FASTLANE.md). Agent workflows do
+  not hold store secrets; see [AGENTIC_SYSTEM_DESIGN.md](AGENTIC_SYSTEM_DESIGN.md).
 
 ## 4. Security
 - Secrets live in GitHub repository secrets, AWS and the owner's machine; none are committed.

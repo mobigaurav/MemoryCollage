@@ -18,7 +18,16 @@ Follow [AGENTS.md](../../../AGENTS.md) (branch flow, guardrails).
 - Draft short, user-facing notes (what changed for users, no internal jargon, no emojis) for App Store "What's New" and Play "Release notes"; put them in the PR body.
 - Check `memory_book/store/ASO.md` and `memory_book/store/PRIVACY.md` when data collection, permissions or subscriptions change; flag any store-answer updates for the owner.
 
+## Owner upload (Fastlane)
+After the version bump merges, the **owner** builds and uploads with Fastlane (not agents):
+
+- Android: `cd memory_book/android && bundle exec fastlane beta` (Play internal) or `release` (production)
+- iOS: `cd memory_book/ios && bundle exec fastlane beta` (TestFlight) or `release` (App Store Connect, no auto-submit)
+- Runbook: [memory_book/docs/FASTLANE.md](../../../memory_book/docs/FASTLANE.md)
+
+Agents may document the commands and confirm `pubspec.yaml` was bumped; they must not execute upload lanes or touch credentials.
+
 ## Never
-- Do not read, print or commit signing material: Android keystores and `key.properties`, iOS certificates, provisioning profiles, `.p8` keys, `memory_book/store/credentials/`.
-- Do not upload builds, change store listings or answer privacy questionnaires. The owner archives, signs and submits from their machine or console.
+- Do not read, print or commit signing material: Android keystores and `key.properties`, iOS certificates, provisioning profiles, `.p8` keys, `memory_book/store/credentials/`, Fastlane AuthKeys or Play JSON under `fastlane/`.
+- Do not upload builds, change store listings or answer privacy questionnaires. The owner runs Fastlane (or Xcode / Play Console) from their machine.
 - Bundle ids (iOS release `com.playingview.mobigaurav.MemoryCollage`, Android `com.playingview.mobigaurav.memorybook`) and the Apple team are fixed; changing them is an owner decision.

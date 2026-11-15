@@ -1,0 +1,124 @@
+# frozen_string_literal: true
+
+# Memory Book (Flutter) — iOS Fastlane.
+# Build with flutterw build ipa, then upload the IPA (Flutter CD pattern).
+# Do not gym-rebuild a React Native / bare Xcode scheme.
+
+opt_out_usage
+default_platform(:ios)
+
+PLATFORM_ROOT = File.expand_path("..", __dir__)
+APP_ROOT = File.expand_path("..", PLATFORM_ROOT)
+ARCHIVE_PATH = File.join(APP_ROOT, "build/ios/archive/Runner.xcarchive")
+IPA_GLOB = File.join(APP_ROOT, "build/ios/ipa", "*.ipa")
+APP_IDENTIFIER = "com.playingview.mobigaurav.MemoryCollage"
+
+def flutterw
+  candidate = File.join(APP_ROOT, "flutterw")
+  UI.user_error!("Missing #{candidate}") unless File.executable?(candidate)
+  candidate
+end
+
+def appstore_api_key
+  key_id = ENV["APP_STORE_CONNECT_API_KEY_ID"].to_s.strip
+  issuer = ENV["APP_STORE_CONNECT_API_ISSUER_ID"].to_s.strip
+  key = ENV["APP_STORE_CONNECT_API_KEY"].to_s
+  UI.user_error!(
+    "Set APP_STORE_CONNECT_API_KEY_ID, APP_STORE_CONNECT_API_ISSUER_ID, " \
+    "and APP_STORE_CONNECT_API_KEY (PEM or base64 with " \
+    "APP_STORE_CONNECT_API_KEY_IS_BASE64=true)."
+  ) if key_id.empty? || issuer.empty? || key.strip.empty?
+
+  app_store_connect_api_key(
+    key_id: key_id,
+    issuer_id: issuer,
+    key_content: key,
+    is_key_content_base64: ENV["APP_STORE_CONNECT_API_KEY_IS_BASE64"] == "true",
+    duration: 1200,
+    in_house: false
+  )
+end
+
+def sync_signing!(api_key)
+  return if ENV["MATCH_PASSWORD"].to_s.strip.empty?
+
+  # Same team / certs approach as PulseMind; profiles keyed by this app's bundle id.
+  if ENV["CERTS_REPO_PAT"].to_s.strip != "" && ENV["MATCH_GIT_BASIC_AUTHORIZATION"].to_s.empty?
+    require "base64"
+    ENV["MATCH_GIT_BASIC_AUTHORIZATION"] = Base64.strict_encode64(
+      "x-access-token:#{ENV['CERTS_REPO_PAT']}"
+    )
+  end
+
+  args = {
+    type: "appstore",
+    app_identifier: [APP_IDENTIFIER],
+    api_key: api_key,
+    readonly: ENV["MATCH_READONLY"] != "0"
+  }
+  args[:git_url] = ENV["MATCH_GIT_URL"] unless ENV["MATCH_GIT_URL"].to_s.strip.empty?
+  match(args)
+end
+
+def built_ipa_path
+  ipas = Dir[IPA_GLOB]
+  UI.user_error!("No IPA under #{File.dirname(IPA_GLOB)} after flutter build ipa") if ipas.empty?
+  ipas.max_by { |p| File.mtime(p) }
+end
+
+def flutter_build_ipa!
+  Dir.chdir(APP_ROOT) do
+    # Version/build come from pubspec.yaml (FLUTTER_BUILD_NAME / FLUTTER_BUILD_NUMBER).
+    sh("'#{flutterw}' build ipa --release")
+  end
+  UI.user_error!("Archive missing at #{ARCHIVE_PATH}") unless File.directory?(ARCHIVE_PATH)
+end
+
+platform :ios do
+  desc "Build a release IPA via flutterw (no upload)"
+  lane :build do
+    # match is optional for local Automatic signing; uploads always use API key.
+    if ENV["MATCH_PASSWORD"].to_s.strip != "" &&
+       ENV["APP_STORE_CONNECT_API_KEY_ID"].to_s.strip != ""
+      sync_signing!(appstore_api_key)
+    end
+    flutter_build_ipa!
+    ipa = built_ipa_path
+    UI.success("IPA ready: #{ipa} (#{File.size(ipa)} bytes)")
+  end
+
+  desc "Build and upload to TestFlight (end-to-end)"
+  lane :beta do
+    api_key = appstore_api_key
+    sync_signing!(api_key)
+    flutter_build_ipa!
+    ipa = built_ipa_path
+    # Flutter CD: upload the IPA flutterw already produced (no gym rebuild).
+    upload_to_testflight(
+      api_key: api_key,
+      ipa: ipa,
+      skip_waiting_for_build_processing: true,
+      notify_external_testers: false,
+      changelog: ENV.fetch("TESTFLIGHT_CHANGELOG", "Memory Book automated build")
+    )
+    UI.success("Uploaded to TestFlight")
+  end
+
+  desc "Build and upload to App Store Connect (no auto-submit)"
+  lane :release do
+    api_key = appstore_api_key
+    sync_signing!(api_key)
+    flutter_build_ipa!
+    ipa = built_ipa_path
+    upload_to_app_store(
+      api_key: api_key,
+      ipa: ipa,
+      skip_metadata: true,
+      skip_screenshots: true,
+      submit_for_review: false,
+      force: true,
+      precheck_include_in_app_purchases: false
+    )
+    UI.success("Uploaded to App Store Connect (not submitted for review)")
+  end
+end

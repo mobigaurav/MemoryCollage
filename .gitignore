@@ -72,6 +72,15 @@ fastlane/report.xml
 fastlane/Preview.html
 fastlane/screenshots/**/*.png
 fastlane/test_output
+memory_book/**/fastlane/report.xml
+memory_book/**/fastlane/Preview.html
+memory_book/**/fastlane/screenshots/**/*.png
+memory_book/**/fastlane/test_output
+memory_book/**/fastlane/README.md.backup
+memory_book/android/fastlane/*.json
+memory_book/ios/fastlane/AuthKey_*.p8
+memory_book/ios/fastlane/*.p8
+memory_book/store/credentials/
 
 # Flutter rebuild (memory_book)
 .tools/
@@ -113,3 +122,7 @@ apps/web/.env.local
 __pycache__/
 .pytest_cache/
 .ruff_cache/
+
+# Bundler (Fastlane local installs)
+memory_book/**/vendor/bundle/
+memory_book/**/.bundle/
