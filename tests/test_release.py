@@ -130,6 +130,43 @@ def test_wants_ship_ignores_approve_and_dev_prs():
     assert not r.wants_ship("ship", "admin", rpr(labels=(), head="DEV_9", base="dev"))[0]
 
 
+def dpr(head="DEV_9"):
+    return rpr(labels=(), base="dev", head=head)
+
+
+def test_wants_pr_approve():
+    assert r.wants_pr_approve("approve", "admin", dpr())[0]
+    assert r.wants_pr_approve("approved\nthanks", "maintain", dpr())[0]
+    assert "not an approve" in r.wants_pr_approve("ship", "admin", dpr())[1]
+    assert "negation" in r.wants_pr_approve("approve, but do not merge", "admin", dpr())[1]
+    assert "ship" in r.wants_pr_approve("approve", "admin", rpr())[1]
+    assert "into dev" in r.wants_pr_approve("approve", "admin", rpr(labels=(), base="feature", head="DEV_9"))[1]
+
+
+def test_approve_comment_squash_merges_into_dev(monkeypatch):
+    monkeypatch.setattr(r, "update_release_pr", lambda gh, url: "release PR #50 updated")
+    gh = GH({}, [], runs=[cr(n) for n in REQUIRED_CHECKS])
+    gh.pr_state = dpr()
+    out = r.cmd_approve_pr(gh, {"PR": "49", "LOGIN": "owner", "BODY": "approve"}, sleep=lambda s: None)
+    assert out.startswith("merged #49")
+    merge = [x for x in gh.reqs if x[0] == "PUT"][0]
+    assert merge[1] == "pulls/49/merge" and merge[2]["merge_method"] == "squash"
+    assert ("DELETE", "git/refs/heads/DEV_9", None) in gh.reqs
+
+
+def test_approve_on_release_pr_points_at_ship():
+    gh = GH({}, [], runs=[cr(n) for n in REQUIRED_CHECKS])
+    out = r.cmd_approve_pr(gh, {"PR": "49", "LOGIN": "owner", "BODY": "approved"}, sleep=lambda s: None)
+    assert out.startswith("skip") and "ship" in gh.posted[-1][1]
+    assert not [x for x in gh.reqs if x[0] == "PUT"]
+
+
+def test_merge_on_comment_workflow_is_pr_only():
+    wf = _wf("merge-on-comment.yml")
+    assert "pull_request != null" in wf["jobs"]["merge"]["if"]
+    assert "approve-pr" in wf["jobs"]["merge"]["steps"][-1]["run"]
+
+
 def test_ship_rejection_replies_only_for_real_ship_comments():
     gh = GH({}, [])
     gh.perm = "write"

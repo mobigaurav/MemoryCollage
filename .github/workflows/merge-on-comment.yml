@@ -1,0 +1,43 @@
+name: Merge pull request on comment
+
+# An owner or maintainer commenting `approve` or `approved` (first line) on a pull request into dev
+# squash-merges it after the required checks pass, then updates the release PR. A release PR
+# (dev -> main) is left for `ship`. Workflows on comment events run from the default branch, so this
+# file has to be on main before a comment can merge a pull request.
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: merge-pr-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  merge:
+    if: github.event.issue.pull_request != null && github.event.comment.user.type != 'Bot'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      checks: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install requests
+      - name: Merge into dev
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.issue.number }}
+          LOGIN: ${{ github.event.comment.user.login }}
+          BODY: ${{ github.event.comment.body }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: python -m scripts.release approve-pr
