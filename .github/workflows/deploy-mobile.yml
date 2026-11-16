@@ -1,0 +1,220 @@
+# TestFlight and Play internal, only when the Flutter app changes.
+# Same gate as Arogya: a push to main that does not touch the mobile app skips both stores.
+# Manual: Actions → Deploy mobile → platform ios | android | both.
+
+name: Deploy mobile
+
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: "ios | android | both"
+        required: true
+        default: "both"
+        type: choice
+        options:
+          - both
+          - ios
+          - android
+  push:
+    branches: [main]
+    paths:
+      - "memory_book/**"
+      - "!memory_book/**/*.md"
+      - "!memory_book/docs/**"
+
+concurrency:
+  group: deploy-mobile
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  changes:
+    name: Should ship stores
+    runs-on: ubuntu-latest
+    outputs:
+      mobile: ${{ steps.gate.outputs.mobile }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Gate
+        id: gate
+        env:
+          EVENT: ${{ github.event_name }}
+          BEFORE: ${{ github.event.before }}
+        run: |
+          if [ "$EVENT" = "workflow_dispatch" ]; then
+            echo "mobile=true" >> "$GITHUB_OUTPUT"
+            echo "Manual run — store jobs follow the platform input."
+            exit 0
+          fi
+          empty="0000000000000000000000000000000000000000"
+          if [ -z "$BEFORE" ] || [ "$BEFORE" = "$empty" ]; then
+            echo "mobile=true" >> "$GITHUB_OUTPUT"
+            echo "No previous SHA — ship stores."
+            exit 0
+          fi
+          files=$(git diff --name-only "$BEFORE" HEAD)
+          echo "$files"
+          if echo "$files" | grep -E '^memory_book/' | grep -vE '(\.md$|^memory_book/docs/)' >/dev/null; then
+            echo "mobile=true" >> "$GITHUB_OUTPUT"
+            echo "Store-relevant memory_book files changed vs previous main."
+          else
+            echo "mobile=false" >> "$GITHUB_OUTPUT"
+            echo "No store-relevant memory_book files vs previous main — skip TestFlight and Play."
+          fi
+
+  ios:
+    name: TestFlight
+    needs: changes
+    if: ${{ needs.changes.outputs.mobile == 'true' && (github.event_name == 'push' || inputs.platform == 'both' || inputs.platform == 'ios') }}
+    runs-on: macos-15
+    timeout-minutes: 120
+    defaults:
+      run:
+        working-directory: memory_book
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Require App Store secrets
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8_BASE64: ${{ secrets.ASC_KEY_P8_BASE64 }}
+          IOS_DIST_CERTIFICATE_P12_BASE64: ${{ secrets.IOS_DIST_CERTIFICATE_P12_BASE64 }}
+        run: |
+          missing=0
+          [ -n "$ASC_KEY_ID" ] || { echo "::error::Missing secret ASC_KEY_ID"; missing=1; }
+          [ -n "$ASC_ISSUER_ID" ] || { echo "::error::Missing secret ASC_ISSUER_ID"; missing=1; }
+          [ -n "$ASC_KEY_P8_BASE64" ] || { echo "::error::Missing secret ASC_KEY_P8_BASE64"; missing=1; }
+          [ -n "$IOS_DIST_CERTIFICATE_P12_BASE64" ] || { echo "::error::Missing secret IOS_DIST_CERTIFICATE_P12_BASE64"; missing=1; }
+          [ "$missing" -eq 0 ]
+
+      - name: Select Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.5"
+          channel: stable
+          cache: true
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+          working-directory: memory_book
+
+      - name: Write iOS signing files
+        env:
+          ASC_KEY_P8_BASE64: ${{ secrets.ASC_KEY_P8_BASE64 }}
+          IOS_DIST_CERTIFICATE_P12_BASE64: ${{ secrets.IOS_DIST_CERTIFICATE_P12_BASE64 }}
+        run: |
+          echo "$ASC_KEY_P8_BASE64" | base64 -d > fastlane/AuthKey.p8
+          echo "$IOS_DIST_CERTIFICATE_P12_BASE64" | base64 -d > fastlane/dist.p12
+          cp fastlane/dist.p12 dist.p12
+          chmod 600 fastlane/AuthKey.p8 fastlane/dist.p12 dist.p12
+
+      - name: Fastlane TestFlight
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8_BASE64: ${{ secrets.ASC_KEY_P8_BASE64 }}
+          IOS_DIST_CERTIFICATE_PASSWORD: ${{ secrets.IOS_DIST_CERTIFICATE_PASSWORD }}
+          IOS_DIST_CERTIFICATE_P12_PATH: ${{ github.workspace }}/memory_book/fastlane/dist.p12
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID || 'C6E94YDVFW' }}
+        run: bundle exec fastlane ios beta
+
+  android:
+    name: Play internal
+    needs: changes
+    if: ${{ needs.changes.outputs.mobile == 'true' && (github.event_name == 'push' || inputs.platform == 'both' || inputs.platform == 'android') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    defaults:
+      run:
+        working-directory: memory_book
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Require Play secrets
+        env:
+          PLAY_JSON_BASE64: ${{ secrets.PLAY_JSON_BASE64 }}
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PROPERTIES: ${{ secrets.ANDROID_KEYSTORE_PROPERTIES }}
+        run: |
+          missing=0
+          [ -n "$PLAY_JSON_BASE64" ] || { echo "::error::Missing secret PLAY_JSON_BASE64"; missing=1; }
+          [ -n "$ANDROID_KEYSTORE_BASE64" ] || { echo "::error::Missing secret ANDROID_KEYSTORE_BASE64"; missing=1; }
+          [ -n "$ANDROID_KEYSTORE_PROPERTIES" ] || { echo "::error::Missing secret ANDROID_KEYSTORE_PROPERTIES"; missing=1; }
+          [ "$missing" -eq 0 ]
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.5"
+          channel: stable
+          cache: true
+
+      - name: Install the Android SDK Flutter expects
+        run: |
+          set -euo pipefail
+          compile=$(grep -R --include='*.kt' --include='*.groovy' -oE 'compileSdk(Version)?[[:space:]]*=[[:space:]]*[0-9]+' "$FLUTTER_ROOT/packages/flutter_tools/gradle" | head -1 | grep -oE '[0-9]+$' || true)
+          ndk=$(grep -R --include='*.kt' --include='*.groovy' -oE 'ndkVersion[[:space:]]*=[[:space:]]*"[^"]+"' "$FLUTTER_ROOT/packages/flutter_tools/gradle" | head -1 | sed -E 's/.*"([^"]+)".*/\1/' || true)
+          compile=${compile:-36}
+          echo "compileSdk=$compile ndk=${ndk:-unset}"
+          yes | sdkmanager --licenses >/dev/null || true
+          pkgs=("platforms;android-${compile}")
+          if [ -n "${ndk}" ]; then pkgs+=("ndk;${ndk}"); fi
+          sdkmanager --install "${pkgs[@]}"
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+          working-directory: memory_book
+
+      - name: Write Android signing files
+        env:
+          PLAY_JSON_BASE64: ${{ secrets.PLAY_JSON_BASE64 }}
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PROPERTIES: ${{ secrets.ANDROID_KEYSTORE_PROPERTIES }}
+        run: |
+          echo "$PLAY_JSON_BASE64" | base64 -d > fastlane/play-service-account.json
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > android/app/vedic-ai-upload-key.keystore
+          printf '%s\n' "$ANDROID_KEYSTORE_PROPERTIES" > android/keystore.properties
+          chmod 600 fastlane/play-service-account.json \
+            android/app/vedic-ai-upload-key.keystore \
+            android/keystore.properties
+          {
+            echo "sdk.dir=${ANDROID_HOME}"
+            echo "flutter.sdk=${FLUTTER_ROOT}"
+          } > android/local.properties
+
+      - name: Fastlane Play internal
+        env:
+          PLAY_JSON_KEY_PATH: ${{ github.workspace }}/memory_book/fastlane/play-service-account.json
+        run: bundle exec fastlane android beta

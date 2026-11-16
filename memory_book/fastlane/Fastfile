@@ -1,0 +1,241 @@
+# frozen_string_literal: true
+
+require "fileutils"
+
+# Memory Book — TestFlight + Play internal.
+# Flutter builds the IPA and AAB. Fastlane signs on CI and uploads.
+# Local Mac builds can keep using Xcode automatic signing; CI imports dist.p12.
+#
+#   bundle exec fastlane ios beta
+#   bundle exec fastlane android beta
+
+skip_docs
+
+default_platform(:ios)
+
+APP_ROOT = File.expand_path("..", __dir__)
+IOS_PROJECT = File.join(APP_ROOT, "ios/Runner.xcodeproj")
+BUNDLE_ID = "com.playingview.mobigaurav.MemoryCollage"
+PACKAGE_NAME = "com.playingview.mobigaurav.memorybook"
+TEAM_ID = ENV["APPLE_TEAM_ID"].to_s.strip
+TEAM_ID = "C6E94YDVFW" if TEAM_ID.empty?
+
+def ci?
+  ENV["CI"].to_s == "true"
+end
+
+def increment_builds?
+  ci? || ENV["FASTLANE_INCREMENT_BUILD"].to_s == "1"
+end
+
+def pubspec_version
+  text = File.read(File.join(APP_ROOT, "pubspec.yaml"))
+  match = text.match(/^version:\s*(\d+\.\d+\.\d+)\+(\d+)\s*$/)
+  UI.user_error!("pubspec.yaml has no version: x.y.z+n") unless match
+
+  [match[1], match[2].to_i]
+end
+
+def flutter_bin
+  wrapped = File.join(APP_ROOT, "flutterw")
+  return wrapped if !ci? && File.executable?(wrapped)
+
+  "flutter"
+end
+
+def asc_api_key
+  issuer = ENV["ASC_ISSUER_ID"].to_s.strip
+  UI.user_error!("Missing ASC_ISSUER_ID") if issuer.empty?
+
+  if ENV["ASC_KEY_P8_BASE64"].to_s.strip != ""
+    UI.user_error!("Missing ASC_KEY_ID") if ENV["ASC_KEY_ID"].to_s.strip.empty?
+    return app_store_connect_api_key(
+      key_id: ENV["ASC_KEY_ID"],
+      issuer_id: issuer,
+      key_content: ENV["ASC_KEY_P8_BASE64"],
+      is_key_content_base64: true,
+      duration: 1200,
+      in_house: false
+    )
+  end
+
+  key_filepath = [
+    File.join(__dir__, "AuthKey.p8"),
+    *Dir.glob(File.join(__dir__, "AuthKey_*.p8"))
+  ].find { |path| File.file?(path) }
+  UI.user_error!("Missing App Store Connect API key .p8 in fastlane/ (or set ASC_KEY_P8_BASE64)") unless key_filepath
+
+  key_id = ENV["ASC_KEY_ID"].to_s.strip
+  key_id = File.basename(key_filepath)[/AuthKey_([A-Z0-9]+)\.p8/, 1] if key_id.empty?
+  UI.user_error!("Set ASC_KEY_ID (or name the file AuthKey_<KEYID>.p8)") if key_id.to_s.empty?
+
+  app_store_connect_api_key(
+    key_id: key_id,
+    issuer_id: issuer,
+    key_content: File.read(key_filepath),
+    is_key_content_base64: false,
+    duration: 1200,
+    in_house: false
+  )
+end
+
+def import_distribution_cert!
+  candidates = [
+    ENV["IOS_DIST_CERTIFICATE_P12_PATH"],
+    File.join(__dir__, "dist.p12")
+  ].compact.reject(&:empty?)
+  source = candidates.find { |path| File.file?(path) }
+  UI.user_error!("CI requires fastlane/dist.p12 — set IOS_DIST_CERTIFICATE_P12_BASE64") unless source
+
+  cwd_p12 = File.expand_path("dist.p12")
+  FileUtils.cp(source, cwd_p12) unless File.expand_path(source) == cwd_p12
+  import_certificate(
+    certificate_path: cwd_p12,
+    certificate_password: ENV["IOS_DIST_CERTIFICATE_PASSWORD"].to_s,
+    keychain_name: ENV["MATCH_KEYCHAIN_NAME"],
+    keychain_password: ENV["MATCH_KEYCHAIN_PASSWORD"]
+  )
+end
+
+def next_build_number(store_latest)
+  _name, code = pubspec_version
+  return code unless increment_builds?
+
+  [code, store_latest.to_i + 1].max
+end
+
+def write_export_options(profile_name)
+  dir = File.join(APP_ROOT, "build")
+  FileUtils.mkdir_p(dir)
+  path = File.join(dir, "ExportOptions.plist")
+  File.write(path, <<~XML)
+    <?xml version="1.0" encoding="UTF-8"?>
+    <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+    <plist version="1.0">
+    <dict>
+      <key>method</key>
+      <string>app-store</string>
+      <key>signingStyle</key>
+      <string>manual</string>
+      <key>teamID</key>
+      <string>#{TEAM_ID}</string>
+      <key>uploadSymbols</key>
+      <true/>
+      <key>provisioningProfiles</key>
+      <dict>
+        <key>#{BUNDLE_ID}</key>
+        <string>#{profile_name}</string>
+      </dict>
+    </dict>
+    </plist>
+  XML
+  path
+end
+
+def play_json_key
+  candidates = [
+    ENV["PLAY_JSON_KEY_PATH"],
+    File.join(__dir__, "play-service-account.json")
+  ].compact.reject(&:empty?)
+  path = candidates.find { |item| File.file?(item) }
+  UI.user_error!("Missing Play service account JSON (PLAY_JSON_KEY_PATH or fastlane/play-service-account.json)") unless path
+
+  path
+end
+
+platform :ios do
+  desc "Build a release IPA and upload it to TestFlight"
+  lane :beta do
+    setup_ci if ci?
+    api_key = asc_api_key
+    name, = pubspec_version
+    latest = begin
+      latest_testflight_build_number(
+        api_key: api_key,
+        app_identifier: BUNDLE_ID,
+        initial_build_number: 0
+      ).to_i
+    rescue StandardError => e
+      UI.important("TestFlight latest build unavailable: #{e.message}")
+      0
+    end
+    build_number = next_build_number(latest)
+    UI.success("iOS #{name} (#{build_number})")
+
+    import_distribution_cert! if ci?
+    get_provisioning_profile(
+      api_key: api_key,
+      app_identifier: BUNDLE_ID,
+      readonly: false
+    )
+    profile_name = lane_context[SharedValues::SIGH_NAME]
+    update_code_signing_settings(
+      use_automatic_signing: false,
+      path: IOS_PROJECT,
+      team_id: TEAM_ID,
+      code_sign_identity: "Apple Distribution",
+      profile_name: profile_name,
+      bundle_identifier: BUNDLE_ID,
+      targets: ["Runner"],
+      build_configurations: ["Release"]
+    )
+    export_plist = write_export_options(profile_name)
+
+    Dir.chdir(APP_ROOT) do
+      sh(flutter_bin, "build", "ipa", "--release",
+         "--build-name=#{name}", "--build-number=#{build_number}",
+         "--export-options-plist=#{export_plist}")
+    end
+
+    ipa = Dir[File.join(APP_ROOT, "build/ios/ipa/*.ipa")].max_by { |path| File.mtime(path) }
+    UI.user_error!("No IPA under build/ios/ipa") unless ipa
+
+    upload_to_testflight(
+      api_key: api_key,
+      ipa: ipa,
+      skip_waiting_for_build_processing: true,
+      distribute_external: false
+    )
+  end
+end
+
+platform :android do
+  desc "Build a release app bundle and upload it to Play internal testing"
+  lane :beta do
+    json_key = play_json_key
+    name, = pubspec_version
+    store_latest = 0
+    if increment_builds?
+      %w[internal alpha beta production].each do |track|
+        begin
+          codes = google_play_track_version_codes(track: track, json_key: json_key)
+          store_latest = [store_latest, codes.max || 0].max
+        rescue StandardError => e
+          UI.important("Play track #{track} version codes unavailable: #{e.message}")
+        end
+      end
+    end
+    build_number = next_build_number(store_latest)
+    UI.success("Android #{name} (#{build_number})")
+
+    Dir.chdir(APP_ROOT) do
+      sh(flutter_bin, "build", "appbundle", "--release",
+         "--build-name=#{name}", "--build-number=#{build_number}")
+    end
+
+    aab = File.join(APP_ROOT, "build/app/outputs/bundle/release/app-release.aab")
+    UI.user_error!("AAB not found at #{aab}") unless File.file?(aab)
+
+    upload_to_play_store(
+      package_name: PACKAGE_NAME,
+      track: "internal",
+      aab: aab,
+      json_key: json_key,
+      skip_upload_metadata: true,
+      skip_upload_images: true,
+      skip_upload_screenshots: true,
+      skip_upload_changelogs: true,
+      release_status: "completed"
+    )
+  end
+end
