@@ -1,0 +1,5 @@
+# Memory Book store ids. Release iOS bundle id; Play package is separate.
+
+app_identifier("com.playingview.mobigaurav.MemoryCollage")
+package_name("com.playingview.mobigaurav.memorybook")
+team_id("C6E94YDVFW")

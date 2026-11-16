@@ -51,10 +51,11 @@ Create two rulesets (Settings > Rules > Rulesets), no force-push and no deletion
 No GitHub environment is required for the agent flow. The existing site deploy (`web.yml`) uses repository secrets.
 
 ## 6. Existing secrets (unchanged)
-`VERCEL_TOKEN` (required for the site deploy; optional `VERCEL_ORG_ID`). Without `VERCEL_TOKEN`, `web.yml`
-exits without deploying, so `release-closeout.yml` still closes issues; set the token before a real release.
-AWS and store credentials are not used by any workflow. Do not add Apple, Google Play or signing secrets
-for agents.
+The site deploy uses the existing `VERCEL_TOKEN` (optional `VERCEL_ORG_ID`). If that secret is absent,
+`web.yml` exits without deploying and `release-closeout.yml` still closes issues.
+Store signing is not stored on this repository. `deploy-mobile.yml` reads the organization secrets
+shared with Arogya (`ASC_*`, `IOS_DIST_CERTIFICATE_*`, `PLAY_JSON_BASE64`, `ANDROID_KEYSTORE_*`).
+Do not copy those values into this repo. AWS deploy stays manual.
 
 ## 7. Local tooling
 ```bash

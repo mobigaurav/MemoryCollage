@@ -72,6 +72,14 @@ fastlane/report.xml
 fastlane/Preview.html
 fastlane/screenshots/**/*.png
 fastlane/test_output
+memory_book/fastlane/report.xml
+memory_book/fastlane/Preview.html
+memory_book/fastlane/test_output
+memory_book/fastlane/AuthKey*.p8
+memory_book/fastlane/*.p12
+memory_book/fastlane/*.json
+memory_book/dist.p12
+memory_book/vendor/
 
 # Flutter rebuild (memory_book)
 .tools/

@@ -52,10 +52,12 @@ How agents build and ship changes is in [AGENTIC_DEVELOPMENT.md](AGENTIC_DEVELOP
 - `ci.yml` runs on pull requests and on pushes to `dev` and `main`: API (pytest), Web (npm build), Flutter
   (`flutter analyze`, `flutter test`, Flutter 3.47.5), agents-check (ruff and pytest for `scripts/` and `tests/`,
   agent validation), branch-policy (which branch may target which).
-- `web.yml` deploys the site only when `main` changes (or is dispatched); it needs `VERCEL_TOKEN`.
+- `web.yml` deploys the site only when `main` changes (or is dispatched). It uses the existing `VERCEL_TOKEN`.
+- `deploy-mobile.yml` uploads TestFlight and Play internal only when that `main` push changes `memory_book`
+  (not markdown or `memory_book/docs`). A website-only merge does not upload a store build. Signing uses the
+  organization secrets shared with Arogya. See [memory_book/docs/FASTLANE.md](../memory_book/docs/FASTLANE.md).
 - The API and AWS stack are deployed by hand from `infra/lite` (no workflow deploys them).
-- Store builds (App Store, Play) are made and submitted by the owner. The agent workflows are described in
-  [AGENTIC_SYSTEM_DESIGN.md](AGENTIC_SYSTEM_DESIGN.md).
+- Agent workflows are described in [AGENTIC_SYSTEM_DESIGN.md](AGENTIC_SYSTEM_DESIGN.md).
 
 ## 4. Security
 - Secrets live in GitHub repository secrets, AWS and the owner's machine; none are committed.
@@ -68,5 +70,5 @@ How agents build and ship changes is in [AGENTIC_DEVELOPMENT.md](AGENTIC_DEVELOP
 |---|---|---|
 | Video vendor not configured or failing | No cloud clip | API returns `fallbackToOnDevice`; app renders locally |
 | Lambda cold start | In-memory ledger resets | Known limitation until the relational store ships |
-| `VERCEL_TOKEN` missing | Site not deployed | `web.yml` exits without deploying; add the secret |
+| `VERCEL_TOKEN` missing | Site not deployed | `web.yml` exits without deploying |
 | Agent flow disabled | No automatic plans or builds | Repo variable `AGENT_BUILD_ENABLED=false`; work continues by hand |

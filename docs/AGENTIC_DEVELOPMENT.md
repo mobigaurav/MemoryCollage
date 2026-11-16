@@ -51,7 +51,8 @@ Labels: `agent:proposed` -> `agent:plan-ready` -> `agent:approved` -> `agent:in-
   `web.yml` deploys; `release-closeout.yml` then closes the included issues with a "Released" comment.
 - **Architect step:** PRs touching scripts, workflows, infra, API code, app services/data, pubspec or web
   hosting config need `## Architecture docs` in the PR body (`docs-check`).
-- **Store builds** are manual: the owner archives, signs and submits (see the store-release skill).
+- **Store builds** upload from `main` when `memory_book` changes (`deploy-mobile.yml`): TestFlight and Play
+  internal. The owner still merges the release. Agents do not upload and do not submit App Review or Play production.
 
 ## 4. Agents and skills
 | Stage | Agent | Skills |
