@@ -199,7 +199,7 @@ class SettingsScreen extends ConsumerWidget {
                       _Row(
                         icon: Icons.mail_outline,
                         title: 'Contact us',
-                        subtitle: 'Write to support@mysticvedic.com.',
+                        subtitle: 'A book, a print, or the account.',
                         onTap: () => _open('${AppConfig.siteUrl}/contact'),
                       ),
                       const Divider(height: 1),
