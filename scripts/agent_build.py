@@ -362,10 +362,9 @@ def cmd_publish(gh: GitHub, env: dict, out_dir: str) -> str:
             gh.comment(pr["number"], "Architect review\n\n" + open(review, encoding="utf-8").read().strip())
     num = pr["number"]
     gh.add_labels(n, [AWAITING])
-    ask = (f"Owner: review the diff of PR #{num}, then click **Approve workflows to run** on the PR (needed once, "
-           "and again after each new push, because GitHub holds CI on PRs opened by github-actions[bot]). "
-           f"When {CHECKS_TEXT} pass, the PR is squash-merged into dev "
-           f"automatically; a failure is retried with the log (attempt {attempt} of {MAX_ATTEMPTS}).")
+    ask = (f"Owner: review the diff of PR #{num}. Comment `approve` on that pull request to squash-merge it "
+           f"into dev once {CHECKS_TEXT} pass. A failure is retried with the log "
+           f"(attempt {attempt} of {MAX_ATTEMPTS}).")
     gh.comment(n, f"PR #{num} is ready ([run]({run_url})). " + ask)
     return f"pr #{num} awaiting CI approval"
 
@@ -382,16 +381,12 @@ def settle(gh: GitHub, n: int, pr: dict, run_url: str) -> str:
     attempt = pr_attempt(pr.get("body") or "", n)
     gh.remove_label(n, AWAITING)
     if state == "success":
-        title = gh.issue(n).get("title", "")
-        gh.req("PUT", f"pulls/{num}/merge", json={"merge_method": "squash", "sha": sha,
-                                                  "commit_title": f"#{n}: {title} (#{num})"[:120]})
-        gh.req("DELETE", f"git/refs/heads/{pr['head']['ref']}", ok=(200, 204, 404, 422))
         gh.remove_label(n, IN_PROGRESS)
-        rel = update_release_pr(gh, run_url)
-        gh.comment(n, f"PR #{num} passed {CHECKS_TEXT} and was squash-merged into dev "
-                      f"([run]({run_url})). {rel[0].upper() + rel[1:]}. The site updates when the owner approves the "
-                      "release PR's checks (if GitHub asks) and comments `ship`; this issue closes after that deploy.")
-        return f"#{num}: merged; {rel}"
+        gh.comment(num, f"Checks passed ({CHECKS_TEXT}). Comment `approve` on this pull request to squash-merge "
+                        "it into dev ([run](" + run_url + ")).")
+        gh.comment(n, f"PR #{num} passed {CHECKS_TEXT} ([run]({run_url})). Comment `approve` on the pull request "
+                      "to merge it into dev. Comment `ship` on the release pull request to merge dev into main.")
+        return f"#{num}: checks passed, waiting for approve"
     failed = {name: gh.job_log_tail(cr["id"]) for name, cr in runs.items()
               if cr.get("conclusion") not in ("success", "skipped", "neutral")}
     summary = failure_summary(failed)

@@ -1,8 +1,7 @@
 name: Agent merge
-# Issue #35 Phase 3, ADR 0002. GitHub holds CI on PRs opened by agent-build.yml (job token) until the owner
-# clicks "Approve workflows to run". When those runs finish, this merges the PR into dev if the required
-# checks (API, Web, Flutter, agents-check, branch-policy, docs-check, plan-gate) pass, or re-dispatches
-# agent-build.yml with the failure.
+# Issue #35 Phase 3, ADR 0002. When CI finishes on an automated PR, this retries a failed build or, when the
+# required checks pass, asks the owner to comment `approve` on the pull request. It does not merge.
+# merge-on-comment.yml squash-merges into dev after that comment.
 # Only automated PRs (DEV_<N> -> dev, opened by github-actions[bot], issue labeled
 # agent:awaiting-ci-approval) are touched. Never merges into main.
 
