@@ -55,7 +55,9 @@ class SettingsScreen extends ConsumerWidget {
     await SharePlus.instance.share(
       ShareParams(
         text:
-            'Memory Book keeps photo books, collages, and short films. ${AppConfig.siteUrl}',
+            'Memory Book keeps photo books, collages, and short films.\n'
+            '${AppConfig.appStoreUrl}\n'
+            '${AppConfig.playStoreUrl}',
       ),
     );
   }

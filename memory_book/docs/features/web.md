@@ -8,7 +8,7 @@ That unset is the whole lesson. Vercel will attach a folder named `apps/web` to 
 
 ## What the site is allowed to know
 
-The marketing pages do not read the photo library, the credit ledger, or Cognito. Store buttons appear when the App Store and Play URLs are set as public environment variables. Until those exist, the site still explains the product.
+The marketing pages do not read the photo library, the credit ledger, or Cognito. The home page links to the live App Store and Play listings. `NEXT_PUBLIC_APP_STORE_URL` and `NEXT_PUBLIC_PLAY_STORE_URL` can replace those links.
 
 Account pages, if they ever exist on the web, would be a different app. Hosted UI for Apple and Google already assumes a phone callback, `memorybook://auth`. A website login would register its own callback on the same Cognito client or on a second client. That is not this site.
 
