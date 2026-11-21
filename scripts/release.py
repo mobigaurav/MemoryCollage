@@ -21,7 +21,12 @@ import sys
 import time
 
 from scripts.agent_build import (
-    CHECKS_TEXT, OWNER_PERMS, REQUIRED_CHECKS, GitHub, checks_state, update_release_pr,
+    CHECKS_TEXT,
+    OWNER_PERMS,
+    REQUIRED_CHECKS,
+    GitHub,
+    checks_state,
+    update_release_pr,
 )
 from scripts.approve_on_comment import NEGATION, rejection_reply
 
