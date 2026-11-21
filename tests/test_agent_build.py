@@ -206,11 +206,10 @@ def test_settle_skips_when_not_awaiting():
     assert "skip" in b.settle(gh, 7, _pr(gh), "r") and not gh.reqs
 
 
-def test_settle_merges_on_success(monkeypatch):
-    monkeypatch.setattr(b, "update_release_pr", lambda gh, url: "release PR #50 updated")
+def test_settle_waits_for_approve_comment_on_success():
     gh = MergeGH(("agent:approved", b.AWAITING, b.IN_PROGRESS), [cr(n) for n in b.REQUIRED_CHECKS])
-    assert "merged" in b.settle(gh, 7, _pr(gh), "r")
-    assert ("PUT", "pulls/46/merge") in gh.reqs and b.AWAITING in gh.removed and b.IN_PROGRESS in gh.removed
+    assert "waiting for approve" in b.settle(gh, 7, _pr(gh), "r")
+    assert ("PUT", "pulls/46/merge") not in gh.reqs and b.AWAITING in gh.removed and b.IN_PROGRESS in gh.removed
 
 
 def test_settle_retries_then_stops():

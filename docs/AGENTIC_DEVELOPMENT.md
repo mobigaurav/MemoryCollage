@@ -41,17 +41,19 @@ Labels: `agent:proposed` -> `agent:plan-ready` -> `agent:approved` -> `agent:in-
 
 - **Automatic plan:** a new `type:feature` or `type:bug` issue gets a plan from the planner agent
   (`plan-on-issue.yml`). Comment `replan <feedback>` for another version.
-- **Approval:** an owner or maintainer comment starting with `approve`, `approved` or `lgtm` adds
-  `agent:approved` and starts the build (`approve-on-comment.yml`).
+- **Approval:** an owner or maintainer comment starting with `approve`, `approved` or `lgtm` on the
+  issue adds `agent:approved` and starts the build (`approve-on-comment.yml`).
 - **Automatic build:** `agent-build.yml` runs Copilot CLI as the delivery-orchestrator with a read-only token,
-  then the workflow opens the PR. GitHub holds CI on PRs opened by workflows: the owner clicks
-  "Approve workflows to run". When the required checks pass, `agent-merge.yml` squash-merges into `dev`
-  and keeps one `Release: dev -> main` PR up to date. Failures are retried, then `agent:needs-human`.
-- **Release:** the owner merges the release PR or comments `ship` on it (`ship-on-comment.yml`).
+  then the workflow opens the PR. When the required checks pass, the owner comments `approve` or `approved`
+  on the pull request and `merge-on-comment.yml` squash-merges it into `dev`. Failures are retried, then
+  `agent:needs-human`.
+- **Release:** the owner comments `ship` on the release pull request (`ship-on-comment.yml`).
   `web.yml` deploys; `release-closeout.yml` then closes the included issues with a "Released" comment.
 - **Architect step:** PRs touching scripts, workflows, infra, API code, app services/data, pubspec or web
   hosting config need `## Architecture docs` in the PR body (`docs-check`).
-- **Store builds** are manual: the owner archives, signs and submits (see the store-release skill).
+- **Store builds** upload from `main` when `memory_book` changes (`deploy-mobile.yml`): TestFlight and Play
+  internal. That starts when the owner comments `ship` on the release pull request. Agents do not upload
+  and do not submit App Review or Play production.
 
 ## 4. Agents and skills
 | Stage | Agent | Skills |
