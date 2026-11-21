@@ -88,3 +88,37 @@ img { max-width: 100%; }
 }
 .page li { margin: 6px 0; }
 .site-footer { color: var(--ink-soft); font-size: 0.9rem; border-top: 1px solid var(--paper-deep); margin-top: 36px; }
+
+.contact-form {
+  display: grid;
+  gap: 14px;
+  max-width: 32rem;
+  margin-top: 8px;
+}
+.contact-form label {
+  display: grid;
+  gap: 6px;
+  font-size: 0.92rem;
+  color: var(--ink-soft);
+}
+.contact-form input,
+.contact-form textarea {
+  width: 100%;
+  border: 1px solid var(--paper-deep);
+  border-radius: 12px;
+  background: white;
+  color: var(--ink);
+  font: inherit;
+  padding: 12px 14px;
+}
+.contact-form textarea { resize: vertical; }
+.contact-form button { justify-content: center; border: 0; cursor: pointer; }
+.contact-form button:disabled { opacity: 0.6; cursor: default; }
+.form-note, .form-error { margin: 8px 0 0; }
+.form-error { color: var(--leather); }
+.hp {
+  position: absolute;
+  left: -10000px;
+  height: 0;
+  overflow: hidden;
+}
